@@ -58,7 +58,7 @@ jobs:
         id: check_dockerfile
         uses: andstor/file-existence-action@v1
         with:
-          file: "${{ matrix.plugins }}/task/Dockerfile"
+          files: "${{ matrix.plugins }}/task/Dockerfile"
 
       #- name: Get changed files
       #  id: changed-files
