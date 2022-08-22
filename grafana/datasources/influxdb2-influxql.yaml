@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB2-InfluxQL
+    type: influxdb
+    access: proxy
+    url: http://${THINGER_HOST}:8086
+    database: ${THINGER_USER}
+    jsonData:
+      httpMode: GET
+      httpHeaderName1: 'Authorization'
+    secureJsonData:
+      httpHeaderValue1: "Token ${THINGER_INFLUXDB_TOKEN}"
+    isDefault: true
+    version: 1

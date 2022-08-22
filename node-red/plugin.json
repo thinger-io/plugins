@@ -1,0 +1,45 @@
+{
+  "name" : "node-red",
+  "version" : "1.4.0",
+  "description" : "Plugin for Node-RED integration",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/node-red-plugin.git"
+  },
+  "metadata" : {
+    "name" : "Node-RED",
+    "description" : "Node-RED integration for Thinger.io",
+    "image" : "https://user-images.githubusercontent.com/1141353/57460672-dada7200-7275-11e9-91d1-11cdb560c758.png",
+    "icon" : "https://user-images.githubusercontent.com/1141353/58575445-565e8c00-8242-11e9-9f86-e6218c975a0a.png"
+  },
+  "tokens" : {
+    "node_red_plugin" : {
+      "name" : "Access from Node-RED to Thinger.io",
+      "allow" : {
+        "*" : {
+          "*": "*"
+        }
+      }
+    }
+  },
+  "task" : {
+    "type" : "docker",
+    "image" : "thinger/node-red-plugin",
+    "volumes" : {
+      "data" : "/data"
+    },
+    "copy" : {
+      "config" : "data"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin" : "node-red",
+        "port" : 1880
+      }
+    }
+  }
+}

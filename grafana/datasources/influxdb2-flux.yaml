@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB2-Flux
+    type: influxdb
+    access: proxy
+    url: http://${THINGER_HOST}:8086
+    secureJsonData:
+      token: ${THINGER_INFLUXDB_TOKEN}
+    jsonData:
+      version: Flux
+      organization: ${THINGER_USER}
+      defaultBucket: ${THINGER_USER}
+    isDefault: false
+    version: 1

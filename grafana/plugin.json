@@ -1,0 +1,59 @@
+{
+  "name" : "grafana",
+  "version" : "8.5.4",
+  "description" : "Plugin for running Grafana inside Thinger.io",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/grafana-plugin.git"
+  },
+  "metadata" : {
+    "name" : "Grafana",
+    "description" : "Grafana integration for Thinger.io",
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/grafana/img/grafana-logo.png",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/grafana/img/grafana-icon.png"
+  },
+  "tokens" : {
+  },
+  "task" : {
+    "env" : {
+      "GF_SERVER_DOMAIN" : "${THINGER_HOST}",
+      "GF_SERVER_ROOT_URL": "https://${THINGER_HOST}/users/${THINGER_USER}/plugins/${THINGER_PLUGIN}/",
+      "GF_SERVER_SERVE_FROM_SUB_PATH" : "true",
+      "GF_SERVER_ENABLE_GZIP" : "true",
+      "GF_SECURITY_ADMIN_USER" : "${THINGER_USER}",
+      "GF_SECURITY_COOKIE_SECURE" : "true",
+      "GF_SECURITY_COOKIE_SAMESITE" : "strict",
+      "GF_ANALYTICS_REPORTING_ENABLED" : "false",
+      "GF_SECURITY_ALLOW_EMBEDDING" : "true",
+      "GF_LOG_MODE" : "console",
+      "THINGER_INFLUXDB_TOKEN": "{{THINGER_INFLUXDB_TOKEN}}"
+    },
+    "type" : "docker",
+    "image" : "grafana/grafana:8.5.4",
+    "volumes" : [
+      {
+        "source": "data",
+        "target": "/var/lib/grafana",
+        "description": "Mount point for user data configuration"
+      },
+      {
+        "source": "datasources",
+        "target": "/etc/grafana/provisioning/datasources/",
+        "description": "Mount point for preconfigured datasources"
+      }
+    ],
+    "copy": {
+      "datasources": "datasources"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin" : "grafana",
+        "port" : 3000
+      }
+    }
+  }
+}
