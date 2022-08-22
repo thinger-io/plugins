@@ -24,7 +24,7 @@ jobs:
   matrix: # sets the matrix
     runs-on: ubuntu-latest
     outputs:
-      plugins: ${{ steps.matrix.outputs.plugins }}
+      plugin: ${{ steps.matrix.outputs.plugin }}
 
     steps:
       - uses: actions/checkout@v3
@@ -35,19 +35,19 @@ jobs:
         id: matrix
         run: |
           matrix=$((
-            echo '{ "plugins" : ['
+            echo '{ "plugin" : ['
             separator=''
             for f in *; do [[ -e $f ]] || continue; echo -n "$separator"\""$f"\"; separator=','; done
             echo "]}"
           ) | jq -c .)
-          echo "::set-output name=plugins::$matrix"
+          echo "::set-output name=plugin::$matrix"
 
   build:
     runs-on: ubuntu-latest
     needs: matrix
     strategy:
       fail-fast: false
-      matrix: ${{fromJson(needs.matrix.outputs.plugins)}}
+      matrix: ${{fromJson(needs.matrix.outputs.plugin)}}
 
     steps:
       - uses: actions/checkout@v3
@@ -58,7 +58,7 @@ jobs:
         id: check_dockerfile
         uses: andstor/file-existence-action@v1
         with:
-          files: "${{ matrix.plugins }}/task/Dockerfile"
+          files: "${{ matrix.plugin }}/task/Dockerfile"
 
       #- name: Get changed files
       #  id: changed-files
@@ -67,8 +67,8 @@ jobs:
       - name: Get image version
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
         run: |
-          cd ${{ matrix.plugins }}
-          echo "version=`awk '/^##/ {{print substr($2, 2, length($2)-2)}}' ${{ matrix.plugins }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
+          cd ${{ matrix.plugin }}
+          echo "version=`awk '/^##/ {{print substr($2, 2, length($2)-2)}}' ${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Extract branch name
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
@@ -103,13 +103,13 @@ jobs:
         uses: docker/build-push-action@v3
         #if: contains(steps.changed-files.outputs.modified_files, '${{ matrix.module}}.dockerfile')
         with:
-          file: ./${{ matrix.plugins }}/task/Dockerfile
+          file: ./${{ matrix.plugin }}/task/Dockerfile
           build-args: |
             version=${{ env.version }}
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.module }}-plugin:${{ env.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.module }}-plugin:${{ steps.extract_branch.outputs.branch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ steps.extract_branch.outputs.branch }}
 
       #- name: Tag repository
       #  uses: mathieudutour/github-tag-action@v6.0
