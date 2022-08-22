@@ -68,7 +68,7 @@ jobs:
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
         run: |
           cd ${{ matrix.plugin }}
-          echo "version=`awk '/^##/ {{print substr($2, 2, length($2)-2)}}' ${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
+          echo "version=`awk '/^##/ {{print substr($2, 2, length($2)-2)}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Extract branch name
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
@@ -104,8 +104,11 @@ jobs:
         #if: contains(steps.changed-files.outputs.modified_files, '${{ matrix.module}}.dockerfile')
         with:
           file: ./${{ matrix.plugin }}/task/Dockerfile
+<<<<<<< HEAD
           build-args: |
             version=${{ env.version }}
+=======
+>>>>>>> 774fa98 (First commit)
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
