@@ -104,11 +104,6 @@ jobs:
         #if: contains(steps.changed-files.outputs.modified_files, '${{ matrix.module}}.dockerfile')
         with:
           file: ./${{ matrix.plugin }}/task/Dockerfile
-<<<<<<< HEAD
-          build-args: |
-            version=${{ env.version }}
-=======
->>>>>>> 774fa98 (First commit)
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
