@@ -1,0 +1,45 @@
+{
+  "name" : "jupyter-minimal",
+  "version" : "3.10.5-1",
+  "description" : "Jupyter Notebook Minimal",
+  "author" : "Álvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git"
+  },
+  "metadata" : {
+    "name" : "Jupyter Plugin for Thinger.io",
+    "description" : "Jupyter Notebook Minimal",
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_image.svg",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_icon.svg"
+  },
+  "task": {
+    "type": "docker",
+    "image": "jupyter/minimal-notebook:python-3.10.5",
+    "volumes": [
+        {
+            "source": "../../../storages/",
+            "target": "/home/jovyan/work",
+            "description": "Mount point of thinger storages"
+        },
+        {
+            "source": "config",
+            "target": "/home/jovyan/.jupyter/",
+            "description": "Jupyter Lab user data"
+        }
+    ],
+    "copy" : {
+      "config" : "config"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "jupyter-minimal",
+        "port" : 8888,
+        "rewrite_base_path": false
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name" : "jupyter-tensorflow",
+  "version" : "2.9.1-1",
+  "description" : "Jupyter Notebook TensorFlow",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git"
+  },
+  "metadata" : {
+    "name" : "Jupyter TensorFlow",
+    "description" : "Jupyter Plugin for Thinger.io",
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_image.svg",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_icon.svg"
+  },
+  "task": {
+    "type": "docker",
+    "image": "jupyter/tensorflow-notebook:tensorflow-2.9.1",
+    "volumes": [
+        {
+            "source": "../../../storages/",
+            "target": "/home/jovyan/work",
+            "description": "Mount point of thinger storages"
+        },
+        {
+            "source": "config",
+            "target": "/home/jovyan/.jupyter/",
+            "description": "Jupyter Lab user data"
+        }
+    ],
+    "copy" : {
+      "config" : "config"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "jupyter-tensorflow",
+        "port" : 8888,
+        "rewrite_base_path": false
+      }
+    }
+  }
+}
