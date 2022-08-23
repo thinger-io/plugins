@@ -31,6 +31,9 @@ jobs:
         with:
           fetch-depth: 1 # only one commit, therefore only detects updated plugins
 
+      - run: |
+          ls
+
       - name: Set the plugins matrix
         id: matrix
         run: |
