@@ -27,9 +27,7 @@ jobs:
       plugin: ${{ steps.matrix.outputs.plugin }}
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1 # only one commit, therefore only detects updated plugins
+      - uses: actions/checkout@v3 # only one commit, therefore only detects updated plugins
 
       - run: |
           ls
@@ -40,7 +38,7 @@ jobs:
           matrix=$((
             echo '{ "plugin" : ['
             separator=''
-            for f in *; do [[ -e $f ]] || continue; echo -n "$separator"\""$f"\"; separator=','; done
+            for d in *; do [[ -d $d ]] || continue; echo -n "$separator"\""$d"\"; separator=','; done
             echo "]}"
           ) | jq -c .)
           echo "::set-output name=plugin::$matrix"
