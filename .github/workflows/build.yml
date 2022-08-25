@@ -32,13 +32,19 @@ jobs:
       - run: |
           ls
 
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v20
+        with:
+          dir_names: "true"
+
       - name: Set the plugins matrix
         id: matrix
         run: |
           matrix=$((
             echo '{ "plugin" : ['
             separator=''
-            for d in *; do [[ -d $d ]] || continue; echo -n "$separator"\""$d"\"; separator=','; done
+            for d in ${{ steps.changed-files.all_changed_and_modified_files }}; do [[ -d $d ]] || continue; echo -n "$separator"\""$d"\"; separator=','; done
             echo "]}"
           ) | jq -c .)
           echo "::set-output name=plugin::$matrix"
@@ -60,10 +66,6 @@ jobs:
         uses: andstor/file-existence-action@v1
         with:
           files: "${{ matrix.plugin }}/task/Dockerfile"
-
-      #- name: Get changed files
-      #  id: changed-files
-      #  uses: tj-actions/changed-files@v20
 
       - name: Get image version
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}

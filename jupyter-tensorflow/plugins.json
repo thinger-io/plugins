@@ -29,6 +29,9 @@
             "description": "Jupyter Lab user data"
         }
     ],
+    "resources" : {
+        "memory" : 4294965097
+    },
     "copy" : {
       "config" : "config"
     }
