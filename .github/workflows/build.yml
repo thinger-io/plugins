@@ -28,7 +28,12 @@ jobs:
           matrix=$((
             echo '{ "plugin" : ['
             separator=''
-            for d in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do [[ -d $d ]] || continue; echo -n "$separator"\""$d"\"; separator=','; done
+            for d in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do
+              [[ -d $d ]]             || continue;
+              [[ $d == ".github"* ]]  || continue;
+              [[ $d == *"/"* ]]       || continue;
+              echo -n "$separator"\""$d"\"; separator=',';
+            done
             echo "]}"
           ) | jq -c .)
           echo "::set-output name=plugin::$matrix"
@@ -58,7 +63,7 @@ jobs:
       - name: Get image version
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
         run: |
-          echo "version=`awk '/^##/ {{print substr($2, 2, length($2)-2)}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
+          echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Extract branch name
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
