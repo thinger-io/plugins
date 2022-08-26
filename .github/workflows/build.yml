@@ -34,7 +34,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v20
+        uses: tj-actions/changed-files@v29.0.0
         with:
           dir_names: "true"
 
@@ -50,6 +50,7 @@ jobs:
           echo "::set-output name=plugin::$matrix"
 
   build:
+    if: ${{ needs.matrix.outputs.plugin != '{"plugin":[]}' }} # check if matrix is not empty
     runs-on: ubuntu-latest
     needs: matrix
     strategy:

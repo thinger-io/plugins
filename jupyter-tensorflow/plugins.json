@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-tensorflow",
-  "version" : "2.9.1-1",
+  "version" : "2.9.1-2",
   "description" : "Jupyter Notebook TensorFlow",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -30,7 +30,7 @@
         }
     ],
     "resources" : {
-        "memory" : 4294965097
+        "memory" : 4026531840
     },
     "copy" : {
       "config" : "config"

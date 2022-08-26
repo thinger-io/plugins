@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-r",
-  "version" : "4.1.3-1",
+  "version" : "4.1.3-2",
   "description" : "Jupyter Notebook R",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -30,7 +30,7 @@
         }
     ],
     "resources" : {
-      "memory" : 4294965097
+        "memory" : 4026531840
     },
     "copy" : {
       "config" : "config"
