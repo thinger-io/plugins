@@ -28,6 +28,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3 # only one commit, therefore only detects updated plugins
+        with:
+          fetch-depth: 2
 
       - run: |
           ls
