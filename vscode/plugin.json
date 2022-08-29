@@ -14,6 +14,16 @@
         "image" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-logo.png",
         "icon" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.svg"
     },
+    "tokens" : {
+      "vscode_plugin" : {
+        "name" : "Access from VSCode to Thinger.io OTA",
+        "allow" : {
+          "device" : {
+            "*": ["ListDevices","AccessDeviceResources","ReadDeviceStatistics"]
+          }
+        }
+      }
+    },
     "task" : {
         "type" : "docker",
         "image" : "bautisflow/vscode-plugin:4.6.0-1",
