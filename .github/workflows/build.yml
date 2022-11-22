@@ -57,7 +57,7 @@ jobs:
 
       - name: Get image version
         run: |
-          echo "version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"" >> $GITHUB_ENV
+          echo version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
           #echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Extract branch name
