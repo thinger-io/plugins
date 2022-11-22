@@ -118,7 +118,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ DOCKERHUB_USERNAME}}/${{ matrix.plugin }}-plugin
+          repository: ${{ secrets.DOCKERHUB_USERNAME}}/${{ matrix.plugin }}-plugin
           readme-filepath: ./${{ matrix.plugin }}/README.md
 
       - name: Tag repository
