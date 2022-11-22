@@ -112,9 +112,18 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.branch }}
             #${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
 
+      - name: Update README in DockerHub
+        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ DOCKERHUB_USERNAME}}/${{ matrix.plugin }}-plugin
+          readme-filepath: ./${{ matrix.plugin }}/README.md
+
       - name: Tag repository
         if: ${{ env.branch == 'main' }}
-        uses: mathieudutour/github-tag-action@v6
+        uses: mathieudutour/github-tag-action@v6.1
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
