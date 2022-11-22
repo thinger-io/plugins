@@ -127,5 +127,5 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ matrix.module }}/v${{ env.version }}
+          custom_tag: ${{ matrix.plugin }}/v${{ env.version }}
           tag_prefix: ''
