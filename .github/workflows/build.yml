@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
 
@@ -18,7 +18,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v29.0.1
+        uses: tj-actions/changed-files@v34
         with:
           dir_names: "true"
 
@@ -37,7 +37,7 @@ jobs:
             done
             echo "]}"
           ) | jq -c .)
-          echo "::set-output name=plugin::$matrix"
+          echo "plugin=$matrix" >> $GITHUB_OUTPUT
 
       - name: Check content of matrix
         run: echo ${{ steps.matrix.outputs.plugin }}
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: matrix
     strategy:
-      fail-fast: false
+      fail-fast: false # continues with matrix even if an element fails
       matrix: ${{fromJson(needs.matrix.outputs.plugin)}}
 
     steps:
@@ -55,21 +55,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if Dockerfile exists
-        id: check_dockerfile
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "${{ matrix.plugin }}/task/Dockerfile"
-
       - name: Get image version
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
         run: |
-          echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
+          echo "version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"" >> $GITHUB_ENV
+          #echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Extract branch name
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
-        id: extract_branch
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Check if Dockerfile exists
+        id: check_dockerfile
+        uses: andstor/file-existence-action@v2
+        with:
+          files: "${{ matrix.plugin }}/task/Dockerfile"
 
       - name: Set up QEMU
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
@@ -94,22 +92,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
+      - name: Build and push prod
+        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
         uses: docker/build-push-action@v3
-        #if: contains(steps.changed-files.outputs.modified_files, '${{ matrix.module}}.dockerfile')
         with:
           file: ./${{ matrix.plugin }}/task/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ steps.extract_branch.outputs.branch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.branch }}
 
-      #- name: Tag repository
-      #  uses: mathieudutour/github-tag-action@v6.0
-      #  continue-on-error: true
-      #  if: contains(steps.changed-files.outputs.modified_files, '${{ matrix.module}}.dockerfile')
-      #  with:
-      #    github_token: ${{ secrets.GITHUB_TOKEN }}
-      #    custom_tag: ${{ matrix.module }}_${{ env.version }}
-      #    tag_prefix: ''
+      - name: Build and push dev
+        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'develop' }}
+        uses: docker/build-push-action@v3
+        with:
+          file: ./${{ matrix.plugin }}/task/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.branch }}
+            #${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
+
+      - name: Tag repository
+        if: ${{ env.branch == 'main' }}
+        uses: mathieudutour/github-tag-action@v6
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ matrix.module }}/v${{ env.version }}
+          tag_prefix: ''
