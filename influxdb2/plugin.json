@@ -1,0 +1,48 @@
+{
+  "name" : "influxdb2",
+  "version" : "1.0.0",
+  "description" : "Plugin for InfluxBD2 access",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/influxdb2-plugin.git"
+  },
+  "metadata" : {
+    "name" : "InfluxDB2",
+    "description" : "InfluxDB2 Plugin",
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/influxdb2/influxdb.svg",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/influxdb2/influxdb.svg"
+  },
+  "resources" : {
+    "proxies" : [
+      {
+        "proxy" : "influxdb2_plugin",
+        "enabled" : true,
+        "name" : "InfluxDB2 Plugin Access",
+        "description" : "InfluxDB2 Proxy created by plugin",
+        "config" : {
+          "protocol" : "tcp",
+          "source": {
+            "port": 8087,
+            "secure": true
+          },
+          "target": {
+            "type": "address",
+            "address" : "localhost",
+            "port" : 8086,
+            "secure" : false
+          }
+        }
+
+      }
+    ]
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "port" : 8087
+      }
+    }
+  }
+}

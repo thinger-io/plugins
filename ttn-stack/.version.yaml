@@ -1,0 +1,10 @@
+---
+releases:
+  latest:
+    - 1.0.2
+  development:
+    - main
+    - develop
+  deprecated:
+    - 1.0.1
+    - 1.0.0

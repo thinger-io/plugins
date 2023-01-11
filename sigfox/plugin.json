@@ -1,0 +1,51 @@
+{
+  "name" : "sigfox",
+  "version" : "1.3.0",
+  "description" : "Plugin for handling Sigfox integration",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/sigfox-plugin.git"
+  },
+  "metadata" : {
+    "name" : "Sigfox",
+    "description" : "Sigfox Integration",
+    "image" : "https://user-images.githubusercontent.com/1141353/58866047-00616c80-86b8-11e9-9fe2-ef171c54ec8f.jpg",
+    "icon" : "https://user-images.githubusercontent.com/1141353/58574249-d7685400-823f-11e9-81bf-1fdaa18b9548.png"
+  },
+  "tokens" : {
+    "sigfox_plugin" : {
+      "name" : "Access from Sigfox plugin to thinger.io account",
+      "allow" : {
+        "Device" : {
+          "*" : ["CreateDevice", "SetDeviceProperty", "ReadDeviceProperty", "UpdateDeviceCallback", "CallDeviceCallback", "ReadDeviceCallbackResponse"]
+        },
+        "Bucket" : {
+          "*" : ["CreateBucket"]
+        },
+        "Plugin" : {
+          "sigfox" : "*"
+        }
+      }
+    },
+    "sigfox_plugin_callback" : {
+      "name" : "Access from Sigfox network to plugin callback",
+      "allow" : {
+        "Plugin" : {
+          "sigfox" : ["CallPluginEndpoint"]
+        }
+      }
+    }
+  },
+  "task" : {
+    "type" : "docker",
+    "image" : "thinger/sigfox-plugin",
+    "port" : 3000
+  },
+  "interface" : {
+    "main" : {
+      "file" : "gui/sigfox-settings.js"
+    }
+  }
+}
