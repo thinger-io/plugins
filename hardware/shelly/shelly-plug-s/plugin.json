@@ -1,0 +1,553 @@
+{
+  "name": "shelly-plug-s",
+  "version": "1.0.0",
+  "description": "Shelly Plug S",
+  "author": "Alvaro Luis Bustamante",
+  "license": "MIT",
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "path" : "hardware/shelly/shelly-plug-s"
+  },
+  "metadata": {
+    "name": "Shelly Plug S",
+    "description": "Shelly Plug S",
+    "image": "shelly-plug-s.jpg",
+    "icon": "shelly-plug-s.jpg"
+  },
+  "resources": {
+    "products": [{
+      "enabled": true,
+      "name": "Shelly Plug S",
+      "product": "shelly_plug_s",
+      "profile" : {
+        "buckets" : {
+          "shelly_plug_s_announce" : {
+            "data" : {
+              "payload" : "{{payload}}",
+              "source" : "topic",
+              "topic" : "shellies/announce"
+            },
+            "description" : "Power Description!",
+            "enabled" : true
+          },
+          "shelly_plug_s_power" : {
+            "data" : {
+              "payload" : "{{payload:processData}} ",
+              "source" : "topic",
+              "topic" : "shellies/{{testaabb}}/relay/{{relay}}/{{field=energy|power}}"
+            },
+            "description" : "description description description",
+            "enabled" : true
+          },
+          "shelly_plug_s_temperature" : {
+            "data" : {
+              "payload" : "{{payload}}",
+              "source" : "topic",
+              "topic" : "shellies/{{device}}/{{field=temperature|overtemperature}}"
+            },
+            "enabled" : true
+          }
+        },
+        "properties" : {
+          "power" : {
+            "data" : {
+              "payload" : "{{payload}}",
+              "source" : "topic",
+              "topic" : "shellies/{{device}}/relay/0/power"
+            },
+            "description" : "Power Description",
+            "enabled" : true,
+            "model" : {
+              "description" : "description",
+              "enabled" : true,
+              "source" : "value",
+              "value" : "0"
+            }
+          },
+          "relay" : {
+            "data" : {
+              "payload" : "{{payload:toBoolean}}",
+              "source" : "topic",
+              "topic" : "shellies/{{device}}/relay/0"
+            },
+            "description" : "Relay Status",
+            "enabled" : true,
+            "model" : {
+              "source" : "value"
+            }
+          }
+        },
+        "api" : {
+          "relay" : {
+            "description" : "On/Off Plug Switch",
+            "enabled" : true,
+            "request" : {
+              "data" : {
+                "payload" : "{{payload:toOnOff=property.relay}}",
+                "target" : "topic",
+                "topic" : "shellies/{{device}}/relay/0/command"
+              }
+            },
+            "response" : {
+              "data" : {}
+            }
+          }
+        },
+        "code" : {
+          "code" : "function toBoolean(value){\n    return value == \"on\" ? true : false; \n}\n\nfunction toOnOff(value){\n    return value ? \"on\" : \"off\";\n}\n\nfunction processData(value){\n    // sometimes energy is not provided if device is off\n    if(!value.energy) value.energy=0;\n    // convert energy from watt-min to kwH\n    value.energy = value.energy/60/1000;\n    return value;\n}\n",
+          "environment" : "javascript",
+          "version" : "1.0"
+        }
+      },			"$resources": {
+        "properties": [{
+          "property": "dashboard",
+          "value": {
+            "name": "Shelly Plug S",
+            "properties": {
+              "background_image": "https://www.teahub.io/photos/full/63-630352_unique-background-design-awesome-background-house-images-hd.jpg",
+              "border_radius": "4px",
+              "columns": 12,
+              "row_height": 40,
+              "show_template": true,
+              "template": true
+            },
+            "tabs": [{
+              "icon": "fas fa-tachometer-alt",
+              "name": "tettt",
+              "widgets": [{
+                "layout": {
+                  "col": 0,
+                  "row": 0,
+                  "sizeX": 2,
+                  "sizeY": 3
+                },
+                "panel": {
+                  "color": "#ffffffcc",
+                  "title": "Power Switch"
+                },
+                "properties": {
+                  "icon": "fa-power-off",
+                  "iconColor": "#ffffff",
+                  "iconSize": 35,
+                  "offColor": "#cc0000",
+                  "onColor": "#00bb00",
+                  "style": "switch"
+                },
+                "sources": [{
+                  "device": {
+                    "id": "shellyplug-s-C18B12",
+                    "resource": "relay",
+                    "user": "alvarolb"
+                  },
+                  "source": "device"
+                }],
+                "type": "boolean"
+              },
+                {
+                  "layout": {
+                    "col": 7,
+                    "row": 21,
+                    "sizeX": 2,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "title": "Local IP Address"
+                  },
+                  "properties": {
+                    "decimal_places": 2,
+                    "icon": "",
+                    "size": "25px",
+                    "unit_size": "20px",
+                    "weight": "font-thin"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_announce",
+                      "mapping": "ip",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "ip",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "text"
+                },
+                {
+                  "layout": {
+                    "col": 0,
+                    "row": 21,
+                    "sizeX": 5,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "title": "Firmware Version"
+                  },
+                  "properties": {
+                    "decimal_places": 2,
+                    "icon": "",
+                    "size": "25px",
+                    "unit_size": "20px",
+                    "weight": "font-thin"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_announce",
+                      "mapping": "fw_ver",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "fw_ver",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "text"
+                },
+                {
+                  "layout": {
+                    "col": 5,
+                    "row": 21,
+                    "sizeX": 2,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "showTs": true,
+                    "title": "Firmware Update"
+                  },
+                  "properties": {
+                    "colors": [{
+                      "blink": false,
+                      "color": "#eb0000",
+                      "max": 0,
+                      "min": 0
+                    },
+                      {
+                        "blink": true,
+                        "color": "#00ff00",
+                        "max": 1,
+                        "min": 1
+                      }
+                    ],
+                    "size": "45px"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_announce",
+                      "mapping": "new_fw",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "new_fw",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "led"
+                },
+                {
+                  "layout": {
+                    "col": 10,
+                    "row": 0,
+                    "sizeX": 2,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "title": "Overtemperature"
+                  },
+                  "properties": {
+                    "colors": [{
+                      "blink": false,
+                      "color": "#00ff00",
+                      "max": 0,
+                      "min": 0
+                    },
+                      {
+                        "blink": true,
+                        "color": "#fa0000",
+                        "max": 1,
+                        "min": 1
+                      }
+                    ],
+                    "decimal_places": 2,
+                    "icon": "fa-solid fa-temperature-arrow-up",
+                    "size": "48px",
+                    "unit": "ºC",
+                    "unit_size": "20px",
+                    "weight": "font-bold"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_temperature",
+                      "mapping": "overtemperature",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "overtemperature",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "led"
+                },
+                {
+                  "layout": {
+                    "col": 2,
+                    "row": 0,
+                    "sizeX": 3,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "showTs": true,
+                    "title": "Power Consumption"
+                  },
+                  "properties": {
+                    "color": "#1E313E",
+                    "decimal_places": 2,
+                    "icon": "fa-solid fa-bolt",
+                    "size": "35px",
+                    "unit": "W",
+                    "unit_size": "20px",
+                    "weight": "font-bold"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_power",
+                      "mapping": "power",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "power",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "text"
+                },
+                {
+                  "layout": {
+                    "col": 5,
+                    "row": 0,
+                    "sizeX": 3,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "showTs": true,
+                    "title": "Total Consumption"
+                  },
+                  "properties": {
+                    "color": "#1E313E",
+                    "decimal_places": 2,
+                    "icon": "fas fa-tachometer-alt-average",
+                    "size": "35px",
+                    "unit": "kWh",
+                    "unit_size": "20px",
+                    "weight": "font-bold"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_power",
+                      "mapping": "energy",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "energy",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "text"
+                },
+                {
+                  "layout": {
+                    "col": 8,
+                    "row": 0,
+                    "sizeX": 2,
+                    "sizeY": 3
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "showTs": true,
+                    "title": "Temperature"
+                  },
+                  "properties": {
+                    "decimal_places": 2,
+                    "icon": "fa-solid fa-heat",
+                    "size": "35px",
+                    "unit": "ºC",
+                    "unit_size": "20px",
+                    "weight": "font-bold"
+                  },
+                  "sources": [{
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_temperature",
+                      "mapping": "temperature",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "name": "temperature",
+                    "source": "bucket",
+                    "timespan": {
+                      "mode": "latest"
+                    }
+                  }],
+                  "type": "text"
+                },
+                {
+                  "layout": {
+                    "col": 0,
+                    "row": 12,
+                    "sizeX": 12,
+                    "sizeY": 9
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "title": "Power Consumption"
+                  },
+                  "properties": {
+                    "axis": true,
+                    "fill": false,
+                    "legend": false,
+                    "multiple_axes": false,
+                    "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar'\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            endingShape: 'rounded'\n        },\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        show: true,\n        width: 2,\n        colors: ['transparent']\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    fill: {\n        opacity: 1\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};",
+                    "transformation": "difference"
+                  },
+                  "sources": [{
+                    "aggregation": {
+                      "period": "1d",
+                      "type": "max"
+                    },
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_power",
+                      "mapping": "energy",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "color": "#1E313E",
+                    "name": "energy",
+                    "source": "bucket",
+                    "timespan": {
+                      "magnitude": "month",
+                      "mode": "relative",
+                      "period": "latest",
+                      "value": 1
+                    }
+                  }],
+                  "type": "apex_charts"
+                },
+                {
+                  "layout": {
+                    "col": 0,
+                    "row": 3,
+                    "sizeX": 12,
+                    "sizeY": 9
+                  },
+                  "panel": {
+                    "color": "#ffffffcc",
+                    "title": "Power Consumption"
+                  },
+                  "properties": {
+                    "axis": true,
+                    "fill": false,
+                    "legend": false,
+                    "multiple_axes": false
+                  },
+                  "sources": [{
+                    "aggregation": {
+                      "period": "1d",
+                      "type": "mean"
+                    },
+                    "bucket": {
+                      "backend": "influxdb",
+                      "id": "shelly_plug_s_power",
+                      "mapping": "power",
+                      "tags": {
+                        "device": [
+                          "shellyplug-s-C18B12"
+                        ],
+                        "group": []
+                      },
+                      "user": "alvarolb"
+                    },
+                    "color": "#ff0000",
+                    "name": "power",
+                    "source": "bucket",
+                    "timespan": {
+                      "magnitude": "month",
+                      "mode": "relative",
+                      "period": "latest",
+                      "value": 1
+                    }
+                  }],
+                  "type": "chart"
+                }
+              ]
+            }]
+          }
+        }]
+      }
+    }]
+  }
+}
