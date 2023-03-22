@@ -6,8 +6,7 @@
   "license": "MIT",
   "repository": {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git",
-    "path" : "shelly-plug-s"
+    "url" : "https://github.com/thinger-io/plugins.git"
   },
   "metadata": {
     "name": "Shelly Plug S",
