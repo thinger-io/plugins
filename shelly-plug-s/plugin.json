@@ -7,7 +7,7 @@
   "repository": {
     "type" : "git",
     "url" : "https://github.com/thinger-io/plugins.git",
-    "path" : "hardware/shelly/shelly-plug-s"
+    "path" : "shelly-plug-s"
   },
   "metadata": {
     "name": "Shelly Plug S",
