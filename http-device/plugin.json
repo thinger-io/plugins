@@ -1,6 +1,6 @@
 {
   "name" : "http-device",
-  "version" : "1.0.0",
+  "version" : "1.0.2",
   "description" : "Plugin for handling generic HTTP devices.",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",

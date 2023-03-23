@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-minimal",
-  "version" : "3.10.5-1",
+  "version" : "3.10.9-1",
   "description" : "Jupyter Notebook Minimal",
   "author" : "Álvaro Luis Bustamante",
   "license" : "MIT",
@@ -16,7 +16,7 @@
   },
   "task": {
     "type": "docker",
-    "image": "jupyter/minimal-notebook:python-3.10.5",
+    "image": "jupyter/minimal-notebook:python-3.10.9",
     "volumes": [
         {
             "source": "../../../storages/",

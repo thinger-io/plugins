@@ -1,8 +1,0 @@
-bind-addr: 127.0.0.1:8080
-auth: none
-cert: false
-
-thinger-io.host: thinger
-thinger-io.port: 443
-thinger-io.secure: false
-thinger-io.token: ${THINGER_TOKEN_VSCODE_PLUGIN}

@@ -1,0 +1,43 @@
+<div class="modal-header">
+    <h3 class="modal-title">Editor</h3>
+</div>
+<div class="modal-body">
+    <form id="add_property" role="form" class="form-validation" ng-submit="save()">
+        <fieldset ng-disabled="api.state==api.status.RUNNING">
+            <div class="form-group">
+                <label><strong>Property Identifier</strong> <i class="fa fa-info-circle text-muted" uib-popover="Set a unique property identifier with the pattern: [a-zA-Z0-9_]{1,25}" popover-trigger="'mouseenter'"></i></label>
+                <input type="text" ng-pattern="'[a-zA-Z0-9_]{1,25}'" placeholder="identifier" class="form-control" ng-model="property" ng-disabled="currentItem" required>
+            </div>
+            <div class="form-group">
+                <label><strong>Property Value</strong> <i class="fa fa-info-circle text-muted" uib-popover="Set any JSON value, like a number, boolean, a literal string, an object, or array." popover-trigger="'mouseenter'"></i></label>
+                <a href ng-click="fullScreen()"><i class="fas fa-expand m-l-xs m-r-xs" title="Full Screen"></i></a>
+                <div>
+                    <div id="property-editor" ui-ace="{
+                          mode: 'json'
+                        }" style="height: 300px; border: 1px solid lightgray;" ng-model="value"></div>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+</div>
+<div class="tw-border-t tw-p-6">
+  <alert-banner
+    ng-if="api.state===api.status.ERROR"
+    class="tw-pb-6"
+    type="error"
+    code="{{api.code}}">
+    message="{{api.message}}"
+  </alert-banner>
+
+  <div class="tw-flex tw-flex-row tw-justify-end tw-space-x-4">
+    <button class="btn btn-default btn-addon" ng-click="currentItem ? close() : cancel()" ng-disabled="api.state===api.status.RUNNING">
+      <i class="far fa-times"></i>Close
+    </button>
+    <button class="btn btn-primary btn-addon" type="submit" form="add_property"
+            th-action="{{resourceType + ':' + resourceAction + resourceType + 'Property'}}"
+            th-resource="{{resourceId}}"
+            ng-disabled="!editable || fetch_error ||  api.state==api.status.RUNNING"><i><span
+      ng-class="{'far fa-check': api.state!=api.status.RUNNING, 'far fa-spinner fa-pulse' : api.state==api.status.RUNNING}"></span></i>Save
+    </button>
+  </div>
+</div>

@@ -1,6 +1,6 @@
 {
   "name" : "grafana",
-  "version" : "8.5.4",
+  "version" : "8.5.4-1",
   "description" : "Plugin for running Grafana inside Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",

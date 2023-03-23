@@ -1,0 +1,145 @@
+<div class="modal-header">
+    <h3 class="modal-title">Metric Resource</h3>
+</div>
+<div class="modal-body">
+    <form id="add_metric" name="form" role="form" class="form-validation" ng-submit="form.$valid ? save() : showError('Fix inputs shown in red before saving')">
+        <!-- fieldset ng-disabled="api.state==api.status.RUNNING" -->
+        <fieldset>
+
+            <!-- div class="form-group">
+                <label><strong>Resource Identifier</strong> <i class="fa fa-info-circle text-muted" uib-popover="Set a unique resource identifier for the metric, i.e., devices, cpu_load, etc." popover-trigger="'mouseenter'"></i></label>
+                <input type="text" placeholder="identifier" class="form-control" ng-model="property" ng-disabled="edit" required>
+            </div -->
+            <div class="form-group">
+                <label><strong>Metric Name</strong> <i class="fa fa-info-circle text-muted" uib-popover="Unique metric name with the pattern: [a-zA-Z:][a-zA-Z0-9_:]{1,32}" popover-trigger="'mouseenter'"></i></label>
+                <input type="text" placeholder="Name" maxlength="255" class="form-control" ng-pattern="'[a-zA-Z:][a-zA-Z0-9_:]{1,32}'" ng-model="modifiedValue.name" required>
+            </div>
+
+            <div class="form-group">
+                <label><strong>Resource Configuration</strong> <i class="fa fa-info-circle text-muted" uib-popover="Each API resource can define a request, a response, or both." popover-trigger="'mouseenter'"></i></label>
+                <uib-tabset class="tab-container">
+                  <uib-tab heading="Settings">
+                        <div class="form-group">
+                            <label><strong>Help String</strong> <i class="fa fa-info-circle text-muted" uib-popover="Insert a description of the property." popover-trigger="'mouseenter'"></i></label>
+                            <input type="text" placeholder="Description" maxlength="255" class="form-control" ng-model="modifiedValue.help" required>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Labels</strong> <i class="fa fa-info-circle text-muted" uib-popover="Indicate the label names for the metric." popover-trigger="'mouseenter'"></i></label>
+                            <!-- input type="text" placeholder="Description" maxlength="255" class="form-control" ng-model="modifiedValue.labelNames" -->
+                            <ui-select class="form-control w-full" multiple tagging tagging-label="" ng-model="modifiedValue.labelNames" theme="bootstrap" ng-disabled="editing">
+                              <ui-select-match placeholder="{{::editing? 'No labels...' : 'Type labels...'}}">{{$item}}</ui-select-match>
+                              <ui-select-choices repeat="label in modifiedValue.labelNames | filter:$select.search">{{label}}</ui-select-choices>
+                            </ui-select>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Enabled</strong> <i class="fa fa-info-circle text-muted" uib-popover="Enable or disable the metric retrieval from its configured source." popover-trigger="'mouseenter'"></i></label>
+                            <div>
+                                <label class="i-switch bg-success m-t-xs">
+                                    <input type="checkbox" ng-model="modifiedValue.enabled" ng-init="modifiedValue.enabled = modifiedValue.enabled===undefined ? true : modifiedValue.enabled">
+                                    <i></i>
+                                </label>
+                            </div>
+                        </div>
+                  </uib-tab>
+                  <!-- uib-tab heading="Script" ng-init="modifiedValue.script='value'" -->
+                  <uib-tab heading="Script">
+                      <div class="form-group">
+                          <label><strong>Type</strong> <i class="fa fa-info-circle text-muted" uib-popover="Select the type for the metric." popover-trigger="'mouseenter'"></i></label>
+                          <select class="form-control" name="type" ng-init="modifiedValue.type = modifiedValue.type || 'gauge'" ng-model="modifiedValue.type">
+                            <option value="counter" disabled>Counter</option>
+                            <option value="gauge" selected>Gauge</option>
+                            <option value="summary" disabled>Summary</option>
+                            <option value="histogram" disabled>Histogram</option>
+                          </select>
+                      </div>
+                      <div class="form-group">
+                          <label><strong>Backend</strong> <i class="fa fa-info-circle text-muted" uib-popover="Select the backend to query through the script." popover-trigger="'mouseenter'"></i></label>
+                          <select class="form-control" name="type" ng-init="modifiedValue.backend = modifiedValue.backend || 'thinger'" ng-model="modifiedValue.backend">
+                            <option value="thinger" selected>Thinger.io Database</option>
+                            <option value="buckets" disabled>Data Buckets</option>
+                            <option value="api">API</option>
+                          </select>
+                      </div>
+                      <!-- profile-source-configurator model="modifiedValue.gauge" type="type" allowed="['gauge']" stream-support="false"></profile-source-configurator>
+                      <profile-source-configurator model="modifiedValue.backend" type="backend" allowed="['database', 'api']" stream-support="false"></profile-source-configurator -->
+                      <div class="form-group">
+                          <label><strong>Source</strong> <i class="fa fa-info-circle text-muted" uib-popover="Set the script used to query the desired values." popover-trigger="'mouseenter'"></i></label>
+                          <div>
+                              <div id="property-editor" ui-ace="{
+                                mode: 'javascript'
+                                }" style="height: 200px; border: 1px solid lightgray;" ng-model="modifiedValue.script">
+                              </div>
+                          </div>
+                      </div>
+                  </uib-tab>
+                  <uib-tab heading="Test">
+                    <div class="form-group">
+                      <div class="m-b-xs"><strong>Payload</strong></div>
+                      <div ui-ace="{
+                        mode: 'text',
+                        useWrapMode : true,
+                        showGutter: false,
+                        }" readonly=true style="height: 200px; border: 1px solid lightgray;" ng-model="callbackResponse"></div>
+                      </div>
+                      <div class="row wrapper-xs">
+                        <div class="col-sm-8 col-md-10">
+                          <button type="button" class="btn btn-info btn-addon" ng-click="test_metric(modifiedValue)" ng-disabled="fetch_error || call_state==1"><i><span ng-class="{'fas fa-terminal': call_state!=1, 'fa fa-spinner fa-pulse' : call_state==1}"></span></i>Test metric {{modifiedValue.name}}</button>
+                        </div>
+                      </div>
+                    </div>
+                  </uib-tab>
+                </uib-tabset>
+                <!-- uib-tabset class="tab-container">
+                    <uib-tab heading="Request">
+                        <profile-source-configurator model="modifiedValue.request.data" type="target"  stream-support="false"></profile-source-configurator>
+                    </uib-tab>
+                    <uib-tab heading="Response">
+                        <profile-source-configurator model="modifiedValue.response.data" type="source" allowed="['resource', 'property', 'topic', 'request_response']" stream-support="false"></profile-source-configurator>
+                    </uib-tab>
+                    <uib-tab heading="Settings">
+                        <div class="form-group">
+                            <label><strong>Metric Description</strong> <i class="fa fa-info-circle text-muted" uib-popover="Optional API description." popover-trigger="'mouseenter'"></i></label>
+                            <input type="text" placeholder="Description" maxlength="255" class="form-control" ng-model="modifiedValue.description">
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Enabled</strong> <i class="fa fa-info-circle text-muted" uib-popover="Enable or disable the API function." popover-trigger="'mouseenter'"></i></label>
+                            <div>
+                                <label class="i-switch bg-success m-t-xs">
+                                    <input type="checkbox" ng-model="modifiedValue.enabled" ng-init="modifiedValue.enabled = modifiedValue.enabled===undefined ? true : modifiedValue.enabled">
+                                    <i></i>
+                                </label>
+                            </div>
+                        </div>
+                    </uib-tab>
+                </uib-tabset -->
+            </div>
+
+        </fieldset>
+    </form>
+</div>
+<div class="tw-border-t tw-p-6">
+  <!-- alert-banner
+    ng-if="api.state===api.status.ERROR"
+    class="tw-pb-6"
+    type="error"
+    code="{{api.code}}">
+    message="{{api.message}}"
+  </alert-banner -->
+
+  <div class="tw-flex tw-flex-row tw-justify-end tw-space-x-4">
+    <!-- button class="btn btn-default btn-addon" ng-click="modifiedValue ? close() : cancel()" ng-disabled="api.state===api.status.RUNNING" -->
+    <button class="btn btn-default btn-addon" ng-click="modifiedValue ? close() : cancel()">
+      <i class="far fa-times"></i>Close
+    </button>
+    <!-- button class="btn btn-primary btn-addon" type="submit" form="add_property"
+            th-action="{{resourceType + ':' + resourceAction + resourceType + 'Property'}}"
+            th-resource="{{resourceId}}"
+            ng-disabled="!editable || fetch_error ||  api.state==api.status.RUNNING"><i><span
+      ng-class="{'far fa-check': api.state!=api.status.RUNNING, 'far fa-spinner fa-pulse' : api.state==api.status.RUNNING}"></span></i>Save
+    </button -->
+    <button class="btn btn-primary btn-addon" type="submit" form="add_metric">
+      <i><span ng-class="'far fa-check'"></span></i>Save
+    </button>
+  </div>
+  <pre class="alert alert-danger m-t m-b-none" ng-show="error === true"><strong><i class="fas fa-thumbs-down"></i> Ooops!</strong> ({{error_message}})</pre>
+</div>

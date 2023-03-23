@@ -75,7 +75,16 @@ function getDeviceType(deviceType){
 }
 
 function getSettings(deviceType){
-    return settings[deviceType] || settings['Default'];
+    if(deviceType && deviceType!==''){
+        if(settings.hasOwnProperty(deviceType)){
+            return settings[deviceType];
+        }else{
+            console.error('requested device type is not available');
+        }
+    }else{
+        return settings['Default'];
+    }
+    return undefined;
 }
 
 function getDeviceId(deviceId, settings){
@@ -406,39 +415,31 @@ app.put('/settings', function (req, res) {
     return result===true ? res.sendStatus(200) : res.status(400).send({error:{message: result.message}});
 });
 
-app.listen(3000, function () {
-    console.log('TTN Stack Plugin is now running with the following configuration:');
-    console.log("HOST=" + HOST);
-    console.log("HTTT_PORT=" + HTTP_PORT);
-    console.log("HTTP_SSL_PORT=" + HTTP_SSL_PORT);
-    console.log("TOKEN=" + TOKEN);
-    console.log("USER=" + USER);
-    console.log("PLUGIN=" + PLUGIN);
-    console.log("VERSION=" + VERSION);
-    console.log("DEVELOPMENT=" + DEVELOPMENT);
+function launchServer() {
 
-    thinger.getPluginProperty('settings').then(function (response) {
-        settings = response.data.value;
-        console.log("read existing settings:",JSON.stringify(settings));
-        compileCallbacks();
-    }).catch(function (error) {
-        console.error("plugin settings not available");
-        settings = {
-            'Default' : {
-                auto_provision_resources : true
-            }
-        };
-    });
+    function startServer() {
 
-    let connectWs = function(){
-        
+      app.listen(3000, function () {
+        console.log('TTN Stack Plugin is now running with the following configuration:');
+        console.log("HOST=" + HOST);
+        console.log("HTTT_PORT=" + HTTP_PORT);
+        console.log("HTTP_SSL_PORT=" + HTTP_SSL_PORT);
+        console.log("TOKEN=" + TOKEN);
+        console.log("USER=" + USER);
+        console.log("PLUGIN=" + PLUGIN);
+        console.log("VERSION=" + VERSION);
+        console.log("DEVELOPMENT=" + DEVELOPMENT);
+      });
+
+      let connectWs = function(){
+
         console.log("connecting websocket for events...");
         let url = `ws://${HOST}:${HTTP_PORT}/v1/users/${USER}/events?authorization=${TOKEN}`;
 
         const ws = new WebSocket(url, {
             perMessageDeflate: false
         });
-    
+
         ws.on('open', function open() {
             console.log("subscribing for ttn downlink events...");
             // subscribe to events 
@@ -447,14 +448,14 @@ app.listen(3000, function () {
                 property: 'device_downlink'
             }));
         });
-        
+
         ws.on('message', function incoming(data) {
             console.log("got ttn downlink property update:", data);
             let downlink = JSON.parse(data);
             handleDeviceDownlink(downlink.device, downlink.value).then(result => {
 
             }).catch(error => {
-               
+
             });
         });
 
@@ -466,8 +467,42 @@ app.listen(3000, function () {
             console.log('websocket closed... reconnecting...');
             setTimeout(connectWs, 5*1000);
         });
-    }
+      }
 
-    connectWs();
-    
-});
+      connectWs();
+
+    };
+
+    thinger.getPluginProperty('settings').then(function (response) {
+
+        settings = response.data.value;
+        console.log("read existing settings:",JSON.stringify(settings));
+        compileCallbacks();
+
+        startServer();
+
+    }).catch(function (error) {
+
+        if ( error.response && error.response.status === 404 ) {
+
+            console.error("plugin settings not found");
+            settings = {
+              'Default' : {
+                auto_provision_resources : false,
+                device_downlink_data : '""'
+              }
+            };
+
+            startServer();
+        } else {
+            // Active wait until server is ready
+            console.error('server not available, checking again in 15 seconds...');
+            setTimeout( launchServer, 15000 );
+        }
+
+    });
+
+}
+
+launchServer();
+

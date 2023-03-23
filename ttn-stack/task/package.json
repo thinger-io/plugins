@@ -1,6 +1,6 @@
 {
   "name": "ttn-stack",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Plugin for handling TTN (v3) integration.",
   "author": "Alvaro Luis Bustamante",
   "license": "MIT",
