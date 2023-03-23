@@ -18,7 +18,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v34
+        uses: tj-actions/changed-files@v3
         with:
           dir_names: "true"
 
@@ -31,6 +31,7 @@ jobs:
             separator=''
             for d in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do
               [[ -d $d ]]             || continue;
+              [[ $d != "." ]]         || continue;
               [[ $d != ".github"* ]]  || continue;
               [[ $d != *"/"* ]]       || continue;
               echo -n "$separator"\""$d"\"; separator=',';
@@ -96,21 +97,21 @@ jobs:
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
         uses: docker/build-push-action@v3
         with:
-          file: ./${{ matrix.plugin }}/task/Dockerfile
+          context: ${{ matrix.plugin }}/task
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.branch }}
+            thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
+            thinger/${{ matrix.plugin }}-plugin:${{ env.branch }}
 
       - name: Build and push dev
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'develop' }}
         uses: docker/build-push-action@v3
         with:
-          file: ./${{ matrix.plugin }}/task/Dockerfile
+          context: ${{ matrix.plugin }}/task
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.branch }}
-            #${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.plugin }}-plugin:${{ env.version }}
+            thinger/${{ matrix.plugin }}-plugin:${{ env.branch }}
+            thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
@@ -118,7 +119,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME}}/${{ matrix.plugin }}-plugin
+          repository: thinger/${{ matrix.plugin }}-plugin
           readme-filepath: ./${{ matrix.plugin }}/README.md
 
       - name: Tag repository
