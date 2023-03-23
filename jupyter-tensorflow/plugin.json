@@ -1,7 +1,7 @@
 {
   "name" : "jupyter-tensorflow",
-  "version" : "2.11.0-1",
-  "description" : "Jupyter Notebook TensorFlow",
+  "version" : "2.11.0-2",
+  "description" : "Jupyter Tensorflow Plugin for Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {

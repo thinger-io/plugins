@@ -1,7 +1,7 @@
 {
   "name" : "jupyter-r",
-  "version" : "4.2.3-1",
-  "description" : "Jupyter Notebook R",
+  "version" : "4.2.3-2",
+  "description" : "Jupyter R Plugin for Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {

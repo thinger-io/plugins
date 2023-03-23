@@ -1,7 +1,7 @@
 {
   "name" : "jupyter-minimal",
-  "version" : "3.10.9-1",
-  "description" : "Jupyter Notebook Minimal",
+  "version" : "3.10.9-2",
+  "description" : "Jupyter Minimal Plugin for Thinger.io",
   "author" : "Álvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {
@@ -9,7 +9,7 @@
     "url" : "https://github.com/thinger-io/plugins.git"
   },
   "metadata" : {
-    "name" : "Jupyter Plugin for Thinger.io",
+    "name" : "Jupyter Minimal",
     "description" : "Jupyter Notebook Minimal",
     "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_image.svg",
     "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_icon.svg"
