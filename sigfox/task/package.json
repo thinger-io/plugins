@@ -6,8 +6,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/thinger-io/sigfox-plugin.git",
-    "directory": "task"
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sigfox/task"
   },
   "main": "main.js",
   "config": {

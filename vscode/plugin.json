@@ -6,7 +6,8 @@
     "license" : "MIT",
     "repository" : {
         "type" : "git",
-        "url" : "https://github.com/thinger-io/vscode-plugin.git"
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory" : "vscode"
     },
     "metadata" : {
         "name" : "VS Code",

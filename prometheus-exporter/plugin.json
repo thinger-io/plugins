@@ -6,7 +6,8 @@
   "license" : "MIT",
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git"
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory" : "prometheus-exporter"
   },
   "metadata" : {
     "name" : "Prometheus Exporter",
@@ -38,7 +39,7 @@
   "databases" : {
     "mongodb" : {
     }
-  }, 
+  },
   "task" : {
     "type" : "docker",
     "image" : "thinger/prometheus-exporter-plugin",
