@@ -1,6 +1,6 @@
 {
     "name" : "vscode",
-    "version" : "4.6.0-4",
+    "version" : "4.11.0-1",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
@@ -26,8 +26,7 @@
     },
     "task" : {
         "type" : "docker",
-        "image" : "bautisflow/vscode-plugin:4.6.0-1",
-        "user" : "0:0",
+        "image" : "linuxserver/code-server:4.11.0",
         "volumes" : [
             {
                 "source" : "config",
