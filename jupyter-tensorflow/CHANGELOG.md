@@ -1,11 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## 2.9.1-2 - 2022-08-26
+## 2.11.0-2 - 2023-03-23
 ### Changed
-- Downsized memory constraint to 3.75GB
+- Improved description in plugin.json
 
-
-## 2.9.1-1 - 2022-08-23
+## 2.11.0-1 - 2023-03-23
 ### Added
 - First publication of plugin

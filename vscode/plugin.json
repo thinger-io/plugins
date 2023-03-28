@@ -1,12 +1,13 @@
 {
     "name" : "vscode",
-    "version" : "4.11.0-1",
+    "version" : "4.6.0-1",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
     "repository" : {
         "type" : "git",
-        "url" : "https://github.com/thinger-io/plugins.git"
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory" : "vscode"
     },
     "metadata" : {
         "name" : "VS Code",
@@ -14,29 +15,20 @@
         "image" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-logo.png",
         "icon" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.svg"
     },
-    "tokens" : {
-      "vscode_plugin" : {
-        "name" : "Access from VSCode to Thinger.io OTA",
-        "allow" : {
-          "device" : {
-            "*": ["ListDevices","AccessDeviceResources","ReadDeviceStatistics"]
-          }
-        }
-      }
-    },
     "task" : {
         "type" : "docker",
-        "image" : "linuxserver/code-server:4.11.0",
+        "image" : "linuxserver/code-server:4.6.0",
+        "user" : "0:0",
         "volumes" : [
             {
-                "source" : "config",
-                "target" : "/home/coder/.config/code-server/",
+                "source" : "data",
+                "target" : "/config",
                 "description": "Mount point for user data configuration and workspaces."
             },
             {
-                "source" : "../../../storages",
-                "target" : "/config/workspace",
-                "description": "Mount point for accessing user storages"
+            "source" : "../../../storages",
+            "target" : "/config/workspace",
+            "description": "Mount point for accessing user storages"
             },
             {
                 "source" : "/var/run/docker.sock",
@@ -47,16 +39,21 @@
         "resources" : {
             "memory" : 4026531840
         },
-        "copy" : {
-            "config" : "config"
+        "env" : {
+            "PROXY_DOMAIN":"{{hostname}}",
+            "DOCKER_MODS": "linuxserver/mods:code-server-docker|linuxserver/mods:code-server-python3",
+            "PIAUSER" : "{{username}}",
+            "PUID": "1000",
+            "PGID": "1000",
+            "SUDO_PASSWORD" : "thinger.io"
         }
     },
     "interface" : {
         "main" : {
-            "proxy_to" : {
-                "plugin" : "vscode",
-                "port" : 8080
-            }
+        "proxy_to" : {
+            "plugin" : "vscode",
+            "port" : 8443
+        }
         }
     }
 }

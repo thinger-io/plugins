@@ -1,12 +1,13 @@
 {
   "name" : "ttn-stack",
-  "version" : "1.0.2",
+  "version" : "1.0.4",
   "description" : "Plugin for handling The Things Stack integration",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git"
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory" : "ttn-stack"
   },
   "metadata" : {
     "name" : "The Things Stack",

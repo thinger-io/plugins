@@ -328,25 +328,48 @@ app.put('/settings', function (req, res) {
     return result===true ? res.sendStatus(200) : res.status(400).send({error:{message: result.message}});
 });
 
-app.listen(3000, function () {
-    console.log('Sigfox Plugin is now running with the following configuration:');
-    console.log("HOST=" + HOST);
-    console.log("TOKEN=" + TOKEN);
-    console.log("USER=" + USER);
-    console.log("PLUGIN=" + PLUGIN);
-    console.log("VERSION=" + VERSION);
+function launchServer() {
 
-    getPluginProperty('settings').then(function (response) {
-        settings = response.data.value;
-        console.log("read existing settings:");
-        console.log(JSON.stringify(settings));
-        compileCallbacks();
-    }).catch(function (error) {
-        console.error("plugin settings not available");
-        settings = {
-            'Default' : {
-                auto_provision_resources : true
-            }
-        };
+  function startServer() {
+    app.listen(3000, function () {
+        console.log('Sigfox Plugin is now running with the following configuration:');
+        console.log("HOST=" + HOST);
+        console.log("TOKEN=" + TOKEN);
+        console.log("USER=" + USER);
+        console.log("PLUGIN=" + PLUGIN);
+        console.log("VERSION=" + VERSION);
+
+      compileCallbacks();
     });
-});
+  };
+
+  getPluginProperty('settings').then(function (response) {
+    settings = response.data.value;
+    console.log("read existing settings:");
+    console.log(JSON.stringify(settings));
+
+    startServer();
+
+  }).catch(function (error) {
+
+    if ( error.response && error.response.status === 404 ) {
+      console.error("plugin settings not found");
+      settings = {
+        'Default' : {
+            auto_provision_resources : false,
+            device_downlink_data : '""'
+        }
+      };
+
+      startServer();
+    } else {
+      // Active wait until server is ready
+      console.error('server not available, checking again in 15 seconds...');
+      setTimeout( launchServer, 15000 );
+    }
+
+  });
+}
+
+launchServer();
+

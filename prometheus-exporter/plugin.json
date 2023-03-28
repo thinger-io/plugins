@@ -1,0 +1,54 @@
+{
+  "name" : "prometheus-exporter",
+  "version" : "1.0.0",
+  "description" : "Plugin for querying the status of Thinger resources and exporting them in a Prometheus format",
+  "author" : "Alvaro Luis Bustamante",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory" : "prometheus-exporter"
+  },
+  "metadata" : {
+    "name" : "Prometheus Exporter",
+    "description" : "Export Thinger's resource status in a Prometheus format",
+    "image" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg",
+    "icon" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg"
+  },
+  "tokens" : {
+    "prometheus_exporter_plugin" : {
+      "name" : "Access from the Prometheus Exporter plugin to thinger.io account",
+      "allow" : {
+        "*" : {
+          "*" : ["Read*", "List*"]
+        },
+        "Plugin" : {
+          "prometheus-exporter" : "*"
+        }
+      }
+    },
+    "prometheus_exporter_plugin_callback" : {
+      "name" : "Access from anywhere to metrics endpoints",
+      "allow" : {
+        "Plugin" : {
+          "prometheus-exporter": ["CallPluginEndpoint"]
+        }
+      }
+    }
+  },
+  "databases" : {
+    "mongodb" : {
+    }
+  },
+  "task" : {
+    "type" : "docker",
+    "image" : "thinger/prometheus-exporter-plugin",
+    "port" : 3000,
+    "networks" : ["backend"]
+  },
+  "interface" : {
+    "main" : {
+      "file" : "gui/prometheus-exporter-settings.js"
+    }
+  }
+}

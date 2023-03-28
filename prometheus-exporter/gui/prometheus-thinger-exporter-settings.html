@@ -1,0 +1,114 @@
+<div class="bg-light lter b-b wrapper-md">
+    <div>
+        <h1 class="m-n font-thin h3 text-black">Prometheus Thinger Exporter</h1>
+    </div>
+</div>
+
+<div class="wrapper-md">
+
+  <div class="panel panel-default">
+
+    <div class="panel-heading font-bold">
+
+      <i class="fa fa-cog m-r-xs"></i> {{ui.selectedConfiguration}} Configuration
+      <a href="https://docs.thinger.io/plugins/prometheus-thinger-exporter" target="_blank"><i class="far fa-question-circle text-muted pull-right m-t-xs"></i></a>
+    </div>
+
+    <div class="panel-body">
+      <form class="form-horizontal">
+        <div class="row wrapper-xs">
+          <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-cog m-r-xs text-muted"></i>Application <i class="fa fa-info-circle text-muted" uib-popover="Select an application to configure its callback properties." popover-trigger="'mouseenter'"></i></label>
+          <div class="col-sm-8 col-md-10">
+            <select class="form-control" name="type" ng-init="ui.selectedConfiguration = ui.selectedConfiguration || 'Default'" ng-model="ui.selectedConfiguration">
+              <option value="">New Application...</option>
+              <option value="{{configuration}}" ng-repeat="(configuration, value) in settings.value">{{configuration}}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row wrapper-xs" ng-show="ui.selectedConfiguration===''">
+          <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-rocket m-r-xs text-muted"></i>Create Application <i class="fa fa-info-circle text-muted" uib-popover="Give your application a name." popover-trigger="'mouseenter'"></i></label>
+          <div class="col-sm-8 col-md-10 ">
+            <input type="text" placeholder="Application Id" class="form-control" pattern="[A-Za-z0-9_-]{1,32}" ng-model="ui.configuration"/>
+          </div>
+        </div>
+
+        <div class="row wrapper-xs" ng-show="ui.selectedConfiguration===''">
+          <label class="col-sm-4 col-md-2 control-label"></label>
+          <div class="col-sm-4 col-md-2">
+            <button type="button" ng-click="createConfiguration(ui.configuration)" class="btn btn-sm btn-success btn-addon" ng-show="ui.selectedConfiguration===''"><i><span class="fa fa-plus"></span></i>Add Application</button>
+          </div>
+        </div>
+      </form>
+
+      <form id="form-save-callback" class="form-horizontal form-validation" ng-show="ui.selectedConfiguration!==''">
+        <div class="row wrapper-xs">
+          <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-cog m-r-xs text-muted"></i>Configuration <i class="fa fa-info-circle text-muted" uib-popover="Select an application to configure its callback properties." popover-trigger="'mouseenter'"></i></label>
+          <div class="col-sm-8 col-md-10">
+            <uib-tabset class="tab-container m-b-none">
+
+              <uib-tab heading="Metrics">
+                <th-card>
+                  <div oc-lazy-load=sourcePath()+"/directives/inner-resource-properties/inner-resource-properties.js">
+                    <inner-resource-properties
+                      title="Metrics"
+                      hint="Define metrics to return through the endpoint."
+                      type="Metric"
+                      field-id="metrics"
+                      fields-name="Metric"
+                      icon="fa fa-ruler"
+                      selected-configuration=ui.selectedConfiguration
+                      plugin=plugin
+                      settings=settings
+                    >
+
+                      <ng-include src=sourcePath()+"/directives/metric-profile/metric-profile-list.html"></ng-include>
+
+                    </inner-resource-properties>
+                  </div>
+                </th-card>
+              </uib-tab>
+
+              <uib-tab heading="Endpoint Settings">
+                <!-- pre class="alert-info">{{plugin.taskUrl}}/metrics/{{ ui.SelectedConfiguration }}</pre -->
+                <div class="font-bold m-b-xs"><i class="fa fa-link"></i> Endpoint URL</div>
+                <pre class="bg-black text-white">{{ plugin.taskUrl }}/{{ ui.selectedConfiguration }}/metrics</pre>
+                <div class="font-bold m-b-xs"><i class="fa fa-cog"></i> HTTP Method</div>
+                <pre class="bg-black text-white">GET</pre>
+                <div class="font-bold m-b-xs"><i class="fa fa-lock"></i> Authorization Header</div>
+                <pre class="bg-black text-white">Bearer {{ prometheus_thinger_exporter_plugin_callback }}</pre>
+                <div class="font-bold m-b-xs"><i class="fa fa-code"></i> Payload</div>
+                <div ui-ace="{
+                  mode: 'text',
+                  useWrapMode : true,
+                  showGutter: false,
+                }" readonly=true style="height: 200px; border: 1px solid lightgray;" ng-model="callbackResponse"></div>
+                <div class="row wrapper-xs">
+                  <div class="col-sm-8 col-md-10">
+                    <button type="button" class="btn btn-info btn-addon" ng-click="testConfiguration(ui.selectedConfiguration)" ng-disabled="fetch_error || call_state==1"><i><span ng-class="{'fas fa-terminal': call_state!=1, 'fa fa-spinner fa-pulse' : call_state==1}"></span></i>Test {{ ui.selectedConfiguration }} endpoint</button>
+                  </div>
+                </div>
+              </uib-tab>
+
+              <uib-tab heading="Application Settings">
+                <div class="font-bold m-b-xs"><i class="fa fa-link"></i> Enabled</div>
+                <div>
+                  <label class="i-switch bg-success m-t-xs">
+                    <input type="checkbox" ng-model="settings.value[ui.selectedConfiguration].enabled" ng-change="setEnabled(ui.selectedConfiguration)">
+                    <i></i>
+                  </label>
+                </div>
+                <div class="font-bold m-b-xs"></div>
+                <div>
+                  <button type="button" class="btn btn-sm btn-danger btn-addon" ng-click="removeConfiguration(ui.selectedConfiguration)" ng-disabled="ui.selectedConfiguration==='Default' || ui.selectedConfiguration===''"><i class="fa fa-minus"></i>Remove Application</button>
+                </div>
+              </uib-tab>
+
+            </uib-tabset>
+          </div>
+        </div>
+      </div>
+    </div>
+  <!-- footer class="panel-footer text-left bg-light lter">
+    <button class="btn btn-success btn-addon" type="submit" form="form-save-callback" ng-disabled="fetch_error || save_state==1"><i><span ng-class="{'fa fa-check': save_state!=1, 'fa fa-spinner fa-pulse' : save_state==1}"></span></i>Save</button>
+  </footer -->
+</div>

@@ -1,12 +1,13 @@
 {
   "name" : "grafana",
-  "version" : "8.5.4",
+  "version" : "8.5.4-1",
   "description" : "Plugin for running Grafana inside Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git"
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory": "grafana"
   },
   "metadata" : {
     "name" : "Grafana",

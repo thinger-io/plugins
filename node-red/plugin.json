@@ -1,12 +1,13 @@
 {
   "name" : "node-red",
-  "version" : "1.4.1",
+  "version" : "1.4.3-1",
   "description" : "Plugin for Node-RED integration",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git"
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory" : "node-red"
   },
   "metadata" : {
     "name" : "Node-RED",

@@ -6,7 +6,8 @@
   "license" : "MIT",
   "repository" : {
     "type" : "git",
-    "url" : "https://github.com/thinger-io/plugins.git"
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sigfox"
   },
   "metadata" : {
     "name" : "Sigfox",

@@ -1,0 +1,15 @@
+<div class="panel panel-default">
+    <div class="panel-heading font-bold">
+        <i ng-class="::icon"></i> {{::title || 'Properties'}} <i class="fa fa-info-circle text-muted" uib-popover="{{hint}}" popover-trigger="'mouseenter'" ng-show="hint"></i>
+        <div class="pull-right">
+            <script type="text/ng-template" id="modal.html">
+                <div ng-include="'tpl/modal.html'"></div>
+            </script>
+            <button class="btn btn-xs btn-default" ng-click="refresh()" ng-disabled="loading"><i ng-class="loading ? 'far fa-spinner fa-pulse' : 'far fa-redo-alt'"></i> Refresh</button>
+            <button type="button" class="btn btn-xs btn-default" ng-click="open_remove_dialog()" ng-hide="selected_items.length==0"><i class="far fa-trash-alt"></i> Remove</button>
+            <button type="button" class="btn btn-xs btn-default" ng-click="cloneElement(selected_items[0])" ng-hide="selected_items.length!=1"><i class="far fa-copy"></i> Clone</button>
+            <button type="button" class="btn btn-xs btn-primary" ng-click="add_element('add')"><i class="far fa-plus"></i> Add</button>
+        </div>
+    </div>
+    <div ng-transclude></div>
+</div>

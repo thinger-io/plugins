@@ -1,13 +1,13 @@
 {
   "name": "ttn-stack",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Plugin for handling TTN (v3) integration.",
   "author": "Alvaro Luis Bustamante",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/thinger-io/ttn-stack-plugin.git",
-    "directory": "plugin"
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "ttn-stack/task"
   },
   "main": "app.js",
   "config": {
