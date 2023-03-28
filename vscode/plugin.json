@@ -1,6 +1,6 @@
 {
     "name" : "vscode",
-    "version" : "4.6.0-1",
+    "version" : "4.11.0-1",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
@@ -17,8 +17,7 @@
     },
     "task" : {
         "type" : "docker",
-        "image" : "linuxserver/code-server:4.6.0",
-        "user" : "0:0",
+        "image" : "linuxserver/code-server:4.11.0",
         "volumes" : [
             {
                 "source" : "data",
@@ -26,9 +25,9 @@
                 "description": "Mount point for user data configuration and workspaces."
             },
             {
-            "source" : "../../../storages",
-            "target" : "/config/workspace",
-            "description": "Mount point for accessing user storages"
+              "source" : "../../../storages",
+              "target" : "/config/workspace",
+              "description": "Mount point for accessing user storages"
             },
             {
                 "source" : "/var/run/docker.sock",
@@ -50,10 +49,10 @@
     },
     "interface" : {
         "main" : {
-        "proxy_to" : {
-            "plugin" : "vscode",
-            "port" : 8443
-        }
+          "proxy_to" : {
+              "plugin" : "vscode",
+              "port" : 8443
+          }
         }
     }
 }
