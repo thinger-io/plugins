@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-minimal",
-  "version" : "3.10.9-4",
+  "version" : "3.10.9-5",
   "description" : "Jupyter Minimal Plugin for Thinger.io",
   "author" : "Álvaro Luis Bustamante",
   "license" : "MIT",
