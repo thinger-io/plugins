@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-minimal",
-  "version" : "3.10.9-5",
+  "version" : "3.10.10-1",
   "description" : "Jupyter Minimal Plugin for Thinger.io",
   "author" : "Álvaro Luis Bustamante",
   "license" : "MIT",
@@ -17,17 +17,22 @@
   },
   "task": {
     "type": "docker",
-    "image": "jupyter/minimal-notebook:python-3.10.9",
+    "image": "jupyter/minimal-notebook:python-3.10.10",
     "volumes": [
         {
-          "source": "home",
-          "target": "/home/jovyan",
+            "source": "../../../storages",
+            "target": "/home/jovyan/storages",
+            "description": "Mount point of thinger storages"
+        },
+        {
+          "source": "work",
+          "target": "/home/jovyan/work",
           "description": "Jupyter Lab user data"
         },
         {
-          "source": "../../../storages",
-          "target": "/home/jovyan/storages",
-          "description": "Mount point of thinger storages"
+          "source": "config",
+          "target": "/home/jovyan/.jupyter/",
+          "description": "Jupyter Lab config"
         }
     ],
     "copy" : {
