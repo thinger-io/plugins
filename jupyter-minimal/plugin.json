@@ -20,19 +20,14 @@
     "image": "jupyter/minimal-notebook:python-3.10.9",
     "volumes": [
         {
-            "source": "../../../storages",
-            "target": "/home/jovyan/storages",
-            "description": "Mount point of thinger storages"
-        },
-        {
-          "source": "work",
-          "target": "/home/jovyan/work",
+          "source": "home",
+          "target": "/home/jovyan",
           "description": "Jupyter Lab user data"
         },
         {
-            "source": "config",
-            "target": "/home/jovyan/.jupyter",
-            "description": "Jupyter Lab user data"
+          "source": "../../../storages",
+          "target": "/home/jovyan/storages",
+          "description": "Mount point of thinger storages"
         }
     ],
     "copy" : {
