@@ -1,6 +1,6 @@
 {
     "name" : "vscode",
-    "version" : "4.11.0-1",
+    "version" : "4.11.0-2",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
@@ -26,7 +26,7 @@
             },
             {
               "source" : "../../../storages",
-              "target" : "/config/workspace",
+              "target" : "/config/workspace/storages",
               "description": "Mount point for accessing user storages"
             },
             {

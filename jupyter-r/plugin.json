@@ -21,7 +21,7 @@
     "volumes": [
         {
             "source": "../../../storages/",
-            "target": "/home/jovyan/work",
+            "target": "/home/jovyan/storages",
             "description": "Mount point of thinger storages"
         },
         {

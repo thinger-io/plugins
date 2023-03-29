@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-tensorflow",
-  "version" : "2.11.0-2",
+  "version" : "2.11.0-4",
   "description" : "Jupyter Tensorflow Plugin for Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -21,7 +21,7 @@
     "volumes": [
         {
             "source": "../../../storages/",
-            "target": "/home/jovyan/work",
+            "target": "/home/jovyan/storages",
             "description": "Mount point of thinger storages"
         },
         {
