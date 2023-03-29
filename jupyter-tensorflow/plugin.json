@@ -1,6 +1,6 @@
 {
   "name" : "jupyter-tensorflow",
-  "version" : "2.11.0-4",
+  "version" : "2.11.0-5",
   "description" : "Jupyter Tensorflow Plugin for Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -19,16 +19,21 @@
     "type": "docker",
     "image": "jupyter/tensorflow-notebook:tensorflow-2.11.0",
     "volumes": [
-        {
-            "source": "../../../storages/",
-            "target": "/home/jovyan/storages",
-            "description": "Mount point of thinger storages"
-        },
-        {
-            "source": "config",
-            "target": "/home/jovyan/.jupyter/",
-            "description": "Jupyter Lab user data"
-        }
+      {
+        "source": "../../../storages",
+        "target": "/home/jovyan/storages",
+        "description": "Mount point of thinger storages"
+      },
+      {
+        "source": "work",
+        "target": "/home/jovyan/work",
+        "description": "Jupyter Lab user data"
+      },
+      {
+        "source": "config",
+        "target": "/home/jovyan/.jupyter/",
+        "description": "Jupyter Lab user data"
+      }
     ],
     "resources" : {
         "memory" : 4026531840
