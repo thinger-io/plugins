@@ -18,11 +18,12 @@
     "task" : {
         "type" : "docker",
         "image" : "linuxserver/code-server:4.11.0",
+        "user" : "0:0",
         "volumes" : [
             {
-                "source" : "data",
-                "target" : "/config",
-                "description": "Mount point for user data configuration and workspaces."
+              "source" : "data",
+              "target" : "/config",
+              "description": "Mount point for user data configuration and workspaces."
             },
             {
               "source" : "../../../storages",
@@ -30,9 +31,9 @@
               "description": "Mount point for accessing user storages"
             },
             {
-                "source" : "/var/run/docker.sock",
-                "target" : "/var/run/docker.sock",
-                "description": "Mount point for docker management (only for admin)"
+              "source" : "/var/run/docker.sock",
+              "target" : "/var/run/docker.sock",
+              "description": "Mount point for docker management (only for admin)"
             }
         ],
         "resources" : {
