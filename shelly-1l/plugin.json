@@ -78,7 +78,7 @@
             }
           },
           "buckets": {
-            "shelly_plug_1l_energy": {
+            "shelly_1l_energy": {
               "data": {
                 "payload": "{{payload:processData}}",
                 "source": "topic",
@@ -87,7 +87,7 @@
               "description": "Device Consumption",
               "enabled": true
             },
-            "shelly_plug_1l_temperature": {
+            "shelly_1l_temperature": {
               "data": {
                 "payload": "{{payload}}",
                 "source": "topic",
@@ -281,7 +281,7 @@
                         "sources": [
                           {
                             "color": "#1E313E",
-                            "image_url": "https://www.shelly.cloud/_Resources/Persistent/3/6/e/a/36ea15e546c4f0a751847dc11b4bd8203b88aa3d/Shelly%20Plus1%20Shop%20%281%29.png",
+                            "image_url": "https://raw.githubusercontent.com/thinger-io/plugins/main/shelly-1l/shelly-1l.png",
                             "name": "Default",
                             "source": "image_url"
                           }
@@ -313,7 +313,7 @@
                             },
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_temperature",
+                              "id": "shelly_1l_temperature",
                               "mapping": "temperature",
                               "tags": {
                                 "device": [
@@ -368,7 +368,7 @@
                           {
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_temperature",
+                              "id": "shelly_1l_temperature",
                               "mapping": "overtemperature",
                               "tags": {
                                 "device": [
@@ -524,7 +524,7 @@
                           {
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_temperature",
+                              "id": "shelly_1l_temperature",
                               "mapping": "temperature",
                               "tags": {
                                 "device": [
@@ -656,7 +656,7 @@
                           {
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_temperature",
+                              "id": "shelly_1l_temperature",
                               "mapping": "overtemperature",
                               "tags": {
                                 "device": [
@@ -702,7 +702,7 @@
                             },
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_energy",
+                              "id": "shelly_1l_energy",
                               "mapping": "energy",
                               "tags": {
                                 "device": [
@@ -751,7 +751,7 @@
                           {
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_energy",
+                              "id": "shelly_1l_energy",
                               "mapping": "power",
                               "tags": {
                                 "device": [],
@@ -802,7 +802,7 @@
                           {
                             "bucket": {
                               "backend": "influxdb2",
-                              "id": "shelly_plug_1l_energy",
+                              "id": "shelly_1l_energy",
                               "mapping": "energy",
                               "tags": {
                                 "device": [],
