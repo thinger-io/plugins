@@ -1,5 +1,5 @@
 {
-  "name": "shelly-plus-1-pm",
+  "name": "shelly-plus-1pm",
   "version": "1.0.0",
   "description": "Shelly Plus 1PM with Thinger.io",
   "author": "Thinger.io",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "shelly-plus-1-pm"
+    "directory": "shelly-plus-1pm"
   },
   "metadata": {
     "name": "Shelly Plus 1PM",
@@ -281,7 +281,7 @@
                         "sources": [
                           {
                             "color": "#1E313E",
-                            "image_url": "https://raw.githubusercontent.com/thinger-io/plugins/main/shelly-plus-1-pm/shelly-plus-1-pm.png",
+                            "image_url": "https://raw.githubusercontent.com/thinger-io/plugins/main/shelly-plus-1pm/shelly-plus-1pm.png",
                             "name": "Default",
                             "source": "image_url"
                           }
