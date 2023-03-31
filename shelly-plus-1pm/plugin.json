@@ -1,0 +1,841 @@
+{
+  "name": "shelly-plus-1-pm",
+  "version": "1.0.0",
+  "description": "Shelly Plus 1PM with Thinger.io",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "shelly-plus-1-pm"
+  },
+  "metadata": {
+    "name": "Shelly Plus 1PM",
+    "description": "Shelly Plus 1PM with Thinger.io",
+    "image": "shelly-plus-1-pm.png"
+  },
+  "resources": {
+    "products" : [
+      {
+        "description": "Shelly Plus 1PM with Thinger.io",
+        "enabled": true,
+        "name": "Shelly Plus 1PM",
+        "product": "shelly_plus_1pm",
+        "profile": {
+          "api": {
+            "relay": {
+              "description": "Relay Control",
+              "enabled": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload:toOnOff=property.relay}}",
+                  "target": "topic",
+                  "topic": "shellies/{{device}}/relay/0/command"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            },
+            "state": {
+              "description": "Device State",
+              "enabled": true,
+              "request": {
+                "data": {}
+              },
+              "response": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "property": "state",
+                  "source": "property"
+                }
+              }
+            },
+            "temperature": {
+              "description": "Device Temperature",
+              "enabled": true,
+              "request": {
+                "data": {}
+              },
+              "response": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "property": "temperature",
+                  "source": "property"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "shelly_plus_1pm": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "shellyplus1pm-[A-F0-9]+"
+              },
+              "description": "Shelly Plus 1PM Autoprovision",
+              "enabled": true,
+              "name": "Shelly Plus 1PM"
+            }
+          },
+          "buckets": {
+            "shelly_plus_1pm_energy": {
+              "data": {
+                "payload": "{{payload:processData}}",
+                "source": "topic",
+                "topic": "shellies/{{device}}/relay/{{relay}}/{{field=energy|power}}"
+              },
+              "description": "Device Consumption",
+              "enabled": true
+            },
+            "shelly_plus_1pm_temperature": {
+              "data": {
+                "payload": "{{payload}}",
+                "source": "topic",
+                "topic": "shellies/{{device}}/{{field=temperature|overtemperature}}"
+              },
+              "description": "Device Temperature",
+              "enabled": true
+            }
+          },
+          "code": {
+            "code": "function toOnOff(value){\n    return value ? \"on\" : \"off\";\n}\n\nfunction toBoolean(value){\n    return value == \"on\" ? true : false; \n}\n\nfunction processData(value){\n    // sometimes energy is not provided if device is off\n    if(!value.energy) value.energy=0;\n    // convert energy from watt-min to kwH\n    value.energy = value.energy/60/1000;\n    return value;\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "location": {
+              "data": {},
+              "description": "Device Location",
+              "enabled": true,
+              "model": {
+                "source": "value",
+                "value": "{\n    \"latitude\": 40.4,\n    \"longitude\": -3.703790\n}"
+              }
+            },
+            "relay": {
+              "data": {
+                "payload": "{{payload:toBoolean}}",
+                "source": "topic",
+                "topic": "shellies/{{device}}/relay/0"
+              },
+              "description": "Relay State",
+              "enabled": true,
+              "model": {
+                "source": "value",
+                "value": "false"
+              }
+            },
+            "state": {
+              "data": {
+                "payload": "{{payload}}",
+                "source": "topic",
+                "topic": "shellies/announce"
+              },
+              "description": "Device State",
+              "enabled": true,
+              "model": {
+                "source": "value"
+              }
+            },
+            "temperature": {
+              "data": {
+                "payload": "{{payload}}",
+                "source": "topic",
+                "topic": "shellies/{{device}}/temperature"
+              },
+              "description": "Device Temperature",
+              "enabled": true,
+              "model": {
+                "source": "value",
+                "value": "0"
+              }
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "temperature",
+              "value": 0
+            },
+            {
+              "property": "relay",
+              "value": false
+            },
+            {
+              "property": "location",
+              "value": {
+                "latitude": 40.4,
+                "longitude": -3.70379
+              }
+            },
+            {
+              "property": "dashboard",
+              "value": {
+                "description": "Dashboard for Shelly Plus 1PM devices",
+                "name": "Shelly Plus 1PM",
+                "properties": {
+                  "background_image": "",
+                  "columns": 12,
+                  "row_height": 40,
+                  "show_template": true,
+                  "template": true
+                },
+                "tabs": [
+                  {
+                    "icon": "fas fa-tachometer-alt",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Power Switch"
+                        },
+                        "properties": {
+                          "style": "switch"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm",
+                              "resource": "relay"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "property": "relay"
+                            },
+                            "name": "Default",
+                            "source": "device"
+                          }
+                        ],
+                        "type": "boolean"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 6,
+                          "sizeX": 4,
+                          "sizeY": 11
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device Location"
+                        },
+                        "properties": {
+                          "center": true,
+                          "hideControls": false,
+                          "latitude": 0,
+                          "longitude": 0,
+                          "mapType": "roadmap",
+                          "showClustering": true,
+                          "showConnected": true,
+                          "showDisconnected": true,
+                          "showOptions": false,
+                          "showSearch": true,
+                          "waypoints": false,
+                          "zoom": 8
+                        },
+                        "sources": [
+                          {
+                            "color": "#0cdf72",
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": {
+                                "latitude": "latitude",
+                                "longitude": "longitude"
+                              },
+                              "property": "location"
+                            },
+                            "name": "Device Location",
+                            "source": "device_property",
+                            "timespan": {
+                              "magnitude": "minute",
+                              "value": 30
+                            },
+                            "type": "type"
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Shelly Plus 1PM"
+                        },
+                        "properties": {
+                          "refresh_interval": 0
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "image_url": "https://raw.githubusercontent.com/thinger-io/plugins/main/shelly-plus-1-pm/shelly-plus-1-pm.png",
+                            "name": "Default",
+                            "source": "image_url"
+                          }
+                        ],
+                        "type": "image"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 20,
+                          "sizeX": 12,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device Temperature"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": "15m",
+                              "type": "mean"
+                            },
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_temperature",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [
+                                  "shellyplus1pm"
+                                ],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Temperature ºC",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 17,
+                          "sizeX": 2,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "New Firmware"
+                        },
+                        "properties": {
+                          "color": "#00aa00",
+                          "colors": [
+                            {
+                              "blink": false,
+                              "color": "#00ff00",
+                              "max": 1,
+                              "min": 1
+                            },
+                            {
+                              "blink": false,
+                              "color": "#ff3705",
+                              "max": 0,
+                              "min": 0
+                            }
+                          ],
+                          "size": "35px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_temperature",
+                              "mapping": "overtemperature",
+                              "tags": {
+                                "device": [
+                                  "shellyplus1pm"
+                                ],
+                                "group": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "new_fw",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 14,
+                          "sizeX": 4,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device Model"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-tablet",
+                          "size": "35px",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "model",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "IP Address"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-wifi",
+                          "size": "35px",
+                          "unit_size": "20px",
+                          "weight": "font-normal"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "ip",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 3,
+                          "sizeX": 4,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device MAC"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-ethernet",
+                          "size": "35px",
+                          "unit_size": "20px",
+                          "weight": "font-normal"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "mac",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 3,
+                          "sizeX": 3,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device Temperature"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-thermometer-half",
+                          "size": "35px",
+                          "unit": "ºC",
+                          "unit_size": "20px",
+                          "weight": "font-normal"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_temperature",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [
+                                  "shellyplus1pm"
+                                ],
+                                "group": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "id",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 17,
+                          "sizeX": 8,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Firmware Version"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-code-merge",
+                          "size": "35px",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "fw_ver",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 14,
+                          "sizeX": 4,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Device ID"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-fingerprint",
+                          "size": "35px",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "id",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "device_property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 10,
+                          "row": 17,
+                          "sizeX": 2,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#00aa00",
+                          "colors": [
+                            {
+                              "blink": false,
+                              "color": "#00ff00",
+                              "max": 0,
+                              "min": 0
+                            },
+                            {
+                              "blink": false,
+                              "color": "#ff3705",
+                              "max": 1,
+                              "min": 1
+                            }
+                          ],
+                          "size": "35px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_temperature",
+                              "mapping": "overtemperature",
+                              "tags": {
+                                "device": [
+                                  "shellyplus1pm"
+                                ],
+                                "group": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "name": "Default",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 8,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "subtitle": "kWh",
+                          "title": "Daily Energy Consumption"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": false,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar'\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            endingShape: 'rounded'\n        },\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        show: true,\n        width: 2,\n        colors: ['transparent']\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    fill: {\n        opacity: 1\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": "1d",
+                              "type": "max"
+                            },
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_energy",
+                              "mapping": "energy",
+                              "tags": {
+                                "device": [
+                                  "shellyplus1pm"
+                                ],
+                                "group": [],
+                                "relay": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "name": "Default",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "month",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "transform": "difference"
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "subtitle": "W",
+                          "title": "Current Power"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-bolt",
+                          "size": "35px",
+                          "unit": "W",
+                          "unit_size": "20px",
+                          "weight": "font-normal"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_energy",
+                              "mapping": "power",
+                              "tags": {
+                                "device": [],
+                                "group": [],
+                                "relay": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "mac",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 3,
+                          "sizeX": 3,
+                          "sizeY": 3
+                        },
+                        "panel": {
+                          "color": "#ffffffcc",
+                          "subtitle": "kWh",
+                          "title": "Energy Consumption"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "decimal_places": 2,
+                          "icon": "far fa-infinity",
+                          "size": "35px",
+                          "unit": "kWh",
+                          "unit_size": "20px",
+                          "weight": "font-normal"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "influxdb2",
+                              "id": "shelly_plus_1pm_energy",
+                              "mapping": "energy",
+                              "tags": {
+                                "device": [],
+                                "group": [],
+                                "relay": []
+                              }
+                            },
+                            "color": "#1E313E",
+                            "device": {
+                              "id": "shellyplus1pm"
+                            },
+                            "device_property": {
+                              "device": "shellyplus1pm",
+                              "mapping": "mac",
+                              "property": "state"
+                            },
+                            "name": "Default",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
