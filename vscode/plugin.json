@@ -1,6 +1,6 @@
 {
     "name" : "vscode",
-    "version" : "4.11.0-2",
+    "version" : "4.11.0-3",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
@@ -41,7 +41,7 @@
         },
         "env" : {
             "PROXY_DOMAIN":"{{hostname}}",
-            "DOCKER_MODS": "linuxserver/mods:code-server-docker|linuxserver/mods:code-server-python3",
+            "DOCKER_MODS": "linuxserver/mods:universal-docker|linuxserver/mods:code-server-python3",
             "PIAUSER" : "{{username}}",
             "PUID": "1000",
             "PGID": "1000",
