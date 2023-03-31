@@ -10,7 +10,7 @@
     "directory": "shelly-1l"
   },
   "metadata": {
-    "name": "Shelly 1 L",
+    "name": "Shelly 1L",
     "description": "Shelly 1L with Thinger.io",
     "image": "shelly-1l.png"
   },
@@ -19,7 +19,7 @@
       {
         "description": "Shelly 1L with Thinger.io",
         "enabled": true,
-        "name": "Shelly 1 L",
+        "name": "Shelly 1L",
         "product": "shelly_1l",
         "profile": {
           "api": {
@@ -72,9 +72,9 @@
                 "mode": "pattern",
                 "pattern": "shelly1l-[A-F0-9]+"
               },
-              "description": "Shelly 1 L Autoprovision",
+              "description": "Shelly 1L Autoprovision",
               "enabled": true,
-              "name": "Shelly 1 L"
+              "name": "Shelly 1L"
             }
           },
           "buckets": {
