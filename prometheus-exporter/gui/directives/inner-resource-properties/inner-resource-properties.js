@@ -124,14 +124,14 @@ angular.module('innerResourceProperties', ['uiAce', 'angularJsonTree', 'profileS
                 settings    : "="
             },
             templateUrl: function(){
-              let url = document.querySelector("script[src$='prometheus-thinger-exporter-settings.js']");
-              return url.src.replace('prometheus-thinger-exporter-settings.js','directives/inner-resource-properties/inner-resource-properties.html');
+              let url = document.querySelector("script[src$='prometheus-exporter-settings.js']");
+              return url.src.replace('prometheus-exporter-settings.js','directives/inner-resource-properties/inner-resource-properties.html');
             },
             controllerAs: 'vm',
             controller: ['$scope', '$stateParams', '$uibModal', function($scope, $stateParams, $uibModal){
 
                 function sourcePath() {
-                  const path = document.querySelector("script[src$='prometheus-thinger-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");;
+                  const path = document.querySelector("script[src$='prometheus-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");;
                   return path;
                 }
 

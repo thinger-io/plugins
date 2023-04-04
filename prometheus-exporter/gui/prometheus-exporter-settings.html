@@ -11,7 +11,7 @@
     <div class="panel-heading font-bold">
 
       <i class="fa fa-cog m-r-xs"></i> {{ui.selectedConfiguration}} Configuration
-      <a href="https://docs.thinger.io/plugins/prometheus-thinger-exporter" target="_blank"><i class="far fa-question-circle text-muted pull-right m-t-xs"></i></a>
+      <a href="https://docs.thinger.io/plugins/prometheus-exporter" target="_blank"><i class="far fa-question-circle text-muted pull-right m-t-xs"></i></a>
     </div>
 
     <div class="panel-body">
@@ -75,7 +75,7 @@
                 <div class="font-bold m-b-xs"><i class="fa fa-cog"></i> HTTP Method</div>
                 <pre class="bg-black text-white">GET</pre>
                 <div class="font-bold m-b-xs"><i class="fa fa-lock"></i> Authorization Header</div>
-                <pre class="bg-black text-white">Bearer {{ prometheus_thinger_exporter_plugin_callback }}</pre>
+                <pre class="bg-black text-white">Bearer {{ prometheus_exporter_plugin_callback }}</pre>
                 <div class="font-bold m-b-xs"><i class="fa fa-code"></i> Payload</div>
                 <div ui-ace="{
                   mode: 'text',

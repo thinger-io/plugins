@@ -2,7 +2,7 @@
 
 <!-- TODO: Prometheus and Thinger logo -->
 
-<img src="https://raw.githubusercontent.com/thinger-io/Node-RED/master/images/screely.png" width="1024px">
+<img src="https://raw.githubusercontent.com/thinger-io/plugins/main/prometheus-exporter/images/prometheus-exporter.png" width="1024px">
 
 An exporter for exposing metrics of Thinger.io server resources in Prometheus and OpenMetrics format from an endpoint.
 

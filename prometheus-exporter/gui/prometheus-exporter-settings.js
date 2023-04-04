@@ -1,19 +1,19 @@
 'use strict';
-angular.module('PrometheusThingerExporterPlugin', ['uiAce'])
-    .directive('prometheusThingerExporterSettings', function(){
+angular.module('PrometheusExporterPlugin', ['uiAce'])
+    .directive('prometheusExporterSettings', function(){
     return {
         restrict: 'EA',
         scope: {
             plugin : '=',
         },
         templateUrl: function(){
-            let url = document.querySelector("script[src$='prometheus-thinger-exporter-settings.js']");
+            let url = document.querySelector("script[src$='prometheus-exporter-settings.js']");
             return url.src.replace('.js','.html');
         },
         controller: ['$scope', function($scope){
 
           $scope.sourcePath = function() {
-            const path = document.querySelector("script[src$='prometheus-thinger-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");;
+            const path = document.querySelector("script[src$='prometheus-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");;
             return path;
           }
 
