@@ -36,11 +36,11 @@ angular.module('PrometheusThingerExporterPlugin', ['uiAce'])
             initSettings('Default');
           });
 
-          $scope.plugin.getToken('prometheus_thinger_exporter_plugin_callback').then(function(token) {
-            $scope.prometheus_thinger_exporter_plugin_callback = token.access_token;
+          $scope.plugin.getToken('prometheus_exporter_plugin_callback').then(function(token) {
+            $scope.prometheus_exporter_plugin_callback = token.access_token;
           }, function ( err ) {
             console.log( err );
-            $scope.prometheus_thinger_exporter_plugin_callback = 'Token not found!';
+            $scope.prometheus_exporter_plugin_callback = 'Token not found!';
           });
 
           $scope.createConfiguration = function( cfg ) {

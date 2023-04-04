@@ -7,7 +7,7 @@ const HTTP_SSL_PORT = process.env.THINGER_HTTP_SSL_PORT || 443;
 const USER = process.env.THINGER_USER;
 const PLUGIN = process.env.THINGER_PLUGIN;
 const VERSION = process.env.THINGER_PLUGIN_VERSION;
-const TOKEN = process.env.THINGER_TOKEN_PROMETHEUS_THINGER_EXPORTER_PLUGIN;
+const TOKEN = process.env.THINGER_TOKEN_PROMETHEUS_EXPORTER_PLUGIN;
 
 const express = require('express');
 const app = express();
