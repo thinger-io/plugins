@@ -12,15 +12,16 @@ jobs:
       plugin: ${{ steps.matrix.outputs.plugin }}
 
     steps:
-      - uses: actions/checkout@v3 # only one commit, therefore only detects updated plugins
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v35
         with:
           dir_names: "true"
+          since_last_remote_commit: true
 
       - name: Set the plugins matrix
         id: matrix
