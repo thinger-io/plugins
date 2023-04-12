@@ -1,6 +1,6 @@
 {
   "name" : "grafana",
-  "version" : "8.5.4-1",
+  "version" : "9.4.7-1",
   "description" : "Plugin for running Grafana inside Thinger.io",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -32,7 +32,7 @@
       "THINGER_INFLUXDB_TOKEN": "{{THINGER_INFLUXDB_TOKEN}}"
     },
     "type" : "docker",
-    "image" : "grafana/grafana:8.5.4",
+    "image" : "grafana/grafana:9.4.7",
     "volumes" : [
       {
         "source": "data",
