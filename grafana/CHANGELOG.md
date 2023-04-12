@@ -1,8 +1,8 @@
 # Changelog
 All notable changes to Grafana plugin will be documented here.
 
-## 9.4.7-1 - 2023-04-12
-- Bumped Grafana version to 9.4.7
+## 9.3.11-1 - 2023-04-12
+- Bumped Grafana version to 9.3.11
 
 ## 8.5.4-1 - 2022-06-21
 - Bumped Grafana version to 8.5.4
