@@ -1,5 +1,9 @@
 'use strict';
 
+// Imports
+const Log = require('./lib/utils/log.js');
+const { performace } = require('perf_hooks');
+
 // initialize from environment variables
 const HOST = process.env.THINGER_HOST;
 const HTTP_PORT = process.env.THINGER_HTTP_PORT || 80;
@@ -43,7 +47,7 @@ async function buildMetrics() {
 
       metrics.forEach( metric => {
         if ( ! metric.enabled ) return;
-        promClient.generateMetric( register, metric );
+        promClient.generateMetric( cfg, register, metric );
       });
 
     } else {
@@ -56,56 +60,87 @@ async function buildMetrics() {
 
 app.get('/:cfg/metrics', async (req, res) => {
 
-      const cfg = req.params.cfg;
+  const t0 = performance.now();
 
-      if ( ! registries.has(cfg) )
-        return res.status( 404 ).send( `${ cfg } configuration not found` );
+  const cfg = req.params.cfg;
 
-      if ( ! settings[cfg].enabled )
-        return res.status( 403 ).send( `${ cfg } configuration is disabled` );
+  Log.info(`[cfg: ${ cfg }] retrieving metrics`);
 
-      try {
-        const register = registries.get(cfg);
-        res.setHeader('Content-Type', register.contentType);
-        res.send(await register.metrics());
-      } catch ( err ) {
-        res.status( 500 ).send( err );
-      }
+  if ( ! registries.has(cfg) )
+    return res.status( 404 ).send( `${ cfg } configuration not found` );
+
+  if ( ! settings[cfg].enabled )
+    return res.status( 403 ).send( `${ cfg } configuration is disabled` );
+
+  try {
+    const register = registries.get(cfg);
+    const metrics = await register.metrics();
+    const t1 = performance.now();
+
+    res.setHeader('Content-Type', register.contentType);
+    res.send(metrics);
+
+    Log.debug(`[cfg: ${ cfg }] metrics retrieval took ${ t1 - t0 } milliseconds`);
+
+  } catch ( err ) {
+    res.status( 500 ).send( err );
+    Log.error(`[cfg: ${ cfg }] failed retrieving metrics: ${ err }`);
+  }
 });
 
 app.get('/:cfg/metrics/:metric', async (req, res) => {
 
+  const t0 = performance.now();
+
   const cfg = req.params.cfg;
   const metric = req.params.metric;
+
+  Log.info(`[cfg: ${ cfg }, metric: ${ metric }] retrieval`);
 
   if ( ! registries.has(cfg) )
     res.status( 404 ).send( `${ cfg } configuration not found` );
 
   try {
     const register = registries.get(cfg);
+    const singleMetric = await register.getSingleMetric(metric);
+    const t1 = performance.now();
+
     res.setHeader('Content-Type', register.contentType);
-    res.send(await register.getSingleMetric(metric));
+    res.send(singleMetric);
+
+    Log.debug(`[cfg: ${ cfg }, metric: ${ metric }] metric retrieval took ${ t1 - t0 } milliseconds`);
+
   } catch ( err ) {
     res.status( 500 ).send( err );
+    Log.error(`Failed getting retrieving ${ metric } of ${ cfg } configuration: ${ err }`);
   }
 
 });
 
 app.post('/metrics/test', async (req, res) => {
 
+  const t0 = performance.now();
+
   const metric = req.body; // Get body
+
+  Log.info(`[metric: ${ metric.name }] testing query`);
 
   try {
 
-    // Create registry
+    // Create registry a get metrics
     const register = promClient.testMetric( metric );
+    const metrics = await register.metrics();
+    const t1 = performance.now();
 
     // Send response
     res.setHeader('Content-Type', register.contentType);
-    res.send(await register.metrics());
+    res.send(metrics);
+
+    Log.debug(`[metric: ${ metric.name }] test metric took ${ t1 - t0 } milliseconds`);
+
   } catch ( err ) {
-    console.error( err );
     res.status( 500 ).send( err.message );
+    Log.error(`[metric: ${ metric.name }] failed test metric: ${ err }`);
   }
 });
 
@@ -114,9 +149,11 @@ app.put('/settings', function (req, res) {
   try {
     buildMetrics();
     res.send();
+    Log.info("Updated settings");
   } catch ( err ) {
     console.error( err );
     res.status( 500 ).send( err.message );
+    Log.error(`Failed updating settings: ${ err }`);
   }
 });
 
@@ -124,14 +161,14 @@ function launchServer() {
 
   function startServer() {
     app.listen(3000, function() {
-      console.log('Prometheus Thinger Exporter Plugin is now running with the following configuration:');
-      console.log("HOST=" + HOST);
-      console.log("HTTT_PORT=" + HTTP_PORT);
-      console.log("HTTP_SSL_PORT=" + HTTP_SSL_PORT);
-      console.log("TOKEN=" + TOKEN);
-      console.log("USER=" + USER);
-      console.log("PLUGIN=" + PLUGIN);
-      console.log("VERSION=" + VERSION);
+      Log.info('Prometheus Thinger Exporter Plugin is now running with the following configuration:');
+      Log.info("HOST=" + HOST);
+      Log.info("HTTT_PORT=" + HTTP_PORT);
+      Log.info("HTTP_SSL_PORT=" + HTTP_SSL_PORT);
+      Log.info("TOKEN=" + TOKEN);
+      Log.info("USER=" + USER);
+      Log.info("PLUGIN=" + PLUGIN);
+      Log.info("VERSION=" + VERSION);
 
     });
   }

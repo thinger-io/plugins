@@ -1,4 +1,9 @@
+'use strict';
+
+const Log = require('./lib/utils/log.js');
+
 let USER = "";
+let PLUGIN = "";
 
 let headers;
 let baseUrl
@@ -10,14 +15,15 @@ module.exports.configure = function(HOST, HTTP_PORT, TOKEN, THINGER_USER, THINGE
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ TOKEN }`
     };
+
     USER = THINGER_USER;
     PLUGIN = THINGER_PLUGIN;
 
-    console.log("configure api with", HOST, TOKEN, USER, PLUGIN);
+    Log.info("configure api with", HOST, TOKEN, USER, PLUGIN);
 };
 
 module.exports.getPluginPropertyValue = async function(propertyId) {
-  console.log("Get Settings property");
+  Log.info("Get Settings property");
   return fetch(`${ baseUrl }/v1/users/${ USER }/plugins/${ PLUGIN }/properties/${ propertyId }`, { headers: headers })
     .then((response) => {
       if ( response.status === 404 ) {

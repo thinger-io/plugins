@@ -1,3 +1,8 @@
+'use strict';
+
+// Imports
+const Log = require('./lib/utils/log.js');
+const { performace } = require('perf_hooks');
 const client = require('prom-client');
 
 // Create a Registry to register the metrics
@@ -73,7 +78,7 @@ module.exports.clearRegistry = function (register) {
   register.clear();
 };
 
-module.exports.generateMetric = function ( register, metric ) {
+module.exports.generateMetric = function ( cfg, register, metric ) {
   try {
     new (metricTypes.get(`${ metric.type }`))({
       name: metric.name,
@@ -87,8 +92,12 @@ module.exports.generateMetric = function ( register, metric ) {
         } else if ( metric.backend === 'api' ) {
           run = vm_thinger.run(`module.exports = async function( metric ) { const api = process.env.api; ${ (metric.script) } }`);
         }
-        if ( typeof run !== "undefined" )
+        if ( typeof run !== "undefined" ) {
+          const t0 = performance.now();
           await run( this );
+          const t1 = performance.now();
+          Log.debug(`[cfg: ${ cfg }, metric: ${ metric.name }] query took ${ t1 - t0 } millliseconds`);
+        }
       }
     });
   } catch ( err ) {
@@ -116,8 +125,12 @@ module.exports.testMetric = function ( metric ) {
         } else if ( metric.backend === 'api' ) {
           run = vm_thinger.run(`module.exports = async function( metric ) { const api = process.env.api; ${ (metric.script) } }`);
         }
-        if ( typeof run !== "undefined" )
+        if ( typeof run !== "undefined" ) {
+          const t0 = performance.now();
           await run( this );
+          const t1 = performance.now();
+          Log.debug(`[metric: ${ metric.name }] query took ${ t1 - t0 } millliseconds`);
+        }
       }
     });
   } catch ( err ) {
