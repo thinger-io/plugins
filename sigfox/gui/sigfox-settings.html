@@ -84,6 +84,13 @@
                             </div>
 
                             <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-server m-r-xs text-muted"></i>Assign Endpoint <i class="fa fa-info-circle text-muted" uib-popover="Specify and endpoint for the device callback.." popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                    <resource-selector type="Endpoint" model="settings.value[ui.selectedDeviceType].endpoint_id" nullable="true"></resource-selector>
+                                </div>
+                            </div>
+
+                            <div class="row wrapper-xs">
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-folder m-r-xs text-muted"></i>Assign Project <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Project." popover-trigger="'mouseenter'"></i></label>
                                 <div class="col-sm-8 col-md-10">
                                     <resource-selector type="Project" model="settings.value[ui.selectedDeviceType].assign_project" nullable="true"></resource-selector>

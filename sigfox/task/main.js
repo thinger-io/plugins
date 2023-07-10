@@ -59,6 +59,10 @@ function getBucketId(deviceId, settings){
     return settings.bucket_id_prefix ? settings.bucket_id_prefix + deviceId : deviceId;
 }
 
+function getEndpointId(settings) {
+    return settings.endpoint_id;
+}
+
 function getDeviceTimeout(settings){
     return settings.device_connection_timeout ? settings.device_connection_timeout : 10;
 }
@@ -170,12 +174,10 @@ function setDeviceDownlinkData(deviceId, defaultDownlink){
     return setDeviceProperties(deviceId, downlink);
 }
 
-async function setDeviceCallback(deviceId, writeBucketId, settings) {
+async function setDeviceCallback(deviceId, writeBucketId, endpointId, settings) {
     console.log(`setting device callback: ${deviceId}`);
-    return axios({
-        method: 'put',
-        url: `/v3/users/${USER}/devices/${deviceId}/callback`,
-        data: {
+
+    let data = {
             actions: {
                 write_bucket: writeBucketId,
                 send_property: 'downlink'
@@ -183,7 +185,13 @@ async function setDeviceCallback(deviceId, writeBucketId, settings) {
             properties: {
                 timeout: getDeviceTimeout(settings)
             }
-        }
+        };
+
+    if ( endpointId ) data.actions.call_endpoint = endpointId;
+
+    return axios({
+        method: 'put',
+        url: `/v3/users/${USER}/devices/${deviceId}/callback`,
     });
 }
 
@@ -214,7 +222,7 @@ function getSigfoxDownlinkData(deviceId, data, deviceType){
     return downlink;
 }
 
-function handelDeviceCallbackRequest(res, deviceId, deviceType, payload, sourceIP, timestamp) {
+function handleDeviceCallbackRequest(res, deviceId, deviceType, payload, sourceIP, timestamp) {
     console.log("handling device callback:", deviceId, "deviceType:", deviceType, "payload:", payload, "sourceIP:", sourceIP, "timestamp:", timestamp);
     handleDeviceCallback(deviceId, deviceType, payload, sourceIP, timestamp)
     .then(function(response) {
@@ -257,10 +265,12 @@ async function handleDeviceCallback(deviceId, deviceType, payload, sourceIP, tim
 
                 // create device, bucket, and set callback
                 let realBucketId = getBucketId(deviceId, settings);
+                let realEndpointId = getEndpointId(settings);
+                // TODO: let endpointId =
                 createHTTPDevice(realDeviceId, deviceId, 'Auto provisioned Sigfox Device', settings)
                     .then(() => setDeviceDownlinkData(realDeviceId, getDefaultDownlink(settings)))
                     .then(() => createBucket(realBucketId, settings))
-                    .then(() => setDeviceCallback(realDeviceId, realBucketId, settings))
+                    .then(() => setDeviceCallback(realDeviceId, realBucketId, realEndpointId, settings))
                     .then(() => callDeviceCallback(realDeviceId, payload, sourceIP, timestamp))
                     .then((response) => { resolve(response); })
                     .catch(error => { reject(error) });
@@ -284,7 +294,7 @@ app.post('/device/:deviceId([0-9a-fA-F]+)/callback', function (req, res) {
     let payload = run_callback(req.body, 'uplink', deviceType, {device: req.params.deviceId});
 
     // handle request
-    handelDeviceCallbackRequest(res, req.params.deviceId, deviceType, payload, req.ip, timestamp);
+    handleDeviceCallbackRequest(res, req.params.deviceId, deviceType, payload, req.ip, timestamp);
 });
 
 app.get('/device/:deviceId([0-9a-fA-F]+)/callback', function (req, res) {
@@ -294,7 +304,7 @@ app.get('/device/:deviceId([0-9a-fA-F]+)/callback', function (req, res) {
     let deviceType = getDeviceType(req.query.deviceType);
 
     // handle request
-    handelDeviceCallbackRequest(res, req.params.deviceId, deviceType, undefined, req.ip, 0);
+    handleDeviceCallbackRequest(res, req.params.deviceId, deviceType, undefined, req.ip, 0);
 });
 
 app.post('/run_callback', function (req, res) {

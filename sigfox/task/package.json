@@ -1,6 +1,6 @@
 {
   "name": "sigfox",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Plugin for handling Sigfox integration.",
   "author": "Alvaro Luis Bustamante",
   "license": "MIT",
@@ -16,32 +16,12 @@
     "imagePort": "3000"
   },
   "scripts": {
-    "start": "node main.js",
-    "docker:build": "cross-conf-env docker image build . -t $npm_package_config_imageRepo:$npm_package_version",
-    "postdocker:build": "npm run docker:tag",
-    "docker:tag": " cross-conf-env docker image tag $npm_package_config_imageRepo:$npm_package_version $npm_package_config_imageRepo:latest",
-    "docker:run": "run-s -c docker:clean docker:runHelper",
-    "docker:runHelper": "cross-conf-env docker run -e NODE_ENV=local --name $npm_package_config_imageName -d -p $npm_package_config_imagePort:3000 $npm_package_config_imageRepo",
-    "predocker:publish": "echo Attention! Ensure `docker login` is correct.",
-    "docker:publish": "cross-conf-env docker image push $npm_package_config_imageRepo:$npm_package_version",
-    "postdocker:publish": "cross-conf-env docker image push $npm_package_config_imageRepo:latest",
-    "docker:clean": "cross-conf-env docker rm -f $npm_package_config_imageName",
-    "predocker:taillogs": "echo Web Server Logs:",
-    "docker:taillogs": "cross-conf-env docker logs -f $npm_package_config_imageName",
-    "docker:open:win": "echo Trying to launch on Windows && timeout 2 && start http://localhost:%npm_package_config_imagePort%",
-    "docker:open:mac": "echo Trying to launch on MacOS && sleep 2 && URL=http://localhost:$npm_package_config_imagePort && open $URL",
-    "docker:debugmessage": "echo Docker Debug Completed Successfully! Hit Ctrl+C to terminate log tailing.",
-    "predocker:debug": "run-s docker:build docker:run",
-    "docker:debug": "run-s -cs docker:open:win docker:open:mac docker:debugmessage docker:taillogs"
+    "start": "node main.js"
   },
   "dependencies": {
     "axios": "^0.26.1",
     "express": "^4.17.3",
     "log-timestamp": "^0.3.0",
-    "vm2": "^3.9.9"
-  },
-  "devDependencies": {
-    "cross-conf-env": "^1.2.1",
-    "npm-run-all": "^4.1.5"
+    "vm2": ">=3.9.18"
   }
 }
