@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, 'develop/**' ]
 
 jobs:
 
@@ -102,17 +102,15 @@ jobs:
           push: true
           tags: |
             thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
-            thinger/${{ matrix.plugin }}-plugin:${{ env.branch }}
 
       - name: Build and push dev
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'develop' }}
+        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && startsWith(env.branch, 'develop/') }}
         uses: docker/build-push-action@v3
         with:
           context: ${{ matrix.plugin }}/task
           push: true
           tags: |
-            thinger/${{ matrix.plugin }}-plugin:${{ env.branch }}
-            thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
+            thinger/${{ matrix.plugin }}-plugin:develop
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
@@ -123,11 +121,20 @@ jobs:
           repository: thinger/${{ matrix.plugin }}-plugin
           readme-filepath: ./${{ matrix.plugin }}/README.md
 
-      - name: Tag repository
+      - name: Tag repository prod
         if: ${{ env.branch == 'main' }}
         uses: mathieudutour/github-tag-action@v6.1
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ matrix.plugin }}/v${{ env.version }}
+          tag_prefix: ''
+
+      - name: Tag repository dev
+        if: ${{ startsWith(env.branch, 'develop') }}
+        uses: mathieudutour/github-tag-action@v6.1
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ matrix.plugin }}/develop
           tag_prefix: ''
