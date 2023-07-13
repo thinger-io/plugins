@@ -5,9 +5,9 @@
     "author": "Thinger.io",
     "license": "MIT",
     "repository": {
-        "type": "git",
-        "url": "https://github.com/thinger-io/plugins.git",
-        "directory": "shelly-plus-1pm"
+      "type": "git",
+      "url": "https://github.com/thinger-io/plugins.git",
+      "directory": "shelly-plus-1pm"
     },
     "metadata": {
         "name": "Shelly Plus 1PM",
@@ -171,9 +171,6 @@
                         }
                     }
                 },
-                "project": [
-                    "alvarolb@Shelly"
-                ],
                 "_resources": {
                     "properties": [
                         {
@@ -215,8 +212,7 @@
                                                         "color": "#1E313E",
                                                         "device": {
                                                             "id": "shellyplus1pm-441793a50208",
-                                                            "resource": "relay",
-                                                            "user": "alvarolb"
+                                                            "resource": "relay"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm",
@@ -263,8 +259,7 @@
                                                                 "longitude": "lon"
                                                             },
                                                             "resource": "location",
-                                                            "update": "none",
-                                                            "user": "alvarolb"
+                                                            "update": "none"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
@@ -272,8 +267,7 @@
                                                                 "latitude": "latitude",
                                                                 "longitude": "longitude"
                                                             },
-                                                            "property": "location",
-                                                            "user": "alvarolb"
+                                                            "property": "location"
                                                         },
                                                         "name": "Device Location",
                                                         "source": "device",
@@ -342,8 +336,7 @@
                                                                     "shellyplus1pm-441793a50208"
                                                                 ],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#ff0000",
                                                         "name": "Temperature ºC",
@@ -404,8 +397,7 @@
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "new_fw",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device_property",
@@ -441,14 +433,12 @@
                                                         "device": {
                                                             "id": "shellyplus1pm-441793a50208",
                                                             "mapping": "model",
-                                                            "resource": "info",
-                                                            "user": "alvarolb"
+                                                            "resource": "info"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "model",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device"
@@ -482,14 +472,12 @@
                                                             "id": "shellyplus1pm-441793a50208",
                                                             "mapping": "wifi.sta_ip",
                                                             "resource": "status",
-                                                            "update": "none",
-                                                            "user": "alvarolb"
+                                                            "update": "none"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "ip",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device"
@@ -523,14 +511,12 @@
                                                             "id": "shellyplus1pm-441793a50208",
                                                             "mapping": "sys.mac",
                                                             "resource": "status",
-                                                            "update": "none",
-                                                            "user": "alvarolb"
+                                                            "update": "none"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "mac",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device"
@@ -569,8 +555,7 @@
                                                                     "shellyplus1pm-441793a50208"
                                                                 ],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#1E313E",
                                                         "device": {
@@ -616,14 +601,12 @@
                                                             "id": "shellyplus1pm-441793a50208",
                                                             "mapping": "fw_id",
                                                             "resource": "info",
-                                                            "update": "none",
-                                                            "user": "alvarolb"
+                                                            "update": "none"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "fw_ver",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device"
@@ -657,14 +640,12 @@
                                                             "id": "shellyplus1pm-441793a50208",
                                                             "mapping": "id",
                                                             "resource": "info",
-                                                            "update": "none",
-                                                            "user": "alvarolb"
+                                                            "update": "none"
                                                         },
                                                         "device_property": {
                                                             "device": "shellyplus1pm-441793a50208",
                                                             "mapping": "id",
-                                                            "property": "state",
-                                                            "user": "alvarolb"
+                                                            "property": "state"
                                                         },
                                                         "name": "Default",
                                                         "source": "device"
@@ -712,8 +693,7 @@
                                                                     "shellyplus1pm-441793a50208"
                                                                 ],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#1E313E",
                                                         "device": {},
@@ -758,8 +738,7 @@
                                                             "tags": {
                                                                 "device": [],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#1E313E",
                                                         "name": "Default",
@@ -805,8 +784,7 @@
                                                             "tags": {
                                                                 "device": [],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#1E313E",
                                                         "device": {
@@ -858,8 +836,7 @@
                                                                     "shellyplus1pm-441793a50208"
                                                                 ],
                                                                 "group": []
-                                                            },
-                                                            "user": "alvarolb"
+                                                            }
                                                         },
                                                         "color": "#1E313E",
                                                         "device": {
