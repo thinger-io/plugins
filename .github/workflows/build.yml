@@ -18,7 +18,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v37
         with:
           dir_names: "true"
           since_last_remote_commit: true
@@ -35,6 +35,9 @@ jobs:
               [[ $d != "." ]]         || continue;
               [[ $d != ".github"* ]]  || continue;
               [[ $d != *"/"* ]]       || continue;
+              [[ $d != *"_"* ]]       || continue;
+              [[ $d != *".md" ]]       || continue;
+              [[ $d != *"/assets/"* ]]       || continue;
               echo -n "$separator"\""$d"\"; separator=',';
             done
             echo "]}"
@@ -57,13 +60,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get image version
-        run: |
-          echo version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
-          #echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
-
       - name: Extract branch name
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Get image version
+        run: |
+          if [[ "${{ env.branch }}" == "main" ]]; then
+            echo version=v`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
+          else
+            echo version='develop' >> $GITHUB_ENV
+          #echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
@@ -94,23 +100,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push prod
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
+      - name: Build and push
+        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
         uses: docker/build-push-action@v3
         with:
           context: ${{ matrix.plugin }}/task
           push: true
           tags: |
             thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
-
-      - name: Build and push dev
-        if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && startsWith(env.branch, 'develop/') }}
-        uses: docker/build-push-action@v3
-        with:
-          context: ${{ matrix.plugin }}/task
-          push: true
-          tags: |
-            thinger/${{ matrix.plugin }}-plugin:develop
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
@@ -121,20 +118,28 @@ jobs:
           repository: thinger/${{ matrix.plugin }}-plugin
           readme-filepath: ./${{ matrix.plugin }}/README.md
 
-      - name: Tag repository prod
-        if: ${{ env.branch == 'main' }}
+      - name: Delete tag of repository
+        if: ${{ startsWith(env.branch, 'develop') }}
+        uses: dev-drprasad/delete-tag-and-release@v1.0
+        with:
+          tag_name: ${{ env.branch }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          delete_release: false
+
+      - name: Tag repository
         uses: mathieudutour/github-tag-action@v6.1
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ matrix.plugin }}/v${{ env.version }}
+          custom_tag: ${{ matrix.plugin }}/${{ env.version }}
           tag_prefix: ''
 
-      - name: Tag repository dev
-        if: ${{ startsWith(env.branch, 'develop') }}
-        uses: mathieudutour/github-tag-action@v6.1
-        continue-on-error: true
+      - name: Post tag to DB
+        uses: fjogeleit/http-request-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ matrix.plugin }}/develop
-          tag_prefix: ''
+          url: "${{ secrets.TAGS_URL }}/v2/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
+          method: 'PUT'
+          username: ${{ secrets.TAGS_URL_USER }}
+          password: ${{ secrets.TAGS_URL_PASSWORD }}
+          customHeaders: '{"Content-Type": "application/json"}'
+          data: "{ 'plugin': '${ matrix.plugin }', 'version': '${ env.version }', 'commit': '${ GITHUB_SHA }', 'repository': '${ GITHUB_REPOSITORY }', 'server_url': '${ GITHUB_SERVER_URL }' }"
