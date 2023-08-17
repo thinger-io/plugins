@@ -102,6 +102,7 @@ DEPENDENCIES
   jekyll-sitemap (~> 1.4)
   jemoji (= 0.13.0)
   just-the-docs (= 0.5.4)
+  webrick (~> 1.7)
 
 BUNDLED WITH
    2.3.26
