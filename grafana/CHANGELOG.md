@@ -1,3 +1,13 @@
+---
+title: Changelog
+layout: page
+description: Grafana changelog
+parent: Grafana
+grand_parent: Plugins
+nav_order: 3
+permalink: /plugins/:path/changelog/
+---
+
 # Changelog
 All notable changes to Grafana plugin will be documented here.
 

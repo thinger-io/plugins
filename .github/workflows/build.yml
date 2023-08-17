@@ -22,6 +22,19 @@ jobs:
         with:
           dir_names: "true"
           since_last_remote_commit: true
+          files_ignore_yaml:
+            jekyll:
+              - **/*.md
+              - **/**.md
+              - **/assets/**
+              - _announcements/**
+              - _docs/**
+              - _includes/**
+              - _layouts/**
+              - _sass/**
+              - **/docs/**
+
+
 
       - name: Set the plugins matrix
         id: matrix
@@ -30,7 +43,7 @@ jobs:
           matrix=$((
             echo '{ "plugin" : ['
             separator=''
-            for d in ${{ steps.changed-files.outputs.all_changed_and_modified_files }}; do
+            for d in $directories; do
               [[ -d $d ]]             || continue;
               [[ $d != "." ]]         || continue;
               [[ $d != ".github"* ]]  || continue;
