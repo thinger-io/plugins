@@ -9,7 +9,6 @@ permalink: /plugins/:path/changelog/
 ---
 
 # Changelog
-All notable changes to Grafana plugin will be documented here.
 
 ## 9.3.11-1 - 2023-04-12
 - Bumped Grafana version to 9.3.11

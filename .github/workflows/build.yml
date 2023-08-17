@@ -22,19 +22,16 @@ jobs:
         with:
           dir_names: "true"
           since_last_remote_commit: true
-          files_ignore_yaml:
-            jekyll:
-              - **/*.md
-              - **/**.md
-              - **/assets/**
-              - _announcements/**
-              - _docs/**
-              - _includes/**
-              - _layouts/**
-              - _sass/**
-              - **/docs/**
-
-
+          files_ignore: |
+            **/*.md
+            **/**.md
+            **/assets/**
+            _announcements/**
+            _docs/**
+            _includes/**
+            _layouts/**
+            _sass/**
+            **/docs/**
 
       - name: Set the plugins matrix
         id: matrix
