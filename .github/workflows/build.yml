@@ -76,10 +76,10 @@ jobs:
       - name: Get image version
         run: |
           if [[ "${{ env.branch }}" == "main" ]]; then
-            echo "version=v`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \`" >> $GITHUB_ENV
+            echo version=v`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
           else
-            echo "version='develop'" >> $GITHUB_ENV
-          #echo "version=`awk '/^##/ {{print substr($2, 1, length($2))}}' ./${{ matrix.plugin }}/CHANGELOG.md | head -n1`" >> $GITHUB_ENV
+            echo version=develop >> $GITHUB_ENV
+          fi
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
