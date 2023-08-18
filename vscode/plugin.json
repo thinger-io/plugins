@@ -1,13 +1,13 @@
 {
     "name" : "vscode",
-    "version" : "4.11.0-3",
+    "version" : "4.14.1-1",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
     "repository" : {
-        "type" : "git",
-        "url": "https://github.com/thinger-io/plugins.git",
-        "directory" : "vscode"
+      "type" : "git",
+      "url" : "https://github.com/thinger-io/plugins.git",
+      "directory": "grafana"
     },
     "metadata" : {
         "name" : "VS Code",
@@ -15,45 +15,59 @@
         "image" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-logo.png",
         "icon" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.svg"
     },
+    "tokens" : {
+      "vscode_plugin" : {
+        "name" : "Access from VSCode to Thinger.io OTA",
+        "allow" : {
+          "Device" : {
+            "*": ["ListDevices","AccessDeviceResources","ReadDeviceStatistics"]
+          }
+        }
+      }
+    },
     "task" : {
         "type" : "docker",
-        "image" : "linuxserver/code-server:4.11.0",
-        "user" : "0:0",
+        "image" : "codercom/code-server:4.14.1",
         "volumes" : [
             {
-              "source" : "data",
-              "target" : "/config",
-              "description": "Mount point for user data configuration and workspaces."
+                "source" : "config",
+                "target" : "/home/coder/.config/code-server/",
+                "description": "Mount point for user data configuration and workspaces."
             },
             {
-              "source" : "../../../storages",
-              "target" : "/config/workspace/storages",
-              "description": "Mount point for accessing user storages"
+                "source" : "scripts",
+                "target" : "/entrypoint.d/",
+                "description": "Scripts to run on boot"
             },
             {
-              "source" : "/var/run/docker.sock",
-              "target" : "/var/run/docker.sock",
-              "description": "Mount point for docker management (only for admin)"
+                "source" : "settings",
+                "target" : "/settings",
+                "description" : "Mount point to configure extension settings"
+            },
+            {
+                "source" : "../../../storages",
+                "target" : "/home/coder/storages",
+                "description": "Mount point for accessing user storages"
             }
         ],
+        "copy": {
+            "config": "config",
+            "scripts": "scripts",
+            "settings": "settings"
+        },
         "resources" : {
             "memory" : 4026531840
         },
         "env" : {
-            "PROXY_DOMAIN":"{{hostname}}",
-            "DOCKER_MODS": "linuxserver/mods:universal-docker|linuxserver/mods:code-server-python3",
-            "PIAUSER" : "{{username}}",
-            "PUID": "1000",
-            "PGID": "1000",
-            "SUDO_PASSWORD" : "thinger.io"
+          "CODER_TELEMETRY": "false"
         }
     },
     "interface" : {
         "main" : {
-          "proxy_to" : {
-              "plugin" : "vscode",
-              "port" : 8443
-          }
+            "proxy_to" : {
+                "plugin" : "vscode",
+                "port" : 8080
+            }
         }
     }
 }

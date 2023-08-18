@@ -1,0 +1,7 @@
+{
+    "thinger-io.token": "${THINGER_TOKEN_VSCODE_PLUGIN}",
+    "thinger-io.ssl": false,
+    "thinger-io.port": 80,
+    "thinger-io.host": "${THINGER_HOST}",
+    "http.proxyStrictSSL": false
+}

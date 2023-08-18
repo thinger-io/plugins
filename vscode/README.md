@@ -1,18 +1,39 @@
-## VS Code
+---
+title: VS Code
+layout: page
+description: Plugin for Sofware Edition and OTA Upload
+parent: Plugins
+has_children: true
+permalink: /plugins/:path/
+---
 
-Thinger.io plugin for running VS Code on the Cloud, based on Code-Server. Just a full IDE on the cloud side.
+# VS Code Plugin
 
-<img src="https://user-images.githubusercontent.com/1141353/112288667-de224f80-8c8d-11eb-978c-c7dfdf897e62.png" width="150px">
+<p align="center">
+  <img src="/vscode/assets/laptop-mockup.png" alt="Thinger.io web console with VS Code plugin and OTA upload">
+</p>
 
-[Code-server](https://coder.com) is VS Code running on a remote server, accessible through the browser.
-- Code on your Chromebook, tablet, and laptop with a consistent dev environment.
-- If you have a Windows or Mac workstation, more easily develop for Linux.
-- Take advantage of large cloud servers to speed up tests, compilations, downloads, and more.
-- Preserve battery life when you're on the go.
-- All intensive computation runs on your server.
-- You're no longer running excess instances of Chrome.
+The Thinger.io VS Code Plugin enables users to edit software files on the cloud using a fully-featured Integrated Development Environment (IDE) powered by Visual Studio Code (VS Code). This plugin also facilitates the coding of complete software and allows Over-The-Air (OTA) updates for microcontrollers directly from the cloud.
 
-## Screenshots
+## About Thinger.io and VS Code integration&#x20;
 
-<img src="https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-screenshot.png" width="1024px">
+Thinger.io cloud platform offers a VS Code plugin based on Code-Server. This integration allows you to seamlessly edit any file uploaded into Thinger.io using a powerful IDE. Additionally, you can conveniently update microcontrollers via OTA directly from the cloud.
 
+The plugin comes pre-installed with the complete setup of PlatformIO and the [Thinger.io extension](https://marketplace.visualstudio.com/items?itemName=thinger-io.thinger-io), making it effortless to get started with your projects.
+
+<p align="center">
+  <img src="/vscode/assets/iot-ota.gif" alt="VS Code OTA update for ESP32">
+</p>
+
+Furthermore, when accessing the [File Storages](https://docs.thinger.io/file-system) in Thinger.io's web console, the platform detects the presence of VS Code and adds a convenient shortcut to open the storage inside the VS Code Plugin.
+
+<p align="center">
+  <img src="/vscode/assets/storage-shortcut.png" alt="VS Code file storage shortcut">
+</p>
+
+{: .note}
+Please note that the Thinger.io VS Code Plugin is available only for premium Thinger.io servers. You can check [**this link**](https://thinger.io/pricing) to create your own instance within minutes.
+
+## OTA Support
+
+The plugin supports OTA updates for a wide range of devices. For the latest information on OTA programming, please refer to the [OTA Programming page](https://docs.thinger.io/extended-features/ota). To utilize OTA updates, it is necessary to initially upload an OTA compatible firmware to a device using a native IDE with options available for [Arduino IDE](https://docs.thinger.io/sdk-setup/arduino-ide) or [Visual Studio Code](https://docs.thinger.io/sdk-setup/visual-studio-code).
