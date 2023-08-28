@@ -10,7 +10,7 @@ permalink: /plugins/:path/
 # VS Code Plugin
 
 <p align="center">
-  <img src="/vscode/assets/laptop-mockup.png" alt="Thinger.io web console with VS Code plugin and OTA upload">
+  <img src="https://marketplace.thinger.io/vscode/assets/laptop-mockup.png" alt="Thinger.io web console with VS Code plugin and OTA upload">
 </p>
 
 The Thinger.io VS Code Plugin enables users to edit software files on the cloud using a fully-featured Integrated Development Environment (IDE) powered by Visual Studio Code (VS Code). This plugin also facilitates the coding of complete software and allows Over-The-Air (OTA) updates for microcontrollers directly from the cloud.
@@ -22,13 +22,13 @@ Thinger.io cloud platform offers a VS Code plugin based on Code-Server. This int
 The plugin comes pre-installed with the complete setup of PlatformIO and the [Thinger.io extension](https://marketplace.visualstudio.com/items?itemName=thinger-io.thinger-io), making it effortless to get started with your projects.
 
 <p align="center">
-  <img src="/vscode/assets/iot-ota.gif" alt="VS Code OTA update for ESP32">
+  <img src="https://marketplace.thinger.io/vscode/assets/iot-ota.gif" alt="VS Code OTA update for ESP32">
 </p>
 
 Furthermore, when accessing the [File Storages](https://docs.thinger.io/file-system) in Thinger.io's web console, the platform detects the presence of VS Code and adds a convenient shortcut to open the storage inside the VS Code Plugin.
 
 <p align="center">
-  <img src="/vscode/assets/storage-shortcut.png" alt="VS Code file storage shortcut">
+  <img src="https://marketplace.thinger.io/vscode/assets/storage-shortcut.png" alt="VS Code file storage shortcut">
 </p>
 
 {: .note}

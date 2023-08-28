@@ -20,10 +20,10 @@
 
 title   : Thinger.io Plugins
 tagline : Discover and Deploy Powerful Plugins at thinger.io Marketplace
-email   : plugins@thinger.io
+email   : support@thinger.io
 description: >- # this means to ignore newlines until "baseurl:"
   Unlock IoT innovation at Thinger.io Plugins Marketplace. Elevate your projects with powerful plugins, stay updated with the latest releases, and seamlessly integrate new capabilities into your Thinger.io platform. Join us and embark on a data-driven IoT journey today.
-url     : "https://plugins.thinger.io" # the base hostname & protocol for your site, e.g. http://example.com
+url     : "https://marketplace.thinger.io" # the base hostname & protocol for your site, e.g. http://example.com
 baseurl : "" # the subpath of your site, e.g. /blog
 repository: thinger-io/plugins
 author: thinger.io

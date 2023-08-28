@@ -10,6 +10,10 @@ permalink: /plugins/:path/changelog
 # Changelog
 All notable changes to VS Code plugin will be documented here.
 
+## 4.14.1-2 - 2023-08-23
+### Changed
+- Marginally reduce the limit of memory to be able to run
+
 ## 4.14.1-1 - 2023-07-26
 ### Added
 - Preinstallation of platformio-ide and thinger-io extension
