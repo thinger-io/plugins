@@ -1,0 +1,6 @@
+groups:
+ - name: Devices disconnected greater than 5
+   rules:
+   - alert: DevicesDisconnectedGreaterThan5
+     expr: devices_total{status="disconnected"} > 5
+     for: 10s

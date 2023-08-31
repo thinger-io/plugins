@@ -41,7 +41,7 @@ jobs:
             echo '{ "plugin" : ['
             separator=''
             for d in $directories; do
-              [[ -d $d ]]             || continue;
+              #[[ -d $d ]]             || continue;
               [[ $d != "." ]]         || continue;
               [[ $d != ".github"* ]]  || continue;
               [[ $d != *"/"* ]]       || continue;

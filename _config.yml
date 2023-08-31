@@ -145,6 +145,10 @@ feed:
     announcements:
       categories:
         - vscode
+        - prometheus
+        - alertmanager
+        - monitoring
+        - alerting
     posts:
       path: "404.html"
 

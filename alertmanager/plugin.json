@@ -1,0 +1,57 @@
+{
+  "name" : "alertmanager",
+  "version" : "v0.26.0-1",
+  "description" : "Alertmanager alarm handler system",
+  "author" : "Jaime Bautista",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory": "alertmanager"
+  },
+  "metadata" : {
+    "name" : "Alertmanager",
+    "description" : "Integration of Alertmanager with Thinger.io",
+    "image" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg",
+    "icon" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg"
+  },
+  "tokens" : {
+    "alertmanager_plugin_callback" : {
+      "name" : "Alertmanager metrics endpoint token",
+      "allow" : {
+        "Plugin" : {
+          "alertmanager": ["CallPluginEndpoint"]
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "prom/alertmanager:v0.26.0",
+    "cmd": [
+            "--web.external-url=https://{{THINGER_HOST}}/users/{{THINGER_USER}}/plugins/{{THINGER_PLUGIN}}/",
+            "--web.route-prefix=/",
+            "--config.file=/settings/alertmanager.yml"
+    ],
+    "user" : "0:0",
+    "volumes": [
+        {
+            "source": "../../../storages/prometheus_settings",
+            "target": "/settings",
+            "description": "Prometheus and alertmanager configuration"
+        }
+    ],
+    "copy" : {
+      "config" : "../../../storages/prometheus_settings"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "alertmanager",
+        "port" : 9093,
+        "rewrite_base_path": true
+      }
+    }
+  }
+}
