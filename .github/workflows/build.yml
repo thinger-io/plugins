@@ -32,6 +32,7 @@ jobs:
             _layouts/**
             _sass/**
             **/docs/**
+            .github/**
 
       - name: Set the plugins matrix
         id: matrix
@@ -41,13 +42,12 @@ jobs:
             echo '{ "plugin" : ['
             separator=''
             for d in $directories; do
-              #[[ -d $d ]]             || continue;
-              [[ $d != "." ]]         || continue;
-              [[ $d != ".github"* ]]  || continue;
-              [[ $d != *"/"* ]]       || continue;
-              [[ $d != *"_"* ]]       || continue;
-              [[ $d != *".md" ]]       || continue;
-              [[ $d != *"/assets/"* ]]       || continue;
+              [[ $d == "." ]]         || continue;
+              [[ $d == ".github"* ]]  || continue;
+              [[ $d == *"/"* ]]       || continue;
+              [[ $d == "_"* ]]       || continue;
+              [[ $d == *".md" ]]       || continue;
+              [[ $d == *"/assets/"* ]]       || continue;
               echo -n "$separator"\""$d"\"; separator=',';
             done
             echo "]}"
@@ -147,7 +147,7 @@ jobs:
       - name: Post tag to DB
         uses: fjogeleit/http-request-action@v1
         with:
-          url: "${{ secrets.TAGS_URL }}/v2/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
+          url: "${{ secrets.TAGS_URL }}/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
           method: 'PUT'
           username: ${{ secrets.LAMBDA_USER }}
           password: ${{ secrets.LAMBDA_PASSWORD }}
