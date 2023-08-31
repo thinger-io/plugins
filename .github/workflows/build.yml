@@ -42,12 +42,12 @@ jobs:
             echo '{ "plugin" : ['
             separator=''
             for d in $directories; do
-              [[ $d == "." ]]         || continue;
-              [[ $d == ".github"* ]]  || continue;
-              [[ $d == *"/"* ]]       || continue;
-              [[ $d == "_"* ]]       || continue;
-              [[ $d == *".md" ]]       || continue;
-              [[ $d == *"/assets/"* ]]       || continue;
+              [[ $d != "." ]]         || continue;
+              [[ $d != ".github"* ]]  || continue;
+              [[ $d != *"/"* ]]       || continue;
+              [[ $d != "_"* ]]       || continue;
+              [[ $d != *".md" ]]       || continue;
+              [[ $d != *"/assets/"* ]]       || continue;
               echo -n "$separator"\""$d"\"; separator=',';
             done
             echo "]}"
