@@ -1,0 +1,63 @@
+global:
+  scrape_interval:     20s # By default, scrape targets every 15 seconds.
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'codelab-monitor'
+
+# To configure alerting withing Thinger.io uncomment and substitute thinger_user by your username
+# Install alertmanager plugin before uncommenting this lines
+#rule_files:
+#  - rules.yml
+#alerting:
+#  alertmanagers:
+#  - static_configs:
+#    - targets:
+#       - <thinger_user>-alertmanager:9093
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    scrape_interval: 5s # Override the global default and scrape targets from this job every 5 seconds.
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # To access the prometheus metrics endpoint externally uncomment and set the bearer token with the one
+  # create by the plugin with id 'prometheus_plugin_callback'
+  # Also, comment the local 'prometheus' job above
+  #- job_name: 'prometheus'
+  #  scrape_interval: 5s
+  #  metrics_path: "/users/<thinger_user>/plugins/prometheus/metrics"
+  #  scheme: "https"
+  #  bearer_token: "<prometheus_bearer_token>"
+  #  static_configs:
+  #  - targets: ['perf.aws.thinger.io']
+  #https://perf.aws.thinger.io/users/jaimebs/plugins/prometheus/metrics
+
+  # To track the alertmanager metrics uncomment and configure the below job that best suit your needs, the
+  # first one is to scrape locally, while the second one allows to track it externally and view the raw metrics
+  # through the endpoint. The bearer token for the external configuration can be found in the Access Tokens of
+  # Thinger.io with the id 'alertmanager_plugin_callback'
+  #- job_name: 'alertmanager'
+  #  scrape_interval: 5s
+  #  static_configs:
+  #    - targets: ['<thinger_user>-alertmanager:9093']
+  #- job_name: 'alertmanager'
+  #  scrape_interval: 5s
+  #  metrics_path: "/users/<thinger_user>/plugins/alertmanager/metrics"
+  #  scheme: "https"
+  #  bearer_token: "<alertmanager_bearer_token>"
+  #  static_configs:
+  #    - targets: ['<thinger_url>']
+
+  - job_name: 'thinger'
+    scrape_interval: 10s
+    metrics_path: "/users/<thinger_user>/plugins/prometheus-exporter/Default/metrics"
+    scheme: "https"
+    bearer_token: "<prometheus_exporter_bearer_token>"
+    static_configs:
+    - targets: ['<thinger_url>']

@@ -1,0 +1,67 @@
+{
+  "name" : "prometheus",
+  "version" : "2.46.0-1",
+  "description" : "Prometheus monitoring system",
+  "author" : "Jaime Bautista",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory": "prometheus"
+  },
+  "metadata" : {
+    "name" : "Prometheus",
+    "description" : "Integration of Prometheus with Thinger.io",
+    "image" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg",
+    "icon" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg"
+  },
+  "tokens" : {
+    "prometheus_plugin_callback" : {
+      "name" : "Prometheus metrics endpoint token",
+      "allow" : {
+        "Plugin" : {
+          "prometheus": ["CallPluginEndpoint"]
+        }
+      }
+    }
+  },
+  "resources": {
+    "storages": [
+      {
+        "storage": "prometheus_settings",
+        "name": "Prometheus Settings",
+        "description": "Storage to be able to edit and reload prometheus configuration",
+        "public": false
+      }
+    ]
+  },
+  "task": {
+    "type": "docker",
+    "image": "prom/prometheus:v2.46.0",
+    "cmd": [
+        "--web.external-url=https://{{THINGER_HOST}}/users/{{THINGER_USER}}/plugins/{{THINGER_PLUGIN}}/",
+        "--web.route-prefix=/",
+        "--config.file=/settings/prometheus.yml"
+    ],
+    "user" : "0:0",
+    "volumes": [
+        {
+            "source": "../../../storages/prometheus_settings",
+            "target": "/settings",
+            "description": "Prometheus configuration"
+        }
+    ],
+    "copy" : {
+      "config" : "../../../storages/prometheus_settings"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "prometheus",
+        "port" : 9090,
+        "rewrite_base_path": true
+      }
+    }
+  }
+}

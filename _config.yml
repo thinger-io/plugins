@@ -99,9 +99,6 @@ search:
 # Color scheme supports "light" (default) and "dark"
 color_scheme: thinger_light
 
-
-
-
 ### -- END Customization
 
 callouts_level: quiet # or loud

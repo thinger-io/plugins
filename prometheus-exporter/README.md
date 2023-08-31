@@ -1,21 +1,64 @@
-# Prometheus Exporter Plugin
+---
+title: Prometheus Exporter
+layout: page
+description: Prometheus exporter of Thinger.io resources
+parent: Plugins
+has_children: true
+permalink: /plugins/:path/
+---
 
-<!-- TODO: Prometheus and Thinger logo -->
+# Prometheus Exporter
 
-<img src="https://raw.githubusercontent.com/thinger-io/plugins/main/prometheus-exporter/images/prometheus-exporter.png" width="1024px">
+<p align="center">
+  <img alt="Prometheus logo" src="https://raw.githubusercontent.com/prometheus/prometheus/main/documentation/images/prometheus-logo.svg">
+</p>
 
-An exporter for exposing metrics of Thinger.io server resources in Prometheus and OpenMetrics format from an endpoint.
+The Thinger.io Prometheus Exporter plugin is designed to facilitate the monitoring of your Thinger.io resources. It allows you to expose metrics in Prometheus formats through a dedicated endpoint.
 
-The plugins allows the definition of the desired metrics by programatically configuring extraction of the values against one of three backends:
+This exporter provides you with the flexibility to define and configure metrics according to your requirements. It supports dynamic value extraction from three available backends:
+
 - Thinger.io Database
-- (TODO) Data Buckets
-- (TODO) Thinger.io API
+- Data Buckets (Coming soon)
+- Thinger.io API (Coming soon)
 
 ## Getting Started
 
-Documentation of the plugin and how to use it can be found at Thinger.io docs. <!-- TODO -->
+To start out with this plugin, the Default application might be used or a new one created, by selecting `New Application...` in the dropdown.
+
+To create a metric, click on the `+Add` button in the right top corner of the metrics table, where a modal form will open.
+
+Here you can find an example for a metric that tracks the total of devices with their status:
+
+- Name: devices\_total
+- Help string: number of devices
+- Labels: status
+
+**Script**
+- Type: Gauge
+- Backend: Thinger.io Database
+- Source:
+  ```js
+  const connected = db.collection('devices').countDocuments({ "enabled": true, "connection.active": { "$eq": true }});
+  const disconnected = db.collection('devices').countDocuments({ "enabled": true, "connection.active": { "$eq": false }});
+  const disabled = db.collection('devices').countDocuments({ "enabled": false});
+
+  const values  = await Promise.all([connected, disconnected, disabled]);
+  metric.set({ status: 'connected'}, values[0]);
+  metric.set({ status: 'disconnected'}, values[1]);
+  metric.set({ status: 'disabled'}, values[2]);
+  ```
+
+Each metric can be tested out individually, and once validated and saved, the full application endpoint can be queried, through the `Endpoint Settings` tab, where all needed configuration to create a Prometheus scrape job can be found.
+
+<img src="https://marketplace.thinger.io/prometheus-exporter/assets/prometheus-exporter.png" width="1024px">
+
+## Additional Resources
+
+Given that the plugin is based and developed with Prometheus in mind, you may refer to [Prometheus official documentation](https://prometheus.io/docs/introduction/overview/), and more specifically to the [Data Model](https://prometheus.io/docs/concepts/data_model/).
 
 Metrics are configured using the unofficial Prometheus client for Node.js, coded through the gui of the plugin.
+
+Also, the [Prometheus Server Plugin](https://marketplace.thinger.io/plugins/prometheus) is available within Thinger.io.
 
 ## License
 

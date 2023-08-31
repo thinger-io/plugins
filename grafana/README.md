@@ -62,7 +62,7 @@ Begin your journey with the thinger.io and Grafana integration today and experie
 Unsure if Grafana is for you? Watch Grafana in action on [play.grafana.org](https://play.grafana.org/)!
 
 <span class="fs-5">
-[Starting with Grafana Plugin](documentation.md){: .btn }
+[Starting with Grafana Plugin](get_started){: .btn }
 </span>
 
 ## Official Documentation

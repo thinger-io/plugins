@@ -15,7 +15,7 @@ permalink: /plugins/:path/
 
 The Thinger.io VS Code Plugin enables users to edit software files on the cloud using a fully-featured Integrated Development Environment (IDE) powered by Visual Studio Code (VS Code). This plugin also facilitates the coding of complete software and allows Over-The-Air (OTA) updates for microcontrollers directly from the cloud.
 
-## About Thinger.io and VS Code integration&#x20;
+## About Thinger.io and VS Code integration
 
 Thinger.io cloud platform offers a VS Code plugin based on Code-Server. This integration allows you to seamlessly edit any file uploaded into Thinger.io using a powerful IDE. Additionally, you can conveniently update microcontrollers via OTA directly from the cloud.
 
@@ -32,7 +32,7 @@ Furthermore, when accessing the [File Storages](https://docs.thinger.io/file-sys
 </p>
 
 {: .note}
-Please note that the Thinger.io VS Code Plugin is available only for premium Thinger.io servers. You can check [**this link**](https://thinger.io/pricing) to create your own instance within minutes.
+Please note that the Thinger.io VS Code Plugin is available only for premium Thinger.io servers, from Medium subscription and upwards. You can check [**this link**](https://thinger.io/pricing) to create your own instance within minutes.
 
 ## OTA Support
 

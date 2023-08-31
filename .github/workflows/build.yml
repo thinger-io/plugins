@@ -149,8 +149,8 @@ jobs:
         with:
           url: "${{ secrets.TAGS_URL }}/v2/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
           method: 'PUT'
-          username: ${{ secrets.TAGS_URL_USER }}
-          password: ${{ secrets.TAGS_URL_PASSWORD }}
+          username: ${{ secrets.LAMBDA_USER }}
+          password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
           customHeaders: '{"Content-Type": "application/json"}'
           data: "{ 'plugin': '${ matrix.plugin }', 'version': '${ env.version }', 'commit': '${ GITHUB_SHA }', 'repository': '${ GITHUB_REPOSITORY }', 'server_url': '${ GITHUB_SERVER_URL }' }"
