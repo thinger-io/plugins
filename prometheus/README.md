@@ -28,7 +28,7 @@ This file can also be used to configure external systems scraping.
 Check out also the [Alertmanager plugin](https://marketplace.thinger.io/plugins/alertmanager)
 
 <p align="center">
-  <img src="https://marketplace.thinger.io/prometheus/assets/query.jpg" alt="Prometheus integration showing a query over devices_total in Thinger.io">
+  <img src="https://marketplace.thinger.io/prometheus/assets/query.png" alt="Prometheus integration showing a query over devices_total in Thinger.io">
 </p>
 
 ## Integration with Grafana
@@ -45,7 +45,7 @@ The data to configure the Prometheus as data source you'll need:
 And thats it, you may start now creating dashboard in grafana with prometheus as the backend.
 
 <p align="center">
-  <img src="https://marketplace.thinger.io/prometheus/assets/grafana-dashboard.jpg" alt="Prometheus integration showing a devices_total dashboard in Grafana">
+  <img src="https://marketplace.thinger.io/prometheus/assets/grafana-dashboard.png" alt="Prometheus integration showing a devices_total dashboard in Grafana">
 </p>
 
 ## Official Documentation
