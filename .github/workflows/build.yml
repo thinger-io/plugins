@@ -153,4 +153,4 @@ jobs:
           password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
           customHeaders: '{"Content-Type": "application/json"}'
-          data: "{ 'plugin': '${ matrix.plugin }', 'version': '${ env.version }', 'commit': '${ GITHUB_SHA }', 'repository': '${ GITHUB_REPOSITORY }', 'server_url': '${ GITHUB_SERVER_URL }' }"
+          data: "{ 'plugin': \"${ matrix.plugin }\", 'version': \"${ env.version }\", 'commit': \"${ GITHUB_SHA }\", 'repository': \"${ GITHUB_REPOSITORY }\", 'server_url': \"${ GITHUB_SERVER_URL }\" }"

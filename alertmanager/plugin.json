@@ -1,6 +1,6 @@
 {
   "name" : "alertmanager",
-  "version" : "v0.26.0-1",
+  "version" : "0.26.0-1",
   "description" : "Alertmanager alarm handler system",
   "author" : "Jaime Bautista",
   "license" : "MIT",
