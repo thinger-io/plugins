@@ -1,4 +1,4 @@
-name: Deploy Jekyll site to Pages
+name: Deploy Docs site to Pages
 
 on:
   push:
@@ -42,6 +42,8 @@ jobs:
             mkdocs-material-
       - run: |
           pip install mkdocs-material
+          pip install mkdocs-minify-plugin
+          pip install mkdocs-redirects
           pip install mkdocs-monorepo-plugin
           pip install mkdocs-rss-plugin
           pip install mkdocs-git-revision-date-localized-plugin
