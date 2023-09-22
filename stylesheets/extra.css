@@ -1,0 +1,18 @@
+
+[data-md-color-scheme="thinger-light"] {
+
+  /* Primary color shades */
+  --md-primary-fg-color:  #0F1029;
+  --md-typeset-a-color:   #1F8EFE;
+  --md-accent-fg-color:   #4a97e5;
+
+}
+
+[data-md-color-scheme="slate"] {
+
+  /*--md-hue: 210; */
+  --md-primary-fg-color: #0F1029;
+  --md-typeset-a-color: #1F8EFE;
+  --md-accent-fg-color:   #4a97e5;
+
+}

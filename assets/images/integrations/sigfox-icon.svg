@@ -1,0 +1,13 @@
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 102.1 84.75">
+    <defs>
+        <style>.cls-1{fill:#230066;}.cls-2{fill:#afafaf;}.cls-3{fill:url(#Dégradé_sans_nom_2);}</style>
+        <linearGradient id="Dégradé_sans_nom_2" x1="8.03" y1="51.9" x2="92.79" y2="51.9" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#00dbff"/>
+            <stop offset="1" stop-color="#8024ff"/>
+        </linearGradient>
+    </defs>
+    <title>Logo_Full_Sigfox</title>
+    <path class="cls-1" d="M107.92,11.71C101,4.84,79.85,14.71,59.07,34q2.38,2.2,4.74,4.55A148.27,148.27,0,0,1,83.64,62.73C104.21,41.28,115,18.83,107.92,11.71Z" transform="translate(-8.03 -9.53)"/>
+    <path class="cls-1" d="M54.33,38.51C32.14,60.7,20.14,84.7,27.54,92.09h0c4.94,4.94,17.27,1.23,31.53-8.38V34Q56.7,36.15,54.33,38.51Z" transform="translate(-8.03 -9.53)"/>
+    <path class="cls-3" d="M63.81,38.51Q61.45,36.15,59.07,34C38.3,14.71,17.09,4.84,10.22,11.71h0c-7.11,7.11,3.71,29.57,24.28,51A148.27,148.27,0,0,1,54.33,38.51q2.36-2.36,4.74-4.55V83.71C73.33,93.32,85.66,97,90.6,92.09,98,84.7,86,60.7,63.81,38.51Z" transform="translate(-8.03 -9.53)"/>
+</svg>
