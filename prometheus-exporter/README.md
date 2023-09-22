@@ -1,16 +1,8 @@
----
-title: Prometheus Exporter
-layout: page
-description: Prometheus exporter of Thinger.io resources
-parent: Plugins
-has_children: true
-permalink: /plugins/:path/
----
 
 # Prometheus Exporter
 
 <p align="center">
-  <img alt="Prometheus logo" src="https://raw.githubusercontent.com/prometheus/prometheus/main/documentation/images/prometheus-logo.svg">
+  <img src="/plugins/prometheus-exporter/assets/prometheus-logo.svg" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus-exporter/assets/prometheus-logo.svg';this.onerror='';" alt="Prometheus logo">
 </p>
 
 The Thinger.io Prometheus Exporter plugin is designed to facilitate the monitoring of your Thinger.io resources. It allows you to expose metrics in Prometheus formats through a dedicated endpoint.
@@ -50,7 +42,7 @@ Here you can find an example for a metric that tracks the total of devices with 
 
 Each metric can be tested out individually, and once validated and saved, the full application endpoint can be queried, through the `Endpoint Settings` tab, where all needed configuration to create a Prometheus scrape job can be found.
 
-<img src="https://marketplace.thinger.io/prometheus-exporter/assets/prometheus-exporter.png" width="1024px">
+<img src="/plugins/prometheus-exporter/assets/prometheus-exporter.png" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus-exporter/assets/prometheus-exporter.png';this.onerror='';" width="1024px">
 
 ## Additional Resources
 
@@ -62,7 +54,9 @@ Also, the [Prometheus Server Plugin](https://marketplace.thinger.io/plugins/prom
 
 ## License
 
-<img align="right" src="https://opensource.org/trademarks/opensource/OSI-Approved-License-100x137.png">
+<a href="http://opensource.org/">
+  <img style="float: right;" width="100px" height="137px" src="/assets/OSI_Standard_Logo_0.svg">
+</a>
 
 The class is licensed under the [MIT License](http://opensource.org/licenses/MIT):
 

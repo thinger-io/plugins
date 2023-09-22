@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Prometheus",
     "description" : "Integration of Prometheus with Thinger.io",
-    "image" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg",
-    "icon" : "https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg"
+    "image" : "docs/assets/prometheus-logo.svg",
+    "icon" : "docs/assets/prometheus-logo.svg"
   },
   "tokens" : {
     "prometheus_plugin_callback" : {

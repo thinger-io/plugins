@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Node-RED",
     "description" : "Node-RED integration for Thinger.io",
-    "image" : "https://user-images.githubusercontent.com/1141353/57460672-dada7200-7275-11e9-91d1-11cdb560c758.png",
-    "icon" : "https://user-images.githubusercontent.com/1141353/58575445-565e8c00-8242-11e9-9f86-e6218c975a0a.png"
+    "image" : "docs/assets/node-red-logo.svg",
+    "icon" : "docs/assets/node-red-icon.svg"
   },
   "tokens" : {
     "node_red_plugin" : {

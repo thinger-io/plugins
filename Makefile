@@ -1,5 +1,5 @@
 build:
-	docker build -t thinger/plugins .
+	docker build -t thinger/monorepo .
 
 serve:
-	docker run -v ${PWD}:/app -v ${PWD}/vendor/bundle:/usr/local/bundle -p 4000:4000 -it --rm --name thinger_plugins thinger/plugins
+	docker run --rm -it -p 8000:8000 -v ${PWD}:/docs --name thinger_monorepo thinger/monorepo

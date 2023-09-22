@@ -1,0 +1,7 @@
+
+site_name: plugins/shelly-plus-1pm
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"

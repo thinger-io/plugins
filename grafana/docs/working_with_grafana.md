@@ -1,12 +1,3 @@
----
-title: Working with Grafana
-layout: page
-description: Build the first dashboard in the plugin
-parent: Grafana
-grand_parent: Plugins
-nav_order: 2
-permalink: /plugins/grafana/:basename/
----
 
 # Working with Grafana
 
@@ -17,19 +8,19 @@ Once the data source is set up, the most common way to work with Grafana is by c
 * **Panel Configuration**: Choose the type of graph to be used, such as time series charts, and explore various options for legends, axes, and more.
 
 <p align="center">
-  <img src="/grafana/assets/panel_configuration.png" alt="Grafana panel configuration">
+  <img src="/plugins/grafana/assets/panel_configuration.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/panel_configuration.png';this.onerror='';" alt="Grafana panel configuration">
 </p>
 
 * **Data Configuration in InfluxQL**: Select the data source (InfluxDB2-InfluxQL in our example), a data bucket profile from Thinger.io, and specific variables for the panel.
 
 <p align="center">
-  <img src="/grafana/assets/data_configuration_influxql.png" alt="Data Configuration in influxQL">
+  <img src="/plugins/grafana/assets/data_configuration_influxql.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/data_configuration_influxql.png';this.onerror='';" alt="Data Configuration in influxQL">
 </p>
 
 * **Data Configuration in Flux**: Select the data source (InfluxDB2-Flux in our example) and write the desired data using [Flux syntax](https://docs.influxdata.com/influxdb/v2.6/query-data/get-started/)
 
 <p align="center">
-  <img src="/grafana/assets/data_configuration_flux.png" alt="Data Configuration in Flux">
+  <img src="/plugins/grafana/assets/data_configuration_flux.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/data_configuration_flux.png';this.onerror='';" alt="Data Configuration in Flux">
 </p>
 
 * **Transform data**: Filter or aggregate device data using different tools before displaying it in the panel.
@@ -51,7 +42,7 @@ Grafana can be configured to create collaborative working groups for sharing res
 3. Choose the desired privileges to grant.
 
 <p align="center">
-  <img src="/grafana/assets/permissions.png" alt="Grafana dashboard permissions">
+  <img src="/plugins/grafana/assets/permissions.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/permissions.png';this.onerror='';" alt="Grafana dashboard permissions">
 </p>
 
-However, when Grafana is running as a Thinger.io plugin, it is neccesary to give public access to the plugin as explained in the sercion "Giving Public Access" at the [managing plugins page](/managing-plugins)
+However, when Grafana is running as a Thinger.io plugin, it is neccesary to give public access to the plugin as explained in the sercion "Giving Public Access" at the [managing plugins page](/plugins/managing/)

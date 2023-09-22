@@ -12,7 +12,7 @@
     "metadata": {
         "name": "Shelly Plus 1PM",
         "description": "Shelly Plus 1PM with Thinger.io",
-        "image": "shelly-plus-1pm.png"
+        "image": "docs/assets/shelly-plus-1pm.png"
     },
     "resources": {
         "products": [

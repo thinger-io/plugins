@@ -1,0 +1,6 @@
+site_name: plugins/http-device
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"

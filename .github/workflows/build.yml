@@ -12,7 +12,7 @@ jobs:
       plugin: ${{ steps.matrix.outputs.plugin }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -26,11 +26,6 @@ jobs:
             **/*.md
             **/**.md
             **/assets/**
-            _announcements/**
-            _docs/**
-            _includes/**
-            _layouts/**
-            _sass/**
             **/docs/**
             .github/**
 

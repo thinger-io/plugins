@@ -1,17 +1,22 @@
-## Jupyter R
+
+# Jupyter R
+
+<p align="center">
+  <img src="/plugins/jupyter-r/assets/jupyter_image.svg" onerror="this.src='https://marketplace.thinger.io/plugins/jupyter-r/assets/jupyter_image.svg';this.onerror='';" alt="Jupyter logo" width="200">
+</p>
 
 Thinger.io plugin for running Jupyter R version on the Cloud, integrating with Thinger.io file storages.
 
-<img src="https://jupyter-docker-stacks.readthedocs.io/en/latest/_static/jupyter-logo.svg" alt="Jupyter logo" width="200"/>
-<br/><br/>
+## Features
 
-### Features
 - Have your Notebook where your data is, providing a unified management and data access
 - Delegate the execution of the code and algorithms to a cloud environment
 - Develop in a stable environment
 
-### Technical Features
+## Technical Features
+
 This version integrates the following technology:
+
 - R interpreter
 - Python3 Runtime
 - git
@@ -19,5 +24,8 @@ This version integrates the following technology:
 
 More details in what this plugins includes can be found [here](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-r-notebook)
 
-### Screenshots
-<img src="https://raw.githubusercontent.com/thinger-io/plugins/jupyter-minimal/main/images/jupyter-thinger.png" alt="Jupyter Integration with Thinger.io" width="1000"/>
+## Screenshots
+
+<p align="center">
+  <img src="/plugins/jupyter-r/assets/jupyter-thinger.png" onerror="this.src='https://marketplace.thinger.io/plugins/jupyter-r/assets/jupyter-thinger.png';this.onerror='';" alt="Mockup of Jupyter Notebook integrated within Thinger.io" width="1000">
+</p>

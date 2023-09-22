@@ -1,12 +1,17 @@
-# InfluxDB2 Plugin 
 
-<img src="https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/influxdb2/influxdb.svg" alt="Grafana Logo" width="200"/>
+# InfluxDB2
+
+<p align="center">
+  <img src="/plugins/influxdb2/assets/influxdb.svg" onerror="this.src='https://marketplace.thinger.io/plugins/influxdb2/assets/influxdb.svg';this.onerror='';" alt="Influxdb logo" width="200">
+</p>
 
 InfluxDB is an open source time series platform. This includes APIs for storing and querying data, processing it in the background for ETL or monitoring and alerting purposes, user dashboards, and visualizing and exploring the data and more.
 
 InfluxDB is the default database backend for Thinger.io. This plugin allows direct access to the underlying installation and the user buckets for custom queries, dashboards, or alerts.
 
-![image](https://discoursefiles.s3.dualstack.eu-west-1.amazonaws.com/optimized/2X/b/b9181507304f07b8a3499e1079384c5e435ab1a3_2_836x750.jpeg)
+<p align="center">
+  <img src="/plugins/influxdb2/assets/login_page.jpeg" onerror="this.src='https://marketplace.thinger.io/plugins/influxdb2/assets/login_page.jpeg';this.onerror='';" alt="Influxdb login page integrated in Thinger.io Platform">
+</p>
 
 ## Requirements
 

@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Sigfox",
     "description" : "Sigfox Integration",
-    "image" : "https://user-images.githubusercontent.com/1141353/58866047-00616c80-86b8-11e9-9fe2-ef171c54ec8f.jpg",
-    "icon" : "https://user-images.githubusercontent.com/1141353/58574249-d7685400-823f-11e9-81bf-1fdaa18b9548.png"
+    "image" : "docs/assets/sigfox-image.jpg",
+    "icon" : "docs/assets/sigfox-icon.png"
   },
   "tokens" : {
     "sigfox_plugin" : {

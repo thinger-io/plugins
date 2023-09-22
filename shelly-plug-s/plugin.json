@@ -12,8 +12,8 @@
   "metadata": {
     "name": "Shelly Plug S",
     "description": "Shelly Plug S",
-    "image": "shelly-plug-s.jpg",
-    "icon": "shelly-plug-s.jpg"
+    "image": "docs/assets/shelly-plug-s.jpg",
+    "icon": "docs/assets/shelly-plug-s.jpg"
   },
   "resources": {
     "products": [

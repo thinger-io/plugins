@@ -1,9 +1,6 @@
-FROM jekyll/jekyll
+FROM squidfunk/mkdocs-material
 
-WORKDIR /app
-
-COPY . ./
-
-EXPOSE 4000
-
-CMD ["jekyll", "serve"]
+RUN \
+  pip install mkdocs-monorepo-plugin \
+  pip install mkdocs-git-revision-date-localized-plugin \
+  pip install mkdocs-rss-plugin

@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Shelly 1L",
     "description": "Shelly 1L with Thinger.io",
-    "image": "shelly-1l.png"
+    "image": "docs/assets/shelly-1l.png"
   },
   "resources": {
     "products" : [

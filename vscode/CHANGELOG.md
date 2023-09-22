@@ -1,14 +1,5 @@
----
-title: Changelog
-layout: page
-description: VS Code changelog
-parent: VS Code
-grand_parent: Plugins
-permalink: /plugins/:path/changelog
----
 
 # Changelog
-All notable changes to VS Code plugin will be documented here.
 
 ## 4.14.1-2 - 2023-08-23
 ### Changed

@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Grafana",
     "description" : "Grafana integration for Thinger.io",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/grafana/img/grafana-logo.png",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/grafana/img/grafana-icon.png"
+    "image" : "docs/assets/grafana-logo.png",
+    "icon" : "docs/assets/grafana-icon.png"
   },
   "tokens" : {
   },

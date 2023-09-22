@@ -4,5 +4,5 @@
 ### Added
 - Support for Shelly Gen2 Protocol
 
-## 1.0.0 - 2023-
+## 1.0.0 - 2023-03-31
 - First version of plugin for Shelly Gen1 Protocol

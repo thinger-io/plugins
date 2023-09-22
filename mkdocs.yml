@@ -1,0 +1,201 @@
+
+# Project information
+site_name: Thinger.io Marketplace
+site_url: https://marketplace.thinger.io/
+site_author: Thinger.io
+site_description: >-
+  Unlock IoT innovation at Thinger.io Plugins Marketplace. Enhance your projects with powerful integrations,
+  stay updated with the latest releases, and seamlessly integrate new capabilities into your Thinger.io platform.
+  Join us and embark on a data-driven IoT journey today.
+
+# Repository
+repo_name: thinger-io/plugins
+repo_url: https://github.com/thinger-io/plugins
+
+# Copyright
+copyright: >
+  Copyright &copy; 2016 - 2023 Thinger.io<br />
+#  <a href="#__consent">Change cookie settings</a>
+
+# Configuration
+theme:
+  name: material
+  custom_dir: docs/overrides
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    #- navigation.prune
+    - navigation.indexes
+    - toc.follow
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - search.share
+    - navigation.footer
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: thinger-light
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  favicon: assets/favicon.svg
+  logo: assets/favicon.svg
+  #font:
+  #  text: Poppins Sans Serif
+  #  code: Poppins Mono
+#  toggle:
+#    icon: material/brightness-7
+#    name: Switch to dark mode
+
+# Plugins
+plugins:
+  - monorepo
+  - blog:
+      blog_dir: announcements
+      blog_toc: false
+      post_url_format: "{slug}"
+      archive: false
+      pagination_per_page: 5
+  - rss:
+      match_path: announcements/posts/.*
+      date_from_meta:
+        as_creation: date
+      categories:
+        - categories
+      image: "https://marketplace.thinger.io/assets/favicon.svg"
+      abstract_chars_count: -1
+      comments_path: "#__comments"
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+  - minify:
+      minify_html: true
+  #- meta -> insiders
+
+# Customization
+extra_css:
+  - stylesheets/extra.css
+#  - stylesheets/tailwind.min.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/discourse
+      link: https://community.thinger.io/
+      name: Thinger.io community
+    - icon: fontawesome/brands/github
+      link: https://github.com/thinger-io/
+      name: Thinger.io on GitHub
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/u/thinger
+      name: Thinger.io on GitHub
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/thinger-io/
+      name: Thinger.io on LinkedIn
+    - icon: fontawesome/brands/x-twitter
+      link: https://twitter.com/thinger_io/
+      name: Thinger.io on Twitter
+    - icon: fontawesome/brands/facebook
+      link: https://www.facebook.com/thinger.io/
+      name: Thinger.io on Facebook
+    - icon: fontawesome/brands/instagram
+      link: https://www.instagram.com/thinger.io/
+      name: Thinger.io on Instagram
+  generator: true # Removed footer "made with"
+
+#  consent:
+#    title: We value your privacy
+#    description: >-
+#      We use cookies to enhance your browsing experience, serve personalized ads or content,
+#      and analyze our traffic. By clicking "Accept", you consent to our use of cookies.
+#    actions:
+#      - accept
+#      - reject
+#      - manager
+
+# Extensions
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - def_list
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - footnotes
+  - toc:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+
+# Page tree
+nav:
+  - How It Works:
+      - 'how_it_works/index.md'
+      - Hardware Manufacturers: 'how_it_works/hardware_manufacturers.md'
+      - IoT Consultants: 'how_it_works/iot_consultants.md'
+      - End Customers: 'how_it_works/end_customers.md'
+      - Community: 'how_it_works/community.md'
+  - Plugins:
+    - 'plugins/index.md'
+    - Managing Plugins: 'plugins/managing.md'
+    #- Plugins: '*include ./*/mkdocs.yml'
+    - Plugins:
+      - Alertmanager: '!include ./alertmanager/mkdocs.yml'
+      - Docker Registry: '!include ./docker-registry/mkdocs.yml'
+      - Grafana: '!include ./grafana/mkdocs.yml'
+      - HTTP Devices: '!include ./http-device/mkdocs.yml'
+      - InfluxDB2: '!include ./influxdb2/mkdocs.yml'
+      - Jupyter Minimal: '!include ./jupyter-minimal/mkdocs.yml'
+      - Jupyter R: '!include ./jupyter-r/mkdocs.yml'
+      - Jupyter TensorFlow: '!include ./jupyter-tensorflow/mkdocs.yml'
+      - Node-RED: '!include ./node-red/mkdocs.yml'
+      - Prometheus Exporter: '!include ./prometheus-exporter/mkdocs.yml'
+      - Prometheus: '!include ./prometheus/mkdocs.yml'
+      - Shelly 1L: '!include ./shelly-1l/mkdocs.yml'
+      - Shelly Plug S: '!include ./shelly-plug-s/mkdocs.yml'
+      - Shelly Plus 1PM: '!include ./shelly-plus-1pm/mkdocs.yml'
+      - Sigfox: '!include ./sigfox/mkdocs.yml'
+      - The Things Stack: '!include ./ttn-stack/mkdocs.yml'
+      - VS Code: '!include ./vscode/mkdocs.yml'
+  - Contributing:
+    - 'contributing/index.md'
+    - Plugin System Infrastructure: 'contributing/plugin-system-infrastructure.md'
+    - Plugin Structure:
+      - 'contributing/structure/index.md'
+      - Plugin File: 'contributing/structure/plugin-file.md'
+      - Readme File: 'contributing/structure/readme-file.md'
+      - Changelog File: 'contributing/structure/changelog-file.md'
+      - Dockerfile: 'contributing/structure/dockerfile.md'
+      - Configuration Files: 'contributing/structure/configuration-files.md'
+    - Writing a Plugin:
+      - 'contributing/writing/index.md'
+      - Integrating Services: 'contributing/writing/integrating-services.md'
+      - Developing Custom Plugins: 'contributing/writing/developing-custom-plugins.md'
+      - Off-the-shelf Hardware Integration: 'contributing/writing/off-the-shelf-hardware.md'
+      - Deploying Local Plugins: 'contributing/writing/deploying-local.md'
+    - Documentation:
+      - 'contributing/documentation/index.md'
+  - Announcements:
+    - announcements/index.md

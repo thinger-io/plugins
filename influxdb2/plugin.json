@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "InfluxDB2",
     "description" : "InfluxDB2 Plugin",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/influxdb2/influxdb.svg",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/influxdb2/influxdb.svg"
+    "image" : "docs/assets/influxdb.svg",
+    "icon" : "docs/assets/influxdb.svg"
   },
   "resources" : {
     "proxies" : [

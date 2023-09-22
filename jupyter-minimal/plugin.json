@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Jupyter Minimal",
     "description" : "Jupyter Notebook Minimal",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_image.svg",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/jupyter/jupyter_icon.svg"
+    "image" : "docs/assets/jupyter_image.svg",
+    "icon" : "docs/assets/jupyter_icon.svg"
   },
   "task": {
     "type": "docker",

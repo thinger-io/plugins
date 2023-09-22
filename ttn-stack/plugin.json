@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "The Things Stack",
     "description" : "The Things Stack Integration",
-    "image" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-logo.png",
-    "icon" : "https://s3-eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-icon.png"
+    "image" : "docs/assets/ttn-stack-logo.png",
+    "icon" : "docs/assets/ttn-stack-icon.png"
   },
   "tokens" : {
     "ttn_stack_plugin" : {

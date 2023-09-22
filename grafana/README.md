@@ -1,22 +1,14 @@
----
-title: Grafana
-layout: page
-description: Grafana integration
-parent: Plugins
-has_children: true
-permalink: /plugins/:path/
----
 
-# Grafana: The Open-Source Platform for Monitoring and Observability
+# Grafana
 
 <p align="center">
-  <img src="/grafana/assets/icon.png" alt="Grafana logo">
+  <img src="/plugins/grafana/assets/grafana-icon.svg" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/grafana-icon.svg';this.onerror='';" alt="Grafana logo" width="200">
 </p>
 
 Grafana is a powerful and versatile open-source platform designed to streamline the monitoring and observability of your metrics, regardless of their storage location. With Grafana, you can effortlessly query, visualize, set up alerts, and gain deep insights into your data, fostering a data-driven culture within your team.
 
 <p align="center">
-  <img src="/grafana/assets/dashboard.png" alt="Grafana dashboard inside thinger.io">
+  <img src="/plugins/grafana/assets/dashboard.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/dashboard.png';this.onerror='';" alt="Grafana dashboard inside thinger.io">
 </p>
 
 ## Key Features
@@ -48,7 +40,7 @@ With Grafana, you can effortlessly mix different data sources within the same gr
 ## About thinger.io and Grafana Integration
 
 <p align="center">
-  <img src="/grafana/assets/integration.png" alt="Diagram showing thinger.io and Grafana integration">
+  <img src="/plugins/grafana/assets/integration.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/integration.png';this.onerror='';" alt="Diagram showing thinger.io and Grafana integration">
 </p>
 
 The integration of thinger.io with Grafana introduces an immensely valuable toolset for thinger.io users, enabling them to elevate their dashboards to a professional level, conduct intricate analytics in a scalable manner, and embark on collaborative visualization projects with fellow developers on their team. This seamless integration leverages the strengths of each component to create a powerful infrastructure, where thinger.io serves as a centralized hub for device administration and management.
@@ -61,9 +53,7 @@ Begin your journey with the thinger.io and Grafana integration today and experie
 
 Unsure if Grafana is for you? Watch Grafana in action on [play.grafana.org](https://play.grafana.org/)!
 
-<span class="fs-5">
-[Starting with Grafana Plugin](get_started){: .btn }
-</span>
+[Starting with Grafana Plugin](get_started){ .md-button .md-button--primary }
 
 ## Official Documentation
 

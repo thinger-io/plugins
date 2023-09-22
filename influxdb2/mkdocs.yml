@@ -1,0 +1,6 @@
+site_name: plugins/influxdb2
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
