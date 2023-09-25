@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Jupyter TensorFlow",
     "description" : "Jupyter Plugin for Thinger.io",
-    "image" : "jupyter-tensorflow/docs/assets/jupyter_image.svg",
-    "icon" : "jupyter-tensorflow/docs/assets/jupyter_icon.svg"
+    "image" : "docs/assets/jupyter_image.svg",
+    "icon" : "docs/assets/jupyter_icon.svg"
   },
   "task": {
     "type": "docker",
