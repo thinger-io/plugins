@@ -47,7 +47,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-  favicon: assets/favicon.svg
+  favicon: assets/favicon.icon
   logo: assets/favicon.svg
   #font:
   #  text: Poppins Sans Serif
