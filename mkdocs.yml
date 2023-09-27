@@ -4,9 +4,7 @@ site_name: Thinger.io Marketplace
 site_url: https://marketplace.thinger.io/
 site_author: Thinger.io
 site_description: >-
-  Unlock IoT innovation at Thinger.io Plugins Marketplace. Enhance your projects with powerful integrations,
-  stay updated with the latest releases, and seamlessly integrate new capabilities into your Thinger.io platform.
-  Join us and embark on a data-driven IoT journey today.
+  Experience IoT innovation with powerful integrations, updates, and refined capabilities. Join us and embark on a data-driven journey
 
 # Repository
 repo_name: thinger-io/plugins

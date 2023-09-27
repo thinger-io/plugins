@@ -1,5 +1,5 @@
 
-# Introduction
+# Plugins
 
 Plugins are extensions that allow complementing Thinger.io Platform with additional features or creating integrations with third-party internet services, data analytics algorithms or custom software.
 
