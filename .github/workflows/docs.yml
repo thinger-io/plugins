@@ -45,5 +45,6 @@ jobs:
           pip install mkdocs-monorepo-plugin
           pip install mkdocs-rss-plugin
           pip install mkdocs-git-revision-date-localized-plugin
+          pip install "mkdocs-material[imaging]"
 
       - run: mkdocs gh-deploy --force

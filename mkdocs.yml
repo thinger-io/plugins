@@ -61,6 +61,7 @@ theme:
 # Plugins
 plugins:
   - monorepo
+  - social
   - blog:
       blog_dir: announcements
       blog_toc: false
@@ -100,7 +101,7 @@ extra:
       name: Thinger.io on GitHub
     - icon: fontawesome/brands/docker
       link: https://hub.docker.com/u/thinger
-      name: Thinger.io on GitHub
+      name: Thinger.io on DockerHub
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/thinger-io/
       name: Thinger.io on LinkedIn
@@ -161,7 +162,7 @@ nav:
     - 'plugins/index.md'
     - Managing Plugins: 'plugins/managing.md'
     #- Plugins: '*include ./*/mkdocs.yml'
-    - Plugins:
+    - Integrations:
       - Alertmanager: '!include ./alertmanager/mkdocs.yml'
       - Docker Registry: '!include ./docker-registry/mkdocs.yml'
       - Grafana: '!include ./grafana/mkdocs.yml'

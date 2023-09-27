@@ -28,6 +28,8 @@ jobs:
             **/assets/**
             **/docs/**
             .github/**
+            Dockerfile
+            Makefile
 
       - name: Set the plugins matrix
         id: matrix
