@@ -2,417 +2,432 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://marketplace.thinger.io/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/vs-code-plugin-version-2460-1/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/prometheus-plugin-version-2460-1/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/alertmanager-plugin-version-0260-1/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/plugin-system-infrastructure/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/documentation/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/changelog-file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/configuration-files/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/dockerfile/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/plugin-file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/readme-file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/deploying-local/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/developing-custom-plugins/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/integrating-services/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/off-the-shelf-hardware/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/community/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/end_customers/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/hardware_manufacturers/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/iot_consultants/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/managing/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/alertmanager/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/alertmanager/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/alertmanager/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/docker-registry/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/docker-registry/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/docker-registry/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/grafana/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/grafana/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/grafana/get_started/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/grafana/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/grafana/working_with_grafana/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/http-device/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/http-device/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/http-device/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/influxdb2/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/influxdb2/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/influxdb2/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-minimal/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-minimal/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-minimal/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-r/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-r/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-r/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-tensorflow/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-tensorflow/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/jupyter-tensorflow/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/node-red/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/node-red/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/node-red/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus-exporter/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus-exporter/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/prometheus-exporter/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-1l/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-1l/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-1l/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/shelly-em/</loc>
+         <lastmod>2023-10-09</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/shelly-em/changelog/</loc>
+         <lastmod>2023-10-09</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/shelly-em/plugin_file/</loc>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plug-s/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plug-s/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plug-s/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plus-1pm/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plus-1pm/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/shelly-plus-1pm/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/sigfox/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/sigfox/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/sigfox/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/ttn-stack/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/ttn-stack/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/ttn-stack/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/vscode/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/vscode/changelog/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/vscode/plugin_file/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/prometheus/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/monitoring/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/alerting/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/vs-code/</loc>
-         <lastmod>2023-09-27</lastmod>
+         <lastmod>2023-10-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
