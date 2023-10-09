@@ -1,0 +1,7 @@
+
+site_name: plugins/shelly-em
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"

@@ -47,7 +47,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-  favicon: assets/favicon.icon
+  favicon: assets/favicon.ico
   logo: assets/favicon.svg
   #font:
   #  text: Poppins Sans Serif
@@ -173,6 +173,7 @@ nav:
       - Prometheus Exporter: '!include ./prometheus-exporter/mkdocs.yml'
       - Prometheus: '!include ./prometheus/mkdocs.yml'
       - Shelly 1L: '!include ./shelly-1l/mkdocs.yml'
+      - Shelly EM: '!include ./shelly-em/mkdocs.yml'
       - Shelly Plug S: '!include ./shelly-plug-s/mkdocs.yml'
       - Shelly Plus 1PM: '!include ./shelly-plus-1pm/mkdocs.yml'
       - Sigfox: '!include ./sigfox/mkdocs.yml'

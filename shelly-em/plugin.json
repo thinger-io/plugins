@@ -1,0 +1,1386 @@
+{
+    "name": "shelly-em",
+    "version": "1.0.0",
+    "description": "Shelly EM with Thinger.io",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "shelly-em"
+    },
+    "metadata": {
+        "name": "Shelly EM",
+        "description": "Shelly EM with Thinger.io",
+        "image": "shelly-em.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "Shelly EM with Thinger.io",
+                "enabled": true,
+                "name": "Shelly EM",
+                "product": "shelly_em",
+                "profile": {
+                    "api": {
+                        "relay": {
+                            "description": "Relay Control",
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload:toOnOff=property.relay}}",
+                                    "target": "topic",
+                                    "topic": "shellies/{{device}}/relay/0/command"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        },
+                        "state": {
+                            "description": "Device State",
+                            "enabled": true,
+                            "request": {
+                                "data": {}
+                            },
+                            "response": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "property": "state",
+                                    "source": "property"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "shelly_em": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "shellyem-[A-F0-9]+"
+                            },
+                            "description": "Shelly EM Autoprovision",
+                            "enabled": true,
+                            "name": "Shelly EM"
+                        }
+                    },
+                    "buckets": {
+                        "shelly_em_energy": {
+                            "data": {
+                                "payload": "{{:processData}}",
+                                "source": "topic",
+                                "topic": "shellies/{{device}}/emeter/{{em=0|1}}/{{measurement=energy|returned_energy|total|total_returned|power|reactive_power|voltage}}"
+                            },
+                            "description": "Device Consumption",
+                            "enabled": true
+                        }
+                    },
+                    "code": {
+                        "code": "function toOnOff(value){\n    return value ? \"on\" : \"off\";\n}\n\nfunction toBoolean(value){\n    return value == \"on\" ? true : false;\n}\n\nfunction processData(value){\n\n    let parts = value.topic.split(\"/\");\n    let measurement = parts[parts.length-1];\n\n    let payload;\n\n    switch (measurement) {\n        case 'energy':\n        case 'returned_energy':\n            // convert energy from watt-min to kwH\n            payload = value.payload/60/1000;\n            break;\n        case 'total':\n        case 'total_returned':\n            // convert total energy from Wh to kWh\n            payload = value.payload/1000;\n            break;\n        case 'power':\n        case 'reactive_power':\n            // convert power from W to kW\n            payload = value.payload/1000\n            break;\n        default:\n            payload = value.payload; \n    }\n\n    return payload;\n}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "location": {
+                            "data": {},
+                            "description": "Device Location",
+                            "enabled": true,
+                            "model": {
+                                "source": "value",
+                                "value": "{\n    \"latitude\": 40.4,\n    \"longitude\": -3.703790\n}"
+                            }
+                        },
+                        "relay": {
+                            "data": {
+                                "payload": "{{payload:toBoolean}}",
+                                "source": "topic",
+                                "topic": "shellies/{{device}}/relay/0"
+                            },
+                            "description": "Relay State",
+                            "enabled": true,
+                            "model": {
+                                "source": "value",
+                                "value": "false"
+                            }
+                        },
+                        "state": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "source": "topic",
+                                "topic": "shellies/announce"
+                            },
+                            "description": "Device State",
+                            "enabled": true,
+                            "model": {
+                                "source": "value"
+                            }
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "description": "Dashboard for Shelly EM devices",
+                                "name": "Shelly EM",
+                                "properties": {
+                                    "background_image": "",
+                                    "columns": 12,
+                                    "row_height": 40,
+                                    "show_template": true,
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 9,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Power Switch"
+                                                },
+                                                "properties": {
+                                                    "style": "switch"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem-C45BBE6B6902",
+                                                            "resource": "relay"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "property": "relay"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device"
+                                                    }
+                                                ],
+                                                "type": "boolean"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 8,
+                                                    "row": 12,
+                                                    "sizeX": 4,
+                                                    "sizeY": 11
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Device Location"
+                                                },
+                                                "properties": {
+                                                    "center": true,
+                                                    "hideControls": false,
+                                                    "latitude": 0,
+                                                    "longitude": 0,
+                                                    "mapType": "roadmap",
+                                                    "showClustering": true,
+                                                    "showConnected": true,
+                                                    "showDisconnected": true,
+                                                    "showOptions": false,
+                                                    "showSearch": true,
+                                                    "waypoints": false,
+                                                    "zoom": 8
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#0cdf72",
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": {
+                                                                "latitude": "latitude",
+                                                                "longitude": "longitude"
+                                                            },
+                                                            "property": "location"
+                                                        },
+                                                        "name": "Device Location",
+                                                        "source": "device_property",
+                                                        "timespan": {
+                                                            "magnitude": "minute",
+                                                            "value": 30
+                                                        },
+                                                        "type": "type"
+                                                    }
+                                                ],
+                                                "type": "map"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Shelly EM"
+                                                },
+                                                "properties": {
+                                                    "refresh_interval": 0
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "image_url": "https://raw.githubusercontent.com/thinger-io/plugins/main/shelly-em/docs/assets/shelly-em-clamp-50a.png",
+                                                        "name": "Default",
+                                                        "source": "image_url"
+                                                    }
+                                                ],
+                                                "type": "image"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 8,
+                                                    "row": 23,
+                                                    "sizeX": 4,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "New Firmware"
+                                                },
+                                                "properties": {
+                                                    "color": "#00aa00",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#00ff00",
+                                                            "max": 1,
+                                                            "min": 1
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff3705",
+                                                            "max": 0,
+                                                            "min": 0
+                                                        }
+                                                    ],
+                                                    "size": "35px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_temperature",
+                                                            "mapping": "overtemperature",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "new_fw",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 3,
+                                                    "sizeX": 3,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Device Model"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-tablet",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "model",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 3,
+                                                    "sizeX": 4,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "IP Address"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-wifi",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "ip",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 0,
+                                                    "sizeX": 4,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Device MAC"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-ethernet",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 9,
+                                                    "row": 3,
+                                                    "sizeX": 3,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Grid Voltage"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "fa-solid fa-plug",
+                                                    "size": "35px",
+                                                    "unit": "V",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "voltage"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "id",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 23,
+                                                    "sizeX": 8,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Firmware Version"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-code-merge",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "fw_ver",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "title": "Device ID"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-fingerprint",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem-C45BBE6B6902",
+                                                            "mapping": "id",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 8,
+                                                    "sizeY": 11
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "subtitle": "kWh",
+                                                    "title": "Daily Energy Consumption"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": false,
+                                                    "multiple_axes": false,
+                                                    "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar'\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            endingShape: 'rounded'\n        },\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        show: true,\n        width: 2,\n        colors: ['transparent']\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    fill: {\n        opacity: 1\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "1d",
+                                                            "type": "max"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "total"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1f8efe",
+                                                        "name": "ch 0",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "month",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 1
+                                                        },
+                                                        "transform": "difference"
+                                                    },
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "1d",
+                                                            "type": "max"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "energy"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#33d17a",
+                                                        "name": "ch 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "month",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 1
+                                                        },
+                                                        "transform": "difference"
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Total Energy (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "total"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "Wh",
+                                                    "title": "Returned Energy (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "Wh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "energy"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Energy Counter (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "energy"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 8,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "W",
+                                                    "title": "Power (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "power"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Energy Counter (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "energy"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Total Energy (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "total"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 6,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Total Energy Returned (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "total_returned"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "Wh",
+                                                    "title": "Returned Energy (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "Wh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "returned_energy"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 6,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "kWh",
+                                                    "title": "Total Energy Returned (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "total_returned"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 8,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "W",
+                                                    "title": "Power (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "power"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 10,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "W",
+                                                    "title": "Reactive Power (ch 0)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "0"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "reactive_power"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 10,
+                                                    "row": 9,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffffcc",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "subtitle": "W",
+                                                    "title": "Reactive Power (ch 1)"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-infinity",
+                                                    "size": "35px",
+                                                    "unit": "kWh",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb2",
+                                                            "id": "shelly_em_energy",
+                                                            "mapping": "value",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "shellyem"
+                                                                ],
+                                                                "em": [
+                                                                    "1"
+                                                                ],
+                                                                "group": [],
+                                                                "measurement": [
+                                                                    "reactive_power"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1E313E",
+                                                        "device": {
+                                                            "id": "shellyem"
+                                                        },
+                                                        "device_property": {
+                                                            "device": "shellyem",
+                                                            "mapping": "mac",
+                                                            "property": "state"
+                                                        },
+                                                        "name": "Default",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
