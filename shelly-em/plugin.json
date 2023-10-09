@@ -12,7 +12,7 @@
     "metadata": {
         "name": "Shelly EM",
         "description": "Shelly EM with Thinger.io",
-        "image": "shelly-em.png"
+        "image": "sdocs/assets/shelly-em-clamp-50a.png"
     },
     "resources": {
         "products": [
