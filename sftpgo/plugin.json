@@ -13,7 +13,7 @@
     "name" : "SFTPGo",
     "description" : "SFTPGo Plugin",
     "image" : "docs/assets/sftpgo-logo.png",
-    "icon" : "docs/assets/sftpgo-icon.png"
+    "icon" : "https://raw.githubusercontent.com/thinger-io/plugins/main/sftpgo/docs/assets/sftpgo-icon.png"
   },
   "resources" : {
     "storages": [
