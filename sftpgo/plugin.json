@@ -1,0 +1,140 @@
+{
+  "name" : "sftpgo",
+  "version" : "2.5.4-1",
+  "description" : "Plugin for SFTP access to file storages",
+  "author" : "Jaime Bautista",
+   "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory": "sftpgo"
+  },
+  "license" : "MIT",
+  "metadata" : {
+    "name" : "SFTPGo",
+    "description" : "SFTPGo Plugin",
+    "image" : "docs/assets/sftpgo-logo.png",
+    "icon" : "docs/assets/sftpgo-icon.png"
+  },
+  "resources" : {
+    "storages": [
+      {
+        "storage": "sftpgo_data",
+        "name": "SFTPGo Data",
+        "description": "Storage to persist SFTPGo data and backups",
+        "public": false
+      }
+    ],
+    "proxies" : [
+      {
+        "config": {
+          "protocol": "tcp",
+          "source": {
+            "port": 2022
+          },
+          "target": {
+            "plugin": {
+              "name": "{{THINGER_PLUGIN}}",
+              "user": "{{THINGER_USER}}"
+            },
+            "port": 2022,
+            "type": "plugin"
+          }
+        },
+        "description": "SFTPGo SFTP Proxy created by plugin",
+        "enabled": true,
+        "name": "SFTPGo SFTP Plugin Access",
+        "proxy": "sfptgo_sftp_plugin"
+      },
+      {
+        "config": {
+          "protocol": "tcp",
+          "source": {
+            "port": 2121
+          },
+          "target": {
+            "plugin": {
+              "name": "{{THINGER_PLUGIN}}",
+              "user": "{{THINGER_USER}}"
+            },
+            "port": 2121,
+            "type": "plugin"
+          }
+        },
+        "description": "SFTPGo FTP Proxy created by plugin",
+        "enabled": true,
+        "name": "SFTPGo FTP Plugin Access",
+        "proxy": "sfptgo_ftp_control_plugin"
+      },
+      {
+        "config": {
+          "protocol": "tcp",
+          "source": {
+            "port": 2122
+          },
+          "target": {
+            "plugin": {
+              "name": "{{THINGER_PLUGIN}}",
+              "user": "{{THINGER_USER}}"
+            },
+            "port": 2122,
+            "type": "plugin"
+          }
+        },
+        "description": "SFTPGo FTP Data Proxy created by plugin",
+        "enabled": true,
+        "name": "SFTPGo FTP Data Plugin Access",
+        "proxy": "sfptgo_ftp_data_plugin"
+      }
+    ]
+  },
+  "task": {
+    "type": "docker",
+    "image": "drakkan/sftpgo:v2.5.4",
+    "env" : {
+      "SFTPGO_HTTPD__WEB_ROOT" : "/users/{{THINGER_USER}}/plugins/{{THINGER_PLUGIN}}/",
+      "SFTPGO_FTPD__BINDINGS__0__PORT" : "2121",
+      "SFTPGO_FTPD__BINDINGS__0__CERTIFICATE_FILE" : "/certificates/{{THINGER_HOST}}/fullchain.pem",
+      "SFTPGO_FTPD__BINDINGS__0__CERTIFICATE_KEY_FILE" : "/certificates/{{THINGER_HOST}}/privkey.pem",
+      "SFTPGO_FTPD__BINDINGS__0__PASSIVE_HOST" : "{{THINGER_HOST}}",
+      "SFTPGO_FTPD__PASSIVE_PORT_RANGE__START" : "2121",
+      "SFTPGO_FTPD__PASSIVE_PORT_RANGE__END" : "2122",
+      "SFTPGO_FTPD__DISABLE_ACTIVE_MODE" : "true",
+      "SFTPGO_TELEMETRY__BIND_PORT" : "9090",
+      "SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN" : "true",
+      "SFTPGO_DEFAULT_ADMIN_USERNAME" : "{{THINGER_USER}}",
+      "SFTPGO_DEFAULT_ADMIN_PASSWORD" : "{{THINGER_USER}}",
+      "SFTPGO_DATA_PROVIDER__USERS_BASE_DIR" : "/srv/sftpgo/sftpgo_data/data/",
+      "SFTPGO_DATA_PROVIDER__BACKUPS_PATH" : "/srv/sftpgo/sftpgo_data/backups/"
+    },
+    "volumes": [
+      {
+        "source": "../../../storages",
+        "target": "/srv/sftpgo/",
+        "description": "Mount point of thinger storages"
+      },
+      {
+        "source": "data",
+        "target": "/var/lib/sftpgo",
+        "description": "Mount point for user data configuration"
+      },
+      {
+        "source": "../../../../../../thinger/certificates/",
+        "target": "/certificates",
+        "description": "Mount point for TLS certificates"
+      }
+    ],
+    "extra_hosts": {
+        "bind_hostname": false
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "sftpgo",
+        "port" : 8080,
+        "rewrite_base_path": false
+      }
+    }
+  }
+}
+

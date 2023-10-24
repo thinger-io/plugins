@@ -34,7 +34,7 @@ jobs:
       - name: Set the plugins matrix
         id: matrix
         run: |
-          directories=$(echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }} | xargs -n1 | sort -u | xargs |  sed "s# #, #g") # remove duplicate directories
+          directories=$(echo ${{ steps.changed-files.outputs.all_changed_and_modified_files }} | xargs -n1 | sort -u) # remove duplicate directories
           matrix=$((
             echo '{ "plugin" : ['
             separator=''
@@ -150,4 +150,4 @@ jobs:
           password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
           customHeaders: '{"Content-Type": "application/json"}'
-          data: "{ 'plugin': \"${ matrix.plugin }\", 'version': \"${ env.version }\", 'commit': \"${ GITHUB_SHA }\", 'repository': \"${ GITHUB_REPOSITORY }\", 'server_url': \"${ GITHUB_SERVER_URL }\" }"
+          data: "{ 'plugin': \"${{ matrix.plugin }}\", 'version': \"${{ env.version }}\", 'commit': \"${{ GITHUB_SHA }}\", 'repository': \"${{ GITHUB_REPOSITORY }}\", 'server_url': \"${{ GITHUB_SERVER_URL }}\" }"
