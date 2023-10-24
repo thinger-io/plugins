@@ -154,7 +154,7 @@ jobs:
 
       - name: Post tag to DB
         run: |
-          json_body = '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${ GITHUB_SHA }"'", "repository": "'"${ GITHUB_REPOSITORY }"'", "server_url": "'"${ GITHUB_SERVER_URL }"'" }'
+          json_body = '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ env.GITHUB_SHA }}"'", "repository": "'"${{ env.GITHUB_REPOSITORY }}"'", "server_url": "'"${{ env.GITHUB_SERVER_URL }}"'" }'
 
           curl -X PUT \
             -H "Content-Type: application/json" \

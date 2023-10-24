@@ -65,7 +65,15 @@ In order to connect with this protocol, the connection parameters are:
 
 ### FTP and FTPS
 
+!!! warning
+
+    It is recommended to always use SFTP protocol due to the design challenges of FTP/S
+
 For FTP and FTP over TLS (FTPS) the supported connection is in Passive Mode. The upgrade to TLS of the control and data ports may be handled automatically by the FTP client using explicit FTP.
+
+!!! tip
+
+    Currently, only one data connection may be opened simultaneously
 
 The connection parameters are:
 
