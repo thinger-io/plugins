@@ -74,7 +74,7 @@ jobs:
         run: |
           if [[ "${{ env.branch }}" == "main" ]]; then
             echo docker_version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
-            echo "version=v$docker_version" >> $GITHUB_ENV
+            echo "version=v${{ env.docker_version }}" >> $GITHUB_ENV
           else
             echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
@@ -156,10 +156,10 @@ jobs:
 
       - name: Post tag to DB
         run: |
-          json_body = '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
+          json_body='{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
 
           curl -X PUT \
             -H "Content-Type: application/json" \
             -H "Authorization: Basic $(echo -n ${{ secrets.LAMBDA_USER}}:${{ secrets.LAMBDA_PASSWORD}} | base64)" \
-            -d "$(echo -n $json_body)" \
+            -d "$json_body" \
             "${{ secrets.TAGS_URL }}/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
