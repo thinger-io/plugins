@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.5.0-1 - 2023-11-15
+### Changed
+- Bumped node-red to 3.1.0
+- Bumped node-red-contrib-thinger to 1.5.0
+
 ## 1.4.3-1 - 2023-02-09
 ### Changed
 - Bumped node-red-contrib-thinger to 1.4.3

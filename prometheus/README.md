@@ -5,7 +5,12 @@
   <img src="/plugins/prometheus/assets/prometheus-logo.svg" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus/assets/prometheus-logo.svg';this.onerror='';" alt="Prometheus logo">
 </p>
 
-Enhance your monitoring capabilities with the Thinger.io Prometheus Integration. This integration enables you to effectively monitor and alert systems within Thinger.io, providing comprehensive insights into system health and performance.
+Prometheus is an open-source monitoring system and time series database that allows you to collect and store metrics about your infrastructure and applications, and provides a powerful query language called PromQL that you can use to analyze and graph these metrics.
+
+Prometheus also provides a range of other features, including alerting, graphing, and visualization.
+
+One of the key features of Prometheus is its ability to scrape data from targets using a simple HTTP-based protocol. This means that you can easily configure Prometheus to monitor your infrastructure, in this case Thinger.io.
+
 By utilizing both the [Prometheus Exporter Plugin](https://marketplace.thinger.io/plugins/prometheus_exporter/) and the Prometheus Server Plugin, you gain the ability to assess the status of Thinger.io and its resources through database queries. Moreover, this integration extends its functionality to enable monitoring of external systems.
 
 ## Get Started
