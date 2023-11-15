@@ -73,8 +73,10 @@ jobs:
       - name: Get image version
         run: |
           if [[ "${{ env.branch }}" == "main" ]]; then
-            echo version=v`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
+            echo docker_version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
+            echo version=v"$docker_version" >> $GITHUB_ENV
           else
+            echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
           fi
 
@@ -114,7 +116,7 @@ jobs:
           context: ${{ matrix.plugin }}/task
           push: true
           tags: |
-            thinger/${{ matrix.plugin }}-plugin:${{ env.version }}
+            thinger/${{ matrix.plugin }}-plugin:${{ env.docker_version }}
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
@@ -154,10 +156,10 @@ jobs:
 
       - name: Post tag to DB
         run: |
-          json_body = '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ env.GITHUB_SHA }}"'", "repository": "'"${{ env.GITHUB_REPOSITORY }}"'", "server_url": "'"${{ env.GITHUB_SERVER_URL }}"'" }'
+          json_body = '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
 
           curl -X PUT \
             -H "Content-Type: application/json" \
-            -H "Authorization: Basic $(echo -n ${{ secrets.LAMBDA_USER}}:${{ secrets.LAMBDA_PASSWORD}} | base64)"
-            -d "$json_body"
+            -H "Authorization: Basic $(echo -n ${{ secrets.LAMBDA_USER}}:${{ secrets.LAMBDA_PASSWORD}} | base64)" \
+            -d "$json_body" \
             "${{ secrets.TAGS_URL }}/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"

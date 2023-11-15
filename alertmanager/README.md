@@ -36,4 +36,5 @@ More details regarding the configuration of Prometheus at [this link](https://pr
     requires a restart of the Alertmanager plugin.
 
 ## License
+
 Alertmanager, as well as Prometheus are distributed under the [Apache 2.0 License](https://prometheus.io/docs/introduction/faq/#what-license-is-prometheus-released-under).

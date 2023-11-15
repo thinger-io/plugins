@@ -13,7 +13,7 @@
     "name" : "Node-RED",
     "description" : "Node-RED integration for Thinger.io",
     "image" : "docs/assets/node-red-logo.svg",
-    "icon" : "docs/assets/node-red-icon.svg"
+    "icon" : "https://raw.githubusercontent.com/thinger-io/plugins/main/node-red/docs/assets/node-red-icon.svg"
   },
   "tokens" : {
     "node_red_plugin" : {
