@@ -15,7 +15,7 @@ comments: true
   <img src="/announcements/2023-11-16-node-red-v1.5.0-1/node-red-control-panel.png" onerror="this.src='/announcements/2023-11-16-node-red-v1.5.0-1/node-red-control-panel.png';this.onerror='';" alt="Sample control panel a Node-RED integration with Thinger.io">
 </p>
 
-From [Thinger.io](https://thinger.io) we have release a new Node-RED Plugin version with some improvements and fixes.
+From [Thinger.io](https://thinger.io) we have released a new Node-RED Plugin version with some improvements and fixes.
 
 Between the highlights of this new version, we have added the possibility to filter by tags in the bucket read node, needed feature when using [product buckets](https://docs.thinger.io/business-features/products/product-profile/buckets).
 
@@ -41,4 +41,4 @@ The full changelog is available [here](https://github.com/thinger-io/node-red-co
 
 In regards of the underlying Node-RED, we have update it to the last version [3.1.0](https://github.com/node-red/node-red/releases/tag/3.1.0). More information in Node-REDs blog [post](https://nodered.org/blog/2023/09/06/version-3-1-released).
 
-[Checkout the doc for the this plugin](/plugins/sftpgo/).
+[Checkout the doc for the this plugin](/plugins/node-red/).
