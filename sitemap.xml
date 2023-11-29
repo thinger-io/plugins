@@ -36,6 +36,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-160-1/</loc>
+         <lastmod>2023-11-29</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/contributing/</loc>
          <lastmod>2023-11-29</lastmod>
          <changefreq>daily</changefreq>
@@ -487,6 +492,11 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/vs-code/</loc>
+         <lastmod>2023-11-29</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/announcements/page/2/</loc>
          <lastmod>2023-11-29</lastmod>
          <changefreq>daily</changefreq>
     </url>
