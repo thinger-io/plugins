@@ -162,7 +162,7 @@ jobs:
         run: |
           json_body='{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
 
-          curl -X PUT \
+          curl -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Basic $(echo -n $LAMBDA_USER:$LAMBDA_PASSWORD | base64)" \
             -d "$json_body" \

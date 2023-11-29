@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.6.1-1 - 2023-11-30
+
+### Changed
+
+- Bumped node-red-contrib-thinger to 1.6.1
+- Downgrade Node.js to version 16
+
 ## 1.6.0-1 - 2023-11-29
 
 ### Changed
