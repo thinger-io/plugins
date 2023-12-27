@@ -152,19 +152,11 @@ jobs:
           password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
           customHeaders: '{"Content-Type": "application/json"}'
-          data: '{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
-          #data: "{ 'plugin': \"${{ matrix.plugin }}\", 'version': \"${{ env.version }}\", 'commit': \"${ GITHUB_SHA }\", 'repository': \"${ GITHUB_REPOSITORY }\", 'server_url': \"${ GITHUB_SERVER_URL }\" }"
-
-#      - name: Post tag to DB
-#        env:
-#          LAMBDA_USER: ${{ secrets.LAMBDA_USER }}
-#          LAMBDA_PASSWORD: ${{ secrets.LAMBDA_PASSWORD }}
-#          TAGS_URL: ${{ secrets.TAGS_URL }}
-#        run: |
-#          json_body='{ "plugin": "'"${{ matrix.plugin }}"'", "version": "'"${{ env.version }}"'", "commit": "'"${{ github.sha }}"'", "repository": "'"${{ github.repository }}"'", "server_url": "'"${{ github.server_url }}"'" }'
-#
-#          curl -X PUT \
-#            -H "Content-Type: application/json" \
-#            -H "Authorization: Basic $(echo -n $LAMBDA_USER:$LAMBDA_PASSWORD | base64)" \
-#            -d "$json_body" \
-#            "$TAGS_URL/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
+          data: |
+            {
+              "plugin": "${{ matrix.plugin }}",
+              "version": "${{ env.version }}",
+              "commit": "${{ github.sha }}",
+              "repository": "${{ github.repository }}",
+              "server_url": "${{ github.server_url }}"
+            }
