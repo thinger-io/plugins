@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.6.2-1 - 2023-12-27
+
+### Changed
+
+- node-red-contrib-thinger with Node.js version 18
+- Bumped node-red-contrib-thinger to 1.6.2
+
 ## 1.6.1-2 - 2023-11-30
 
 ### Changed
