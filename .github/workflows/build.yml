@@ -146,7 +146,7 @@ jobs:
       - name: Post tag to DB
         uses: fjogeleit/http-request-action@v1
         with:
-          url: "${{ secrets.TAGS_URL }}/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
+          url: "https://cloud.thinger.io/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
           method: 'PUT'
           username: ${{ secrets.LAMBDA_USER }}
           password: ${{ secrets.LAMBDA_PASSWORD }}
