@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "Sigfox",
     "description" : "Sigfox Integration",
-    "image" : "docs/assets/sigfox-image.jpg",
-    "icon" : "docs/assets/sigfox-icon.png"
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/sigfox/sigfox-image.jpg",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/sigfox/sigfox-icon.png"
   },
   "tokens" : {
     "sigfox_plugin" : {
