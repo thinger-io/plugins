@@ -192,6 +192,7 @@ async function setDeviceCallback(deviceId, writeBucketId, endpointId, settings) 
     return axios({
         method: 'put',
         url: `/v3/users/${USER}/devices/${deviceId}/callback`,
+        data: data
     });
 }
 
