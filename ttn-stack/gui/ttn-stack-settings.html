@@ -84,6 +84,20 @@
                             </div>
 
                             <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-folder m-r-xs text-muted"></i>Assign Project <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Project" popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                  <resource-selector type="Project" model="settings.value[ui.selectedDeviceType].assign_project" nullable="true"></resource-selector>
+                                </div>
+                            </div>
+
+                            <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-box m-r-xs text-muted"></i>Assign Product <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Product" popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                    <resource-selector type="Product" model="settings.value[ui.selectedDeviceType].assign_product" nullable="true"></resource-selector>
+                                </div>
+                            </div>
+
+                            <div class="row wrapper-xs">
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-map-marked m-r-xs text-muted"></i>Update device location <i class="fa fa-info-circle text-muted" uib-popover="Set device location based on gateway location (if available)" popover-trigger="'mouseenter'"></i></label>
                                 <div class="col-sm-8 col-md-10 m-t-xs">
                                     <label class="i-switch bg-success">
