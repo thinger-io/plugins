@@ -242,11 +242,19 @@ function getTTNDownlinkData(deviceProperty, payload, settings){
 
     let data = runCallback(payload, 'downlink', deviceProperty.application_id, deviceProperty);
 
+    let frm_payload = data;
+    let f_port = deviceProperty.f_port;
+
+    if ( typeof data === 'object' ) {
+        if ( data.hasOwnProperty('f_port') ) f_port = data.f_port;
+        if ( data.hasOwnProperty( 'payload')) frm_payload = data.payload;
+    }
+
     let downlink = {
         downlinks : [
             {
-                f_port: deviceProperty.f_port,
-                frm_payload: data,
+                f_port: f_port,
+                frm_payload: frm_payload,
                 priority: settings.downlink_priority || 'LOWEST',
                 confirmed: !!settings.downlink_confirmed,
             }    

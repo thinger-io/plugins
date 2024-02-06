@@ -1,10 +1,11 @@
 # Changelog
 
-## [1.1.0] - 2024-02-05
+## [1.1.0] - 2024-02-06
 
 ### Added
 
 - Support for setting Project and Product on auto-provisioned devices & buckets
+- f\_port of downlink may be configured by sending it in the downlink body
 
 ## [1.0.4] - 2023-02-21
 
