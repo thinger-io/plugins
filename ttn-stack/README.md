@@ -120,7 +120,7 @@ The following sections provide additional information about how to configure the
 
     The downlink method will be called before the plugin issues a downlink request to The Things Stack. To issue a downlink request to The Things Stack, this plugin must receive an HTTP POST call, indicating the Thinger.io device identifier, and it will automatically issue the request to the required The Things Stack endpoint and its specific protocol. Check out the next sections for more details.
 
-    This function will receive different inputs depending on how the plugin is called over its REST API. The dedicated `f_port` to use for the downlink may be specified by having the input message be `{ "f_port": 1, "payload": "<desired payload to send to the downlink" }`.
+    This function will receive different inputs depending on how the plugin is called over its REST API.
 
     * **JSON Object**: If the downlink call is done for a Thinger.io device that defines a `downlink` property (that is automatically initialized if `Initialize Downlink Data` is configured in the plugin), this method will receive the JSON content of this property. It usually consists on a user-friendly device configuration that should be later encoded to binary in base64.
     * **JSON Object**: If the plugin downlink request contains a JSON payload in the POST call, this function will receive this payload instead of the one configured in the device `downlink` property.&#x20;
@@ -128,7 +128,7 @@ The following sections provide additional information about how to configure the
     The output of this method should be one of the following:
 
     * **Base64 String**: With binary information that can be sent directly to The Things Stack network. It is required if your The Things Stack application is not defining a converter.
-    * **JSON Object**: If The Things Stack application provides a converter for your payloads, this method can return a JSON object that will be accesible in the converter method. In this case, creating a custom downlink method will be redundant, so create the funtion in The Things Stack, or in the plugin.
+    * **JSON Object**: Either if The Things Stack application provides a converter for your payloads, this method can return a JSON object that will be accesible in the converter method. In this case, creating a custom downlink method will be redundant, so create the funtion in The Things Stack, or in the plugin. Or, if the f_port needs to be customized, the dedicated `f_port` to use for the downlink may be specified by having the input message be `{ "f_port": 1, "payload": "<desired payload to send to the downlink" }`.
 
     Example of a downlink method converting a JSON device configuration into base64 as required by The Things Stack:
 
