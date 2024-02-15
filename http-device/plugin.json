@@ -12,8 +12,8 @@
   "metadata" : {
     "name" : "HTTP Device",
     "description" : "HTTP Devices Integration",
-    "image" : "docs/assets/http-device-logo.png",
-    "icon" : "docs/assets/http-device-icon.png"
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/http-device/img/http-device-logo.png",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/http-device/img/http-device-icon.png"
   },
   "tokens" : {
     "http_device_plugin" : {
