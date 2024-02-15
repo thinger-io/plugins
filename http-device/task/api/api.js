@@ -21,6 +21,8 @@ module.exports.createHTTPDevice = async function(deviceId, deviceName, deviceDes
     };
     if(settings.assign_asset_type) data.asset_type = settings.assign_asset_type;
     if(settings.assign_asset_group) data.asset_group = settings.assign_asset_group;
+    if(settings.assign_project) data.project = settings.assign_project;
+    if(settings.assign_product) data.product = settings.assign_product;
     console.log(`creating device: ${JSON.stringify(data)}`);
     return axios({
         method: 'post',
@@ -40,6 +42,8 @@ module.exports.createBucket = async function(bucketId, bucketName, bucketDescrip
     }
     if(settings.assign_asset_type) data.asset_type = settings.assign_asset_type;
     if(settings.assign_asset_group) data.asset_group = settings.assign_asset_group;
+    if(settings.assign_project) data.project = settings.assign_project;
+    if(settings.assign_product) data.product = settings.assign_product;
     console.log(`creating bucket: ${JSON.stringify(data)}`);
     return axios({
         method: 'post',

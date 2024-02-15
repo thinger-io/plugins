@@ -63,11 +63,33 @@
                             </div>
 
                             <div class="row wrapper-xs">
+                              <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-magic m-r-xs text-muted"></i>Auto provision bucket <i class="fa fa-info-circle text-muted" uib-popover="Automatically create bucket for device to store incoming data" popover-trigger="'mouseenter'"></i></label>
+                              <div class="m-t-xs col-sm-8 col-md-10">
+                                <label class="i-switch bg-success">
+                                  <input type="checkbox" ng-model="settings.value[ui.selectedDeviceType].auto_provision_bucket">
+                                  <i></i>
+                                </label>
+                              </div>
+                            </div>
+
+                          <div ng-switch="settings.value[ui.selectedDeviceType].auto_provision_bucket.toString()">
+                            <div ng-switch-when="true">
+                              <div class="row wrapper-xs">
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-database m-r-xs text-muted"></i>Bucket Identifier Prefix <i class="fa fa-info-circle text-muted" uib-popover="Specify a prefix (if required), to be set when creating the new bucket identifier." popover-trigger="'mouseenter'"></i></label>
                                 <div class="col-sm-8 col-md-10">
-                                    <input type="text" placeholder="http_" class="form-control" ng-model="settings.value[ui.selectedDeviceType].bucket_id_prefix"/>
+                                  <input type="text" placeholder="http_" class="form-control" ng-model="settings.value[ui.selectedDeviceType].bucket_id_prefix"/>
                                 </div>
+                              </div>
                             </div>
+                            <div ng-switch-when="true">
+                              <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-database m-r-xs text-muted"></i>Assign Bucket <i class="fa fa-info-circle text-muted" uib-popover="Associate the device callback write to an existing Bucket." popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                  <resource-selector type="Type" model="settings.value[ui.selectedDeviceType].assign_bucket" nullable="true"></resource-selector>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
 
                             <div class="row wrapper-xs">
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-shapes m-r-xs text-muted"></i>Assign Asset Type <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Asset Type." popover-trigger="'mouseenter'"></i></label>
@@ -80,6 +102,20 @@
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-th m-r-xs text-muted"></i>Assign Asset Group <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Asset Group." popover-trigger="'mouseenter'"></i></label>
                                 <div class="col-sm-8 col-md-10">
                                     <resource-selector type="Group" model="settings.value[ui.selectedDeviceType].assign_asset_group" nullable="true"></resource-selector>
+                                </div>
+                            </div>
+
+                            <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-folder m-r-xs text-muted"></i>Assign Project <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Project" popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                  <resource-selector type="Project" model="settings.value[ui.selectedDeviceType].assign_project" nullable="true"></resource-selector>
+                                </div>
+                            </div>
+
+                            <div class="row wrapper-xs">
+                                <label class="col-sm-4 col-md-2 control-label"><i class="fas fa-box m-r-xs text-muted"></i>Assign Product <i class="fa fa-info-circle text-muted" uib-popover="Associate the device and bucket with a given Product" popover-trigger="'mouseenter'"></i></label>
+                                <div class="col-sm-8 col-md-10">
+                                    <resource-selector type="Product" model="settings.value[ui.selectedDeviceType].assign_product" nullable="true"></resource-selector>
                                 </div>
                             </div>
 

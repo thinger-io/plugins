@@ -95,7 +95,9 @@ function getDeviceId(deviceId, settings){
 }
 
 function getBucketId(deviceId, settings){
-    return settings.bucket_id_prefix ? settings.bucket_id_prefix + deviceId : deviceId;
+    if ( settings.auto_provision_bucket )
+      return settings.bucket_id_prefix ? settings.bucket_id_prefix + deviceId : deviceId;
+    return settings.assign_bucket;
 }
 
 function getDeviceTimeout(settings){
@@ -189,25 +191,34 @@ async function handleDeviceRequest(req) {
                 response.data = runCallback(response.data, 'response', deviceType, response.headers);
                 resolve(response);
             })
-            .catch(function (error) {
+            .catch(async function (error) {
                 // device is not yet created?
                 if (payload!==undefined && (error.response && error.response.status===404)) {
 
-                    // no auto provision
-                    if (!settings.auto_provision_resources) return reject(error);
+                  // no auto provision
+                  if (!settings.auto_provision_resources && !settings.auto_provision_bucket) return reject(error);
 
-                    // create device, bucket, and set callback
-                    let realBucketId = getBucketId(deviceId, settings);
-                    thinger.createHTTPDevice(realDeviceId, realDeviceId, 'Auto provisioned HTTP Device', settings)
-                        .then(() => thinger.createBucket(realBucketId, realDeviceId, 'Auto provisioned HTTP Bucket', settings, {source: 'api'}))
-                        .then(() => settings.device_response_data ? thinger.setDeviceProperty(realDeviceId, 'device_response', getDefaultResponse(settings)) : Promise.resolve())
-                        .then(() => thinger.setDeviceCallback(realDeviceId, {write_bucket: realBucketId, send_property: 'device_response'}, {timeout: getDeviceTimeout(settings)}))
-                        .then(() => thinger.callDeviceCallback(realDeviceId, processedPayload, sourceIP, timestamp))
-                        .then((response) => {
-                            response.data = runCallback(response.data, 'response', deviceType, response.headers);
-                            resolve(response);
-                        })
-                        .catch((error) => { reject(error) });
+                  let realBucketId = getBucketId(deviceId, settings);
+
+                  // auto provision bucket
+                  if ( settings.auto_provision_bucket ) {
+                    await thinger.createBucket(realBucketId, realDeviceId, 'Auto provisioned HTTP Bucket', settings, {source: 'api'}).catch((error) => { reject(error) });
+                  }
+
+                  // auto provision device and callback
+                  thinger.createHTTPDevice(realDeviceId, realDeviceId, 'Auto provisioned HTTP Device', settings)
+                      .then(() => settings.device_response_data ? thinger.setDeviceProperty(realDeviceId, 'device_response', getDefaultResponse(settings)) : Promise.resolve())
+                      .then(() => {
+                        let actions = { send_property: 'device_response'};
+                        if ( typeof realBucketId !== 'undefined' ) actions["write_bucket"] = realBucketId;
+                        thinger.setDeviceCallback(realDeviceId, actions, {timeout: getDeviceTimeout(settings)})
+                      })
+                      .then(() => thinger.callDeviceCallback(realDeviceId, processedPayload, sourceIP, timestamp))
+                      .then((response) => {
+                          response.data = runCallback(response.data, 'response', deviceType, response.headers);
+                          resolve(response);
+                      })
+                      .catch((error) => { reject(error) });
                 } else {
                     reject(error);
                 }
@@ -296,6 +307,7 @@ function launchServer() {
           settings = {
             'Default' : {
                 auto_provision_resources : false,
+                auto_provision_bucket : false,
                 device_response_data : '""'
             }
           };
