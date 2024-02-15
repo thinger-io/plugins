@@ -18,7 +18,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v42
         with:
           dir_names: "true"
           since_last_remote_commit: true
@@ -63,7 +63,7 @@ jobs:
       matrix: ${{fromJson(needs.matrix.outputs.plugin)}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -82,17 +82,17 @@ jobs:
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
-        uses: andstor/file-existence-action@v2
+        uses: andstor/file-existence-action@v3
         with:
           files: "${{ matrix.plugin }}/task/Dockerfile"
 
       - name: Set up QEMU
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
@@ -103,7 +103,7 @@ jobs:
 
       - name: Login to GitHub container Registry
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -111,7 +111,7 @@ jobs:
 
       - name: Build and push
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.plugin }}/task
           push: true
@@ -120,7 +120,7 @@ jobs:
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
-        uses: peter-evans/dockerhub-description@v3
+        uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
