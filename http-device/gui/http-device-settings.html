@@ -81,11 +81,11 @@
                                 </div>
                               </div>
                             </div>
-                            <div ng-switch-when="false">
+                            <div ng-switch-default>
                               <div class="row wrapper-xs">
                                 <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-database m-r-xs text-muted"></i>Assign Bucket <i class="fa fa-info-circle text-muted" uib-popover="Associate the device callback write to an existing Bucket." popover-trigger="'mouseenter'"></i></label>
                                 <div class="col-sm-8 col-md-10">
-                                  <resource-selector type="Type" model="settings.value[ui.selectedDeviceType].assign_bucket" nullable="true"></resource-selector>
+                                  <resource-selector type="Bucket" model="settings.value[ui.selectedDeviceType].assign_bucket" nullable="true"></resource-selector>
                                 </div>
                               </div>
                             </div>
