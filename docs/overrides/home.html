@@ -75,6 +75,26 @@
       color: #1F8EFE;
     }
 
+    .arrow-icon {
+      margin: 0 auto;
+      font-size: 80px;
+      font-weight: 900;
+      color: white;
+      position: relative;
+      bottom: 20px;
+      animation: arrowBounce 1.5s infinite alternate;
+      text-align: center;
+    }
+
+    @keyframes arrowBounce {
+      0% {
+        transform: translateY(0) rotate(90deg);
+      }
+      100% {
+        transform: translateY(20px) rotate(90deg);
+      }
+    }
+
   </style>
 
   <!-- Hero section -->
@@ -106,6 +126,8 @@
       </div>
 
     </div>
+
+    <div class="arrow-icon">&rsaquo;</div>
 
   </div>
 

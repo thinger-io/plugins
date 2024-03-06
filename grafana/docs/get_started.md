@@ -6,6 +6,10 @@ First Login
 
 ## First Login
 
+!!! info
+
+    Perform initial login using your thinger.io account username and password 'admin'
+
 Upon installing the plugin, perform the initial login using your thinger.io account username and the password `admin`. After the first login, the system will prompt you to change the password to a custom one. Once done, you'll gain access to the Grafana workspace, offering a variety of options.
 
 <p align="center">

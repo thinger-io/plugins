@@ -12,7 +12,7 @@ repo_url: https://github.com/thinger-io/plugins
 
 # Copyright
 copyright: >
-  Copyright &copy; 2016 - 2023 Thinger.io<br />
+  Copyright &copy; 2016 - 2024 Thinger.io<br />
 #  <a href="#__consent">Change cookie settings</a>
 
 # Configuration
@@ -24,6 +24,7 @@ theme:
     - navigation.tracking
     - navigation.tabs
     - navigation.tabs.sticky
+    - navigation.sections
     #- navigation.prune
     - navigation.indexes
     - toc.follow
@@ -32,6 +33,7 @@ theme:
     - search.highlight
     - search.share
     - navigation.footer
+    - content.tabs.link
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: thinger-light
