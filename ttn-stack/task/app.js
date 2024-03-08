@@ -92,7 +92,9 @@ function getDeviceId(deviceId, settings){
 }
 
 function getBucketId(deviceId, settings){
+  if ( settings.auto_provision_bucket )
     return settings.bucket_id_prefix ? settings.bucket_id_prefix + deviceId : deviceId;
+  return settings.assign_bucket;
 }
 
 function getDeviceTimeout(settings){
@@ -313,19 +315,29 @@ async function handleDeviceUplink(req) {
                     .then(() => { resolve(response); })
                     .catch((error) => { reject(error); } )
             })
-            .catch(function (error) {
+            .catch(async function (error) {
                 // device is not yet created?
                 if (payload!==undefined && (error.response && error.response.status===404)) {
 
                     // no auto provision
-                    if (!settings.auto_provision_resources) return reject(error);
+                    if (!settings.auto_provision_resources && !settings.auto_provision_bucket) return reject(error);
+
+                    let realBucketId = getBucketId(deviceId, settings);
+
+                    // auto provision bucket
+                    if ( settings.auto_provision_bucket ) {
+                      await thinger.createBucket(realBucketId, ttnDeviceId, 'Auto provisioned TTN Bucket', settings, {source: 'api'}).catch((error) => { reject(error) });
+                    }
+
 
                     // create device, bucket, and set callback
-                    let realBucketId = getBucketId(deviceId, settings);
                     thinger.createHTTPDevice(realDeviceId, ttnDeviceId, 'Auto provisioned TTN Device', settings)
                         .then(() => thinger.setDeviceProperty(realDeviceId, 'device_downlink', getDefaultDownlink(settings)))
-                        .then(() => thinger.createBucket(realBucketId, ttnDeviceId, 'Auto provisioned TTN Bucket', settings, {source: 'api'}))
-                        .then(() => thinger.setDeviceCallback(realDeviceId, {write_bucket: realBucketId}, {timeout: getDeviceTimeout(settings)}))
+                        .then(() => {
+                          let actions = {};
+                          if ( typeof realBucketId !== 'undefined' ) actions["write_bucket"] = realBucketId;
+                          thinger.setDeviceCallback(realDeviceId, actions, {timeout: getDeviceTimeout(settings)})
+                        })
                         .then(() => updateDeviceProperties(req, realDeviceId, payload, settings))
                         .then(() => thinger.callDeviceCallback(realDeviceId, processedPayload, sourceIP, timestamp))
                         .then((response) => { resolve(response); })
@@ -497,6 +509,7 @@ function launchServer() {
             settings = {
               'Default' : {
                 auto_provision_resources : false,
+                auto_provision_bucket: false,
                 device_downlink_data : '""'
               }
             };

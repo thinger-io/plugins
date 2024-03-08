@@ -1,6 +1,6 @@
 {
   "name" : "ttn-stack",
-  "version" : "1.1.0",
+  "version" : "1.2.0",
   "description" : "Plugin for handling The Things Stack integration",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
