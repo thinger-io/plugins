@@ -49,6 +49,6 @@ Additionally, now the request against the Thinger.io sevice has a configuration 
 
 We welcome everyone to interact with us through our community at [community.thinger.io](community.thinger.io) as well as from this extensionss [GitHub repository](https://github.com/thinger-io/node-red-contrib-thinger)
 
-The full changelog is available [here](https://github.com/thinger-io/node-red-contrib-thinger/releases/tag/1.6.0)
+The full changelog is available [here](https://github.com/thinger-io/node-red-contrib-thinger/releases/tag/1.7.0)
 
 [Checkout the doc for the this plugin](/plugins/node-red/).
