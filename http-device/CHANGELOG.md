@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1] - 2024-03-22
+
+### Fixed
+
+- Auto provision bucket is set true as default
+- Assign project to provisioned failing device provisioning
+
 ## [1.1.0] - 2024-02-15
 
 ### Added
@@ -26,6 +33,7 @@
 
 - Make sure Thinger server is running before starting service
 
+[1.1.1]: https://github.com/thinger-io/plugins/compare/http-device/v1.1.0...http-device/v1.1.1
 [1.1.0]: https://github.com/thinger-io/plugins/compare/http-device/v1.0.2...http-device/v1.1.0
 [1.0.2]: https://github.com/thinger-io/plugins/tree/http-device/v1.0.2
 

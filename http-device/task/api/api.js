@@ -21,7 +21,6 @@ module.exports.createHTTPDevice = async function(deviceId, deviceName, deviceDes
     };
     if(settings.assign_asset_type) data.asset_type = settings.assign_asset_type;
     if(settings.assign_asset_group) data.asset_group = settings.assign_asset_group;
-    if(settings.assign_project) data.project = settings.assign_project;
     if(settings.assign_product) data.product = settings.assign_product;
     console.log(`creating device: ${JSON.stringify(data)}`);
     return axios({
@@ -106,3 +105,12 @@ module.exports.getDeviceProperty = async function(deviceId, propertyId){
         url: `/v3/users/${USER}/devices/${deviceId}/properties/${propertyId}`,
     });
 };
+
+module.exports.setDeviceProject = async function(deviceID, project) {
+    console.log(`setting project ${project} for ${device}`);
+    return axios({
+      method: 'put',
+      url: `/v1/users/${USER}/devices/${deviceID}/projects`,
+      data: JSON.stringify([ project ])
+    });
+}

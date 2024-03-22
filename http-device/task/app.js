@@ -196,7 +196,7 @@ async function handleDeviceRequest(req) {
                 if (payload!==undefined && (error.response && error.response.status===404)) {
 
                   // no auto provision
-                  if (!settings.auto_provision_resources && !settings.auto_provision_bucket) return reject(error);
+                  if (!settings.auto_provision_resources) return reject(error);
 
                   let realBucketId = getBucketId(deviceId, settings);
 
@@ -213,6 +213,7 @@ async function handleDeviceRequest(req) {
                         if ( typeof realBucketId !== 'undefined' ) actions["write_bucket"] = realBucketId;
                         thinger.setDeviceCallback(realDeviceId, actions, {timeout: getDeviceTimeout(settings)})
                       })
+                      .then(() => settings.assign_project ? thinger.setDeviceProject(realDeviceId, settings.assign_project) : Promise.resolve())
                       .then(() => thinger.callDeviceCallback(realDeviceId, processedPayload, sourceIP, timestamp))
                       .then((response) => {
                           response.data = runCallback(response.data, 'response', deviceType, response.headers);
