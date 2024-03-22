@@ -118,7 +118,7 @@ module.exports.setBucketProject = async function(bucketId, project) {
   console.log(`setting project ${project} for ${bucketId}`);
   return axios({
     method: 'put',
-    url: `/v1/users/${USER}/buckets/${deviceID}/projects`,
+    url: `/v1/users/${USER}/buckets/${bucketId}/projects`,
     data: [ `${USER}@${project}` ]
   });
 }

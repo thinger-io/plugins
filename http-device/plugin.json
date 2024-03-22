@@ -20,10 +20,10 @@
       "name" : "Access from HTTP Device plugin to Thinger.io account",
       "allow" : {
         "Device" : {
-          "*" : ["CreateDevice", "SetDeviceProperty", "ReadDeviceProperty", "UpdateDeviceCallback", "CallDeviceCallback"]
+          "*" : ["CreateDevice", "SetDeviceProperty", "ReadDeviceProperty", "UpdateDeviceCallback", "CallDeviceCallback", "UpdateDeviceProjects"]
         },
         "Bucket" : {
-          "*" : ["CreateBucket"]
+          "*" : ["CreateBucket", "UpdateBucketProjects"]
         },
         "Plugin" : {
           "http-device" : "*"
