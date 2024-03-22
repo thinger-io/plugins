@@ -214,6 +214,7 @@ async function handleDeviceRequest(req) {
                         thinger.setDeviceCallback(realDeviceId, actions, {timeout: getDeviceTimeout(settings)})
                       })
                       .then(() => settings.assign_project ? thinger.setDeviceProject(realDeviceId, settings.assign_project) : Promise.resolve())
+                      .then(() => settings.assign_project && settings.auto_provision_bucket ? thinger.setBucketProject(realBucketId, settings.assign_project) : Promise.resolve())
                       .then(() => thinger.callDeviceCallback(realDeviceId, processedPayload, sourceIP, timestamp))
                       .then((response) => {
                           response.data = runCallback(response.data, 'response', deviceType, response.headers);

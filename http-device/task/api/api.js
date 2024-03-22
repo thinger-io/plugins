@@ -41,7 +41,6 @@ module.exports.createBucket = async function(bucketId, bucketName, bucketDescrip
     }
     if(settings.assign_asset_type) data.asset_type = settings.assign_asset_type;
     if(settings.assign_asset_group) data.asset_group = settings.assign_asset_group;
-    if(settings.assign_project) data.project = settings.assign_project;
     if(settings.assign_product) data.product = settings.assign_product;
     console.log(`creating bucket: ${JSON.stringify(data)}`);
     return axios({
@@ -113,4 +112,13 @@ module.exports.setDeviceProject = async function(deviceID, project) {
       url: `/v1/users/${USER}/devices/${deviceID}/projects`,
       data: JSON.stringify([ project ])
     });
+}
+
+module.exports.setBucketProject = async function(bucketId, project) {
+  console.log(`setting project ${project} for ${bucketId}`);
+  return axios({
+    method: 'put',
+    url: `/v1/users/${USER}/buckets/${deviceID}/projects`,
+    data: JSON.stringify([ project ])
+  });
 }

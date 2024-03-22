@@ -131,7 +131,7 @@ jobs:
         if: ${{ startsWith(env.branch, 'develop') }}
         uses: dev-drprasad/delete-tag-and-release@v1.0
         with:
-          tag_name: ${{ env.branch }}
+          tag_name: ${{ matrix.plugin }}/${{ env.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           delete_release: false
 
