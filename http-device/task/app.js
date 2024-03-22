@@ -308,7 +308,7 @@ function launchServer() {
           settings = {
             'Default' : {
                 auto_provision_resources : false,
-                auto_provision_bucket : false,
+                auto_provision_bucket : true,
                 device_response_data : '""'
             }
           };
