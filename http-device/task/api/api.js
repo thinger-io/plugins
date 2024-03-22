@@ -110,7 +110,7 @@ module.exports.setDeviceProject = async function(deviceId, project) {
     return axios({
       method: 'put',
       url: `/v1/users/${USER}/devices/${deviceId}/projects`,
-      data: JSON.stringify([ project ])
+      data: [ `${USER}@${project}` ]
     });
 }
 
@@ -119,6 +119,6 @@ module.exports.setBucketProject = async function(bucketId, project) {
   return axios({
     method: 'put',
     url: `/v1/users/${USER}/buckets/${deviceID}/projects`,
-    data: JSON.stringify([ project ])
+    data: [ `${USER}@${project}` ]
   });
 }
