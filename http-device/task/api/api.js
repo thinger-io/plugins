@@ -105,11 +105,11 @@ module.exports.getDeviceProperty = async function(deviceId, propertyId){
     });
 };
 
-module.exports.setDeviceProject = async function(deviceID, project) {
+module.exports.setDeviceProject = async function(deviceId, project) {
     console.log(`setting project ${project} for ${deviceId}`);
     return axios({
       method: 'put',
-      url: `/v1/users/${USER}/devices/${deviceID}/projects`,
+      url: `/v1/users/${USER}/devices/${deviceId}/projects`,
       data: JSON.stringify([ project ])
     });
 }
