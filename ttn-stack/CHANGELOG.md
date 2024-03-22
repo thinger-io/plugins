@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1] - 2024-03-22
+
+### Fixed
+
+- Auto provision bucket is set true as default
+- Assign project to provisioned failing device provisioning
+
 ## [1.2.0] - 2024-03-08
 
 ### Added
@@ -32,7 +39,8 @@
 
 - Make sure Thinger server is running before starting service
 
-[1.2.0]: https://github.com/thinger-io/plugins/compare/ttn-stack/v1.2.0...ttn-stack/v1.2.0
+[1.2.1]: `https://github.com/thinger-io/plugins/compare/ttn-stack/v1.2.0...ttn-stack/v1.2.1`
+[1.2.0]: `https://github.com/thinger-io/plugins/compare/ttn-stack/v1.1.0...ttn-stack/v1.2.0`
 [1.1.0]: https://github.com/thinger-io/plugins/compare/ttn-stack/v1.0.4...ttn-stack/v1.1.0
 [1.0.4]: https://github.com/thinger-io/plugins/compare/ttn-stack/v1.0.3...ttn-stack/v1.0.4
 [1.0.3]: https://github.com/thinger-io/plugins/tree/ttn-stack/v1.0.3

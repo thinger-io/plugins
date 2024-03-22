@@ -1,6 +1,6 @@
 {
   "name" : "ttn-stack",
-  "version" : "1.2.0",
+  "version" : "1.2.1",
   "description" : "Plugin for handling The Things Stack integration",
   "author" : "Alvaro Luis Bustamante",
   "license" : "MIT",
@@ -20,13 +20,13 @@
       "name" : "Access from TTN Stack plugin to Thinger.io account",
       "allow" : {
         "Device" : {
-          "*" : ["CreateDevice", "SetDeviceProperty", "ReadDeviceProperty", "UpdateDeviceCallback", "CallDeviceCallback"]
+          "*" : ["CreateDevice", "SetDeviceProperty", "ReadDeviceProperty", "UpdateDeviceCallback", "CallDeviceCallback", "UpdateDeviceProjects"]
         },
         "User" : {
           "*" : ["SubscribeUserEvents"]
         },
         "Bucket" : {
-          "*" : ["CreateBucket"]
+          "*" : ["CreateBucket", "UpdateBucketProjects"]
         },
         "Plugin" : {
           "ttn-stack" : "*"
