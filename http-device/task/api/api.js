@@ -107,7 +107,7 @@ module.exports.getDeviceProperty = async function(deviceId, propertyId){
 };
 
 module.exports.setDeviceProject = async function(deviceID, project) {
-    console.log(`setting project ${project} for ${device}`);
+    console.log(`setting project ${project} for ${deviceId}`);
     return axios({
       method: 'put',
       url: `/v1/users/${USER}/devices/${deviceID}/projects`,

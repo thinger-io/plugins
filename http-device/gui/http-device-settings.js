@@ -22,6 +22,7 @@ angular.module('HTTPDevicePlugin', ['uiAce'])
             function initSettings(type){
                 $scope.settings.value[type] = {};
                 $scope.settings.value[type].auto_provision_resources = false;
+                $scope.settings.value[type].auto_provision_bucket = true;
                 $scope.settings.value[type].device_response_data = '""';
             }
 
