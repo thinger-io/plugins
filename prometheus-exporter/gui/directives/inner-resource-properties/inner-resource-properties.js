@@ -1,5 +1,5 @@
 
-app.controller('RemovePropertyModalController', ['$scope', '$uibModalInstance', 'items', function($scope, $uibModalInstance, items) {
+angular.module('app').controller('RemovePropertyModalController', ['$scope', '$uibModalInstance', 'items', function($scope, $uibModalInstance, items) {
     $scope.items = items;
 
     $scope.ok = function () {
@@ -11,13 +11,13 @@ app.controller('RemovePropertyModalController', ['$scope', '$uibModalInstance', 
     };
 }]);
 
-app.filter('capitalize', function() {
+angular.module('app').filter('capitalize', function() {
     return function(token) {
         return token.charAt(0).toUpperCase() + token.slice(1);
     }
 });
 
-app.controller('AddInnerResourcePropertyController', ['$scope', '$uibModalInstance', 'plugin', 'settings', 'elements', 'selectedConfiguration', 'currentValue', 'action', function($scope, $uibModalInstance, plugin, settings, elements, selectedConfiguration, currentValue, action) {
+angular.module('app').controller('AddInnerResourcePropertyController', ['$scope', '$uibModalInstance', 'plugin', 'settings', 'elements', 'selectedConfiguration', 'currentValue', 'action', function($scope, $uibModalInstance, plugin, settings, elements, selectedConfiguration, currentValue, action) {
 
     $scope.plugin = plugin;
     $scope.settings = settings;

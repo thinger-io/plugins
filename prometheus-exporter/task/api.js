@@ -19,7 +19,6 @@ module.exports.configure = function(HOST, HTTP_PORT, TOKEN, THINGER_USER, THINGE
     USER = THINGER_USER;
     PLUGIN = THINGER_PLUGIN;
 
-    Log.info("configure api with", HOST, TOKEN, USER, PLUGIN);
 };
 
 module.exports.getPluginPropertyValue = async function(propertyId) {
