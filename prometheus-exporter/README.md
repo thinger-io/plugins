@@ -26,6 +26,7 @@ Here you can find an example for a metric that tracks the total of devices with 
 - Labels: status
 
 **Script**
+
 - Type: Gauge
 - Backend: Thinger.io Database
 - Source:

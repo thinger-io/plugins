@@ -2,7 +2,7 @@
 
 // Imports
 const Log = require('./lib/utils/log.js');
-const { performace } = require('perf_hooks');
+const { performace } = require('node:perf_hooks');
 
 // initialize from environment variables
 const HOST = process.env.THINGER_HOST;
