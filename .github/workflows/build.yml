@@ -18,7 +18,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v42
+        uses: tj-actions/changed-files@v44
         with:
           dir_names: "true"
           since_last_remote_commit: true
@@ -49,6 +49,18 @@ jobs:
             done
             echo "]}"
           ) | jq -c .)
+          
+          # if branch is develop/<plugin> keep in matrix only the plugin if it exists
+          branch=${GITHUB_REF#refs/heads/}
+          if [[ "$branch" == "develop/"* ]]; then
+            plugins=${branch#develop/}
+            if echo "$matrix" | jq -e --arg value "$plugins" '.plugin | index($value)' > /dev/null; then
+              matrix='{"plugin":["'$plugins'"]}'
+            else
+              matrix='{"plugin":[]}'
+            fi
+          fi
+          
           echo "plugin=$matrix" >> $GITHUB_OUTPUT
 
       - name: Check content of matrix
@@ -129,14 +141,14 @@ jobs:
 
       - name: Delete tag of repository
         if: ${{ startsWith(env.branch, 'develop') }}
-        uses: dev-drprasad/delete-tag-and-release@v1.0
+        uses: dev-drprasad/delete-tag-and-release@v1.1
         with:
           tag_name: ${{ matrix.plugin }}/${{ env.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           delete_release: false
 
       - name: Tag repository
-        uses: mathieudutour/github-tag-action@v6.1
+        uses: mathieudutour/github-tag-action@v6.2
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

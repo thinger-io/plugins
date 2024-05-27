@@ -22,11 +22,22 @@ angular.module('PrometheusExporterPlugin', ['uiAce'])
             configuration: ""
           };
 
+          $scope.save = function() {
+            console.log($scope.settings);
+            $scope.plugin.setProperty('settings', $scope.settings).then( async function() {
+              await $scope.plugin.put('/settings', $scope.settings.value);
+            }, function ( err ) {
+              console.error( err );
+            });
+          }
+
           function initSettings( cfg ) {
             $scope.settings.value[cfg] = {}
             $scope.settings.value[cfg].metrics = [];
             $scope.settings.value[cfg].enabled = true;
-          };
+            $scope.settings.value[cfg].async = true;
+            $scope.settings.value[cfg].cache_interval = { magnitude: 'second' };
+          }
 
           $scope.plugin.getProperty('settings').then(function(settings) {
             $scope.settings = settings;
@@ -81,14 +92,6 @@ angular.module('PrometheusExporterPlugin', ['uiAce'])
             } else {
               $scope.error_message = 'unknown';
             }
-          }
-
-          $scope.setEnabled = function ( cfg ) {
-
-            $scope.plugin.setProperty('settings', $scope.settings).then( function() {
-            }, function ( err ) {
-              console.error( err );
-            });
           }
 
         }]

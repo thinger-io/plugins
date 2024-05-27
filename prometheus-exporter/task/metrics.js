@@ -2,7 +2,6 @@
 
 // Imports
 const Log = require('./lib/utils/log.js');
-const { performace } = require('perf_hooks');
 const client = require('prom-client');
 
 // Create a Registry to register the metrics
@@ -18,11 +17,10 @@ const uri = `mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/${MONGO_DB}?max
 
 const mongodb = new MongoClient(uri);
 
+mongodb.on('close', () => { Log.warn('Lost connection to mongodb') });
+mongodb.on('reconnect', () => { Log.info('Reconnected to mongodb') });
+
 const db = mongodb.db(MONGO_DB);
-
-//db.on('close', () => { console.log('Lost connection to mongodb') });
-
-//db.on('reconnect', () => { console.log('Reconnected to mongodb') });
 
 // Configure vm2 for running queries
 const { NodeVM } = require('vm2');
@@ -79,24 +77,31 @@ module.exports.clearRegistry = function (register) {
 };
 
 module.exports.generateMetric = function ( cfg, register, metric ) {
+
   try {
     new (metricTypes.get(`${ metric.type }`))({
       name: metric.name,
       help: metric.help,
       labelNames: metric.labelNames,
       registers: [register],
+      run: undefined,
       async collect() {
-        let run = undefined;
-        if ( metric.backend === 'thinger' ) {
-          run = vm_mongo.run(`module.exports = async function( metric ) { const db = process.env.db; ${ (metric.script) } }`);
-        } else if ( metric.backend === 'api' ) {
-          run = vm_thinger.run(`module.exports = async function( metric ) { const api = process.env.api; ${ (metric.script) } }`);
+
+        Log.info(`[cfg: ${cfg}, metric: ${metric.name}] collecting metric`);
+
+        const t0 = performance.now();
+        if ( this.run === undefined ) {
+          if (metric.backend === 'thinger') {
+            this.run = vm_mongo.run(`module.exports = async function( metric ) { const db = process.env.db; ${(metric.script)} }`);
+          } else if (metric.backend === 'api') {
+            this.run = vm_thinger.run(`module.exports = async function( metric ) { const api = process.env.api; ${(metric.script)} }`);
+          }
         }
-        if ( typeof run !== "undefined" ) {
-          const t0 = performance.now();
-          await run( this );
+
+        if ( this.run ) {
+          await this.run( this );
           const t1 = performance.now();
-          Log.debug(`[cfg: ${ cfg }, metric: ${ metric.name }] query took ${ t1 - t0 } millliseconds`);
+          Log.debug(`[cfg: ${cfg}, metric: ${metric.name}] query took ${t1 - t0} millliseconds`);
         }
       }
     });
@@ -119,6 +124,7 @@ module.exports.testMetric = function ( metric ) {
       labelNames: metric.labelNames,
       registers: [register],
       async collect() {
+        const t0 = performance.now();
         let run = undefined;
         if ( metric.backend === 'thinger' ) {
           run = vm_mongo.run(`module.exports = async function( metric ) { const db = process.env.db; ${ (metric.script) } }`);
@@ -126,7 +132,6 @@ module.exports.testMetric = function ( metric ) {
           run = vm_thinger.run(`module.exports = async function( metric ) { const api = process.env.api; ${ (metric.script) } }`);
         }
         if ( typeof run !== "undefined" ) {
-          const t0 = performance.now();
           await run( this );
           const t1 = performance.now();
           Log.debug(`[metric: ${ metric.name }] query took ${ t1 - t0 } millliseconds`);

@@ -1,8 +1,8 @@
 {
   "name" : "prometheus-exporter",
-  "version" : "1.1.1",
+  "version" : "1.2.0",
   "description" : "Plugin for querying the status of Thinger resources and exporting them in a Prometheus format",
-  "author" : "Alvaro Luis Bustamante",
+  "author" : "Álvaro Luis Bustamante",
   "license" : "MIT",
   "repository" : {
     "type" : "git",

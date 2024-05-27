@@ -76,8 +76,8 @@ angular.module('app').controller('AddInnerResourcePropertyController', ['$scope'
         if ( action === "add" || action === "clone" ) {
           let index = elements.findIndex((obj => obj.name === $scope.modifiedValue.name));
           if ( index !== -1 ) {
-            console.error("The metric name already exists"); // TODO: show error in modal
-            showError("The metric name already exists"); // TODO: show error in modal
+            console.error("The metric name already exists");
+            $scope.showError("The metric name already exists");
             return;
           } else { // new element
             $scope.settings.value[ $scope.selectedConfiguration ].metrics.push($scope.modifiedValue);
