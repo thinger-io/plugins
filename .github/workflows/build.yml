@@ -51,7 +51,7 @@ jobs:
           ) | jq -c .)
           
           # if branch is develop/<plugin> keep in matrix only the plugin if it exists
-          branch=${GITHUB_REF#refs/heads/}"
+          branch=${GITHUB_REF#refs/heads/}
           if [[ "$branch" == "develop/"* ]]; then
             plugin=${branch#develop/}
             if echo "$matrix" | jq -e --arg value "$plugin" '.plugin | index($value)' > /dev/null; then
