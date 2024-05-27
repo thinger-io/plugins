@@ -45,6 +45,14 @@ Each metric can be tested out individually, and once validated and saved, the fu
 
 <img src="/plugins/prometheus-exporter/assets/prometheus-exporter.png" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus-exporter/assets/prometheus-exporter.png';this.onerror='';" width="1024px">
 
+For each application there are some settings that can be configured:
+
+- **Cache**: Enable and set a timeout cache for the metrics endpoint.
+- **Asynchronous Queries**: Enable or disable the Asynchronous queries for the metrics.
+- **Enable**: Enable or disable the metrics endpoint for the application.
+
+<img src="/plugins/prometheus-exporter/assets/settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus-exporter/assets/settings.png';this.onerror='';" width="1024px">
+
 ## Additional Resources
 
 Given that the plugin is based and developed with Prometheus in mind, you may refer to [Prometheus official documentation](https://prometheus.io/docs/introduction/overview/), and more specifically to the [Data Model](https://prometheus.io/docs/concepts/data_model/).
