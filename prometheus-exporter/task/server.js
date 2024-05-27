@@ -2,6 +2,7 @@
 
 // Imports
 const Log = require('./lib/utils/log.js');
+const Time = require('./lib/utils/time.js');
 const { performace } = require('node:perf_hooks');
 
 // initialize from environment variables
@@ -58,13 +59,37 @@ async function buildMetrics() {
 
 }
 
+/*
+  This function is meant to substitute the registry.metrics() function, which executes
+  the metric collection in parallel. This function executes the metric collection sequentially.
+ */
+async function collectMetricsSequential(registry) {
+  const isOpenMetrics =
+    registry.contentType === registry.OPENMETRICS_CONTENT_TYPE;
+
+  let metricsArray = registry.getMetricsAsArray();
+  let results = [];
+  for (let metric of metricsArray) {
+    if (isOpenMetrics && metric.type === 'counter') {
+      metric.name = registry.standardizeCounterName(metric.name);
+    }
+    let result = await registry.getMetricsAsString(metric);
+    results.push(result);
+  }
+
+  return isOpenMetrics
+    ? `${results.join('\n')}\n# EOF\n`
+    : `${results.join('\n\n')}\n`;
+}
+
+
 app.get('/:cfg/metrics', async (req, res) => {
 
   const t0 = performance.now();
 
   const cfg = req.params.cfg;
 
-  Log.info(`[cfg: ${ cfg }] retrieving metrics`);
+  Log.info(`[cfg: ${ cfg }] metrics endpoint called`);
 
   if ( ! registries.has(cfg) )
     return res.status( 404 ).send( `${ cfg } configuration not found` );
@@ -74,13 +99,35 @@ app.get('/:cfg/metrics', async (req, res) => {
 
   try {
     const register = registries.get(cfg);
-    const metrics = await register.metrics();
+
+    let metrics;
+    if ( typeof settings[cfg].metricsCache !== "undefined" && Date.now() - (settings[cfg].cache_interval.lastTs || 0) < (settings[cfg].cache_interval.millis ) ) {
+      // retrieve value from cache
+      metrics = settings[cfg].metricsCache;
+      Log.debug(`[cfg: ${ cfg }] Metrics retrieved from cache`);
+    } else {
+
+      // Execute collection in parallel or sequentially
+      if ( typeof settings[cfg].async === 'undefined' || settings[cfg].async ) {
+        Log.info(`[cfg: ${ cfg }] metrics retrieval in parallel`);
+        metrics = await register.metrics();
+      } else {
+        Log.info(`[cfg: ${ cfg }] metrics retrieval sequentially`);
+        metrics = await collectMetricsSequential(register);
+      }
+
+      // Saving metrics in cache
+      if ( typeof settings[cfg].cache_interval !== "undefined" && settings[cfg].cache_interval.value !== 0 ) {
+        settings[cfg].cache_interval.lastTs = Date.now();
+        settings[cfg].metricsCache = metrics;
+      }
+
+    }
     const t1 = performance.now();
+    Log.debug(`[cfg: ${ cfg }] metrics retrieval took ${ t1 - t0 } milliseconds`);
 
     res.setHeader('Content-Type', register.contentType);
     res.send(metrics);
-
-    Log.debug(`[cfg: ${ cfg }] metrics retrieval took ${ t1 - t0 } milliseconds`);
 
   } catch ( err ) {
     res.status( 500 ).send( err );
@@ -146,6 +193,12 @@ app.post('/metrics/test', async (req, res) => {
 
 app.put('/settings', function (req, res) {
   settings = req.body;
+
+  // calculate cache interval value in milliseconds beforehand
+  for (let key in settings) {
+    settings[key].cache_interval.millis = Time.toMilliseconds(settings[key].cache_interval.value, settings[key].cache_interval.magnitude);
+  }
+
   try {
     buildMetrics();
     res.send();

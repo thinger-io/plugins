@@ -40,7 +40,7 @@
         </div>
       </form>
 
-      <form id="form-save-callback" class="form-horizontal form-validation" ng-show="ui.selectedConfiguration!==''">
+      <form id="form-save-callback" class="form-horizontal form-validation" ng-show="ui.selectedConfiguration!==''" ng-submit="save()">
         <div class="row wrapper-xs">
           <label class="col-sm-4 col-md-2 control-label"><i class="fa fa-cog m-r-xs text-muted"></i>Configuration <i class="fa fa-info-circle text-muted" uib-popover="Select an application to configure its callback properties." popover-trigger="'mouseenter'"></i></label>
           <div class="col-sm-8 col-md-10">
@@ -90,15 +90,47 @@
               </uib-tab>
 
               <uib-tab heading="Application Settings">
-                <div class="font-bold m-b-xs"><i class="fa fa-link"></i> Enabled</div>
-                <div>
+                <div class="font-bold m-b-xs"><i class="fa fa-database" uib-popover="Set the cache persistence interval for the application metrics." popover-trigger="'mouseenter'"></i> Cache interval</div>
+                <div class="row wrapper-xs m-b-xs">
+                  <div class="col-sm-3">
+                    <div class="input-group">
+                      <input type="number" placeholder="Update Interval" class="form-control" min="1" ng-model="settings.value[ui.selectedConfiguration].cache_interval.value">
+                      <span class="input-group-btn dropdown" uib-dropdown="">
+                        <button type="button" class="btn btn-default" uib-dropdown-toggle="">
+                          {{settings.value[ui.selectedConfiguration].cache_interval.magnitude ? settings.value[ui.selectedConfiguration].cache_interval.magnitude + 's' : 'seconds'}}
+                          <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li ng-click="settings.value[ui.selectedConfiguration].cache_interval.magnitude='second'"><a href="">seconds</a></li>
+                          <li ng-click="settings.value[ui.selectedConfiguration].cache_interval.magnitude='minute'"><a href="">minutes</a></li>
+                          <li ng-click="settings.value[ui.selectedConfiguration].cache_interval.magnitude='hour'"><a href="">hours</a></li>
+                          <!-- li ng-click="modifiedValue.cache_interval.magnitude='day'"><a href="">days</a></li -->
+                          <!-- li ng-click="modifiedValue.cache_interval.magnitude='week'"><a href="">weeks</a></li -->
+                          <!-- li ng-click="modifiedValue.cache_interval.magnitude='month'"><a href="">months</a></li -->
+                          <!-- li ng-click="modifiedValue.cache_interval.magnitude='year'"><a href="">years</a></li -->
+                        </ul>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="font-bold m-t-xs m-b-xs"><i class="fa fa-plug"></i> Asynchronous metric collection</div>
+                <div class="m-b-xs">
                   <label class="i-switch bg-success m-t-xs">
-                    <input type="checkbox" ng-model="settings.value[ui.selectedConfiguration].enabled" ng-change="setEnabled(ui.selectedConfiguration)">
+                    <input type="checkbox" ng-model="settings.value[ui.selectedConfiguration].async" ng-checked="settings.value[ui.selectedConfiguration].async !== undefined ? settings.value[ui.selectedConfiguration].async : true">
                     <i></i>
                   </label>
                 </div>
-                <div class="font-bold m-b-xs"></div>
-                <div>
+                <div class="font-bold m-t-xs m-b-xs"><i class="fa fa-link"></i> Enabled</div>
+                <div class="m-b-xs">
+                  <label class="i-switch bg-success m-t-xs">
+                    <input type="checkbox" ng-model="settings.value[ui.selectedConfiguration].enabled">
+                    <i></i>
+                  </label>
+                </div>
+                <div class="tw-flex tw-flex-row tw-justify-start tw-space-x-4 m-t-xs">
+                  <button class="btn btn-sm btn-primary btn-addon" type="submit" form="form-save-callback">
+                    <i><span ng-class="'far fa-check'"></span></i>Save
+                  </button>
                   <button type="button" class="btn btn-sm btn-danger btn-addon" ng-click="removeConfiguration(ui.selectedConfiguration)" ng-disabled="ui.selectedConfiguration==='Default' || ui.selectedConfiguration===''"><i class="fa fa-minus"></i>Remove Application</button>
                 </div>
               </uib-tab>
@@ -106,8 +138,9 @@
             </uib-tabset>
           </div>
         </div>
-      </div>
+      </form>
     </div>
+  </div>
   <!-- footer class="panel-footer text-left bg-light lter">
     <button class="btn btn-success btn-addon" type="submit" form="form-save-callback" ng-disabled="fetch_error || save_state==1"><i><span ng-class="{'fa fa-check': save_state!=1, 'fa fa-spinner fa-pulse' : save_state==1}"></span></i>Save</button>
   </footer -->
