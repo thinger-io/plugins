@@ -33,6 +33,10 @@ async function buildMetrics() {
   // Create one registry per config
   for ( let cfg in settings ) {
 
+    // calculate cache interval value in milliseconds beforehand
+    if ( settings[cfg].cache_interval && settings[cfg].cache_interval.value !== 0 )
+      settings[cfg].cache_interval.millis = Time.toMilliseconds(settings[cfg].cache_interval.value, settings[cfg].cache_interval.magnitude);
+
     let register;
     if ( registries.has(cfg) ) {
       register = registries.get(cfg);
@@ -193,11 +197,6 @@ app.post('/metrics/test', async (req, res) => {
 
 app.put('/settings', function (req, res) {
   settings = req.body;
-
-  // calculate cache interval value in milliseconds beforehand
-  for (let key in settings) {
-    settings[key].cache_interval.millis = Time.toMilliseconds(settings[key].cache_interval.value, settings[key].cache_interval.magnitude);
-  }
 
   try {
     buildMetrics();
