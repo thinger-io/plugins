@@ -9,7 +9,7 @@ jobs:
   matrix: # sets the matrix
     runs-on: ubuntu-latest
     outputs:
-      plugin: ${{ steps.matrix.outputs.plugins }}
+      plugin: ${{ steps.matrix.outputs.plugin }}
 
     steps:
       - uses: actions/checkout@v4
@@ -53,26 +53,26 @@ jobs:
           # if branch is develop/<plugin> keep in matrix only the plugin if it exists
           branch=${GITHUB_REF#refs/heads/}
           if [[ "$branch" == "develop/"* ]]; then
-            plugin=${branch#develop/}
-            if echo "$matrix" | jq -e --arg value "$plugin" '.plugin | index($value)' > /dev/null; then
-              matrix='{"plugin":["'$plugin'"]}'
+            plugins=${branch#develop/}
+            if echo "$matrix" | jq -e --arg value "$plugins" '.plugin | index($value)' > /dev/null; then
+              matrix='{"plugin":["'$plugins'"]}'
             else
               matrix='{"plugin":[]}'
             fi
           fi
           
-          echo "plugins=$matrix" >> $GITHUB_OUTPUT
+          echo "plugin=$matrix" >> $GITHUB_OUTPUT
 
       - name: Check content of matrix
-        run: echo ${{ steps.matrix.outputs.plugins }}
+        run: echo ${{ steps.matrix.outputs.plugin }}
 
   build:
-    if: ${{ needs.matrix.outputs.plugins != '{"plugin":[]}' }} # check if matrix is not empty
+    if: ${{ needs.matrix.outputs.plugin != '{"plugin":[]}' }} # check if matrix is not empty
     runs-on: ubuntu-latest
     needs: matrix
     strategy:
       fail-fast: false # continues with matrix even if an element fails
-      matrix: ${{fromJson(needs.matrix.outputs.plugins)}}
+      matrix: ${{fromJson(needs.matrix.outputs.plugin)}}
 
     steps:
       - uses: actions/checkout@v4
