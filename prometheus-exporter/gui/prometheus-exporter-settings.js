@@ -13,8 +13,7 @@ angular.module('PrometheusExporterPlugin', ['uiAce'])
         controller: ['$scope', function($scope){
 
           $scope.sourcePath = function() {
-            const path = document.querySelector("script[src$='prometheus-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");;
-            return path;
+            return document.querySelector("script[src$='prometheus-exporter-settings.js']").src.replace(/\/[^\/]*$/, "");
           }
 
           $scope.ui = {
@@ -41,6 +40,17 @@ angular.module('PrometheusExporterPlugin', ['uiAce'])
 
           $scope.plugin.getProperty('settings').then(function(settings) {
             $scope.settings = settings;
+
+            // Initialize values for new settings
+            for (let cfg in $scope.settings.value) {
+              if ( typeof $scope.settings.value[cfg].cache_interval === "undefined" ) {
+                $scope.settings.value[cfg].cache_interval = { magnitude: 'second' };
+              }
+              if ( typeof $scope.settings.value[cfg].async === "undefined" ) {
+                $scope.settings.value[cfg].async = true;
+              }
+            }
+
           },function error(){
             $scope.settings = {};
             $scope.settings.value = {};
