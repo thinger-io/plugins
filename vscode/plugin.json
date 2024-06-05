@@ -1,13 +1,13 @@
 {
     "name" : "vscode",
-    "version" : "4.14.1-2",
+    "version" : "4.89.1-1",
     "description" : "VS Code Plugin for Thinger.io",
     "author" : "Alvaro Luis Bustamante",
     "license" : "MIT",
     "repository" : {
       "type" : "git",
       "url" : "https://github.com/thinger-io/plugins.git",
-      "directory": "grafana"
+      "directory": "vscode"
     },
     "metadata" : {
         "name" : "VS Code",
@@ -27,7 +27,7 @@
     },
     "task" : {
         "type" : "docker",
-        "image" : "codercom/code-server:4.14.1",
+        "image" : "codercom/code-server:4.89.1",
         "volumes" : [
             {
                 "source" : "config",
