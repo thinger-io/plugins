@@ -12,8 +12,8 @@
     "metadata" : {
         "name" : "VS Code",
         "description" : "VS Code Plugin for Thinger.io",
-        "image" : "docs/assets/vscode-icon.png",
-        "icon" : "docs/assets/vscode-icon.png"
+        "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.png",
+        "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.png"
     },
     "tokens" : {
       "vscode_plugin" : {
