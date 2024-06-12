@@ -1,0 +1,54 @@
+{
+  "name" : "rstudio",
+  "version" : "4.4.0-1",
+  "description" : "rstudio",
+  "author" : "Jaime Bautista",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory": "rstudio"
+  },
+  "metadata" : {
+    "name" : "RStudio",
+    "description" : "RStudio Plugin for Thinger.io",
+    "image" : "https://www.rstudio.com/apple-touch-icon.png",
+    "icon" : "https://www.rstudio.com/favicon-32x32.png"
+  },
+  "tokens" : {
+    "rstudio_plugin" : {
+      "name" : "Access from RStudio to Thinger.io",
+      "allow" : {
+        "Bucket" : {
+          "*": ["List*", "Read*", "WriteBucket"]
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "rocker/rstudio:4.4.0",
+    "env" : {
+      "TERM" : "linux",
+      "ROOT": "true",
+      "DISABLE_AUTH": "true"
+    },
+    "user" : "0:0",
+    "volumes" : [
+      {
+        "source" : "../../../storages",
+        "target" : "/home/rstudio/workspace",
+        "description": "Mount point for accessing user storages"
+      }
+    ]
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin" : "rstudio",
+        "port" : 8787,
+        "rewrite_base_path": true
+      }
+    }
+  }
+}
