@@ -172,5 +172,5 @@ jobs:
               "commit": "${{ github.sha }}",
               "repository": "${{ github.repository }}",
               "server_url": "${{ github.server_url }}",
-              "plugin_file": "${{ env.plugin_file }}"
+              "plugin_file": ${{ env.plugin_file }}
             }
