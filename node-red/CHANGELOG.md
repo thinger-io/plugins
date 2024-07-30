@@ -1,5 +1,13 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
+
+## 1.8.0-1 - 2024-07-30
+
+### Changed
+
+- Bumped node-red-contrib-thinger to 1.8.0
+- Bumped Node-RED to version 4.0.2 with Node.js 20
 
 ## 1.7.6-1 - 2024-05-23
 

@@ -19,6 +19,7 @@ We have made a great effort to simplify the integration between Thinger.io and N
     - Create buckets when an event occurs (bucket create node).
     - Read from data buckets (bucket read node).
     - Writing to data buckets (bucket write node).
+    - Export data from buckets (bucket export node).
     - Calling devices callbacks with autoprovisioning (device callback node).
     - Creating any type of devices (device create node).
     - Reading a device resource when an event occurs (device read node).
