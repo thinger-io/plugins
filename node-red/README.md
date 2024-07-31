@@ -19,6 +19,7 @@ We have made a great effort to simplify the integration between Thinger.io and N
     - Create buckets when an event occurs (bucket create node).
     - Read from data buckets (bucket read node).
     - Writing to data buckets (bucket write node).
+    - Export data from buckets (bucket export node).
     - Calling devices callbacks with autoprovisioning (device callback node).
     - Creating any type of devices (device create node).
     - Reading a device resource when an event occurs (device read node).
@@ -128,6 +129,14 @@ It is a **Function** Node that creates a Data Bucket into a Thinger.io Platform.
 The configuration of this Node requires introducing of at least the `Bucket ID` and `Data Source`, but allows the introduction of the same fields from the Thinger.io `Add Bucket` operation. It is important to make proper management of the node, as if it is run in a loop may create an infinite number of buckets.
 
 The output message will contain the result and details of the operation.
+
+### Bucket Export
+
+<img src="/plugins/node-red/assets/node-bucket-export.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-export.png';this.onerror='';" alt="Bucket export node from Thinger.io image of Node-RED" style="height: 35px">
+
+It is a **Function** Node that executes a Thinger.io Data Bucket export operation and waits until the data is ready to be downloaded, returning the download file URL or the contents as desired. It is useful to extract data from Thinger.io for further analysis, storage or forwarding to other services.
+
+The configuration of this Node requires introducing of at least the `Bucket ID`, `Export Type`, `Data Range`, and `Timestamp Format`. The input for this Node is a triggered event and the output will be a JSON format message with the download URL or the contents of the exported data.
 
 ### Bucket Read
 
