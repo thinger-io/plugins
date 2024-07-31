@@ -130,6 +130,14 @@ The configuration of this Node requires introducing of at least the `Bucket ID` 
 
 The output message will contain the result and details of the operation.
 
+### Bucket Export
+
+<img src="/plugins/node-red/assets/node-bucket-export.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-export.png';this.onerror='';" alt="Bucket export node from Thinger.io image of Node-RED" style="height: 35px">
+
+It is a **Function** Node that executes a Thinger.io Data Bucket export operation and waits until the data is ready to be downloaded, returning the download file URL or the contents as desired. It is useful to extract data from Thinger.io for further analysis, storage or forwarding to other services.
+
+The configuration of this Node requires introducing of at least the `Bucket ID`, `Export Type`, `Data Range`, and `Timestamp Format`. The input for this Node is a triggered event and the output will be a JSON format message with the download URL or the contents of the exported data.
+
 ### Bucket Read
 
 <img src="/plugins/node-red/assets/node-bucket-read.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-read.png';this.onerror='';" alt="Bucket read node from Thinger.io image of Node-RED" style="height: 35px">
