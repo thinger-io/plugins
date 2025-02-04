@@ -171,6 +171,7 @@ nav:
       - Jupyter Minimal: '!include ./jupyter-minimal/mkdocs.yml'
       - Jupyter R: '!include ./jupyter-r/mkdocs.yml'
       - Jupyter TensorFlow: '!include ./jupyter-tensorflow/mkdocs.yml'
+      - LORIOT: '!include ./loriot/mkdocs.yml'
       - RStudio: '!include ./rstudio/mkdocs.yml'
       - Node-RED: '!include ./node-red/mkdocs.yml'
       - Prometheus Exporter: '!include ./prometheus-exporter/mkdocs.yml'

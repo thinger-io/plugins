@@ -1,0 +1,21 @@
+<nz-card [nzTitle]="titleTemplate" nzSize="small" nzType="inner" >
+  <p class="tw-mb-2">Endpoint Base URL</p>
+  <pre style="max-width: 90vw;" class="tw-whitespace-wrap"><code>{{endpointUrl}}&#123;applicationId&#125;/uplink</code></pre>
+  <p class="tw-mb-2 tw-mt-4">Authorization Header
+  <span (click)="tokenVisible = !tokenVisible"><fa-icon [icon]="tokenVisible ? faEyeSlash : faEye"></fa-icon></span>
+  </p>
+  <div style="height: 25px">
+  <nz-skeleton [nzLoading]="!tokenVisible" [nzParagraph]="false" class="tw-w-full tw-whitespace-nowrap">
+    <pre style="margin: inherit; max-width: 90vw;" class="tw-whitespace-wrap tw-w-full "><code>Bearer {{bearerToken}}</code></pre>
+  </nz-skeleton>
+  </div>
+</nz-card>
+<ng-template #titleTemplate>
+    <span class="tw-mr-2">
+      <fa-icon [icon]="faGears"></fa-icon>
+    </span>
+  <span class="tw-font-bold">Webhook Settings</span>
+  <span class="tw-ml-2">
+      <fa-icon [icon]="faQuestionCircle" nz-tooltip="Application Output Settings for LORIOT HTTP Push"></fa-icon>
+  </span>
+</ng-template>
