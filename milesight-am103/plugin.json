@@ -1,0 +1,610 @@
+{
+    "name": "milesight-am103",
+    "version": "1.0.0",
+    "description": "Milesight AM103 device template for integrating into Thinger.io",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "milesight-am103"
+    },
+    "metadata": {
+        "name": "Milesight AM103",
+        "description": "Milesight AM103 device template for integrating into Thinger.io",
+        "image": "assets/milesight-am103.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "icons": []
+                },
+                "enabled": true,
+                "name": "Milesight AM103",
+                "product": "milesight_am103",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}}, // From 0 to 6\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} // Last uplink received\n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            },
+                            "response": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "source": "request_response"
+                                }
+                            }
+                        },
+                        "reboot": {
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{\n    \"data\" : {{payload.data:reboot=false}},\n    \"priority\" : {{payload.priority=7}},\n    \"confirmed\": true\n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "resource": "downlink",
+                                    "target": "resource"
+                                }
+                            },
+                            "response": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "source": "request_response"
+                                }
+                            }
+                        },
+                        "reporting_interval": {
+                            "description": "Configure the reporting interval in seconds",
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{\n    \"data\" : \"{{payload.data:setReportingInterval=15}}\",\n    \"priority\" : {{payload.priority=3}},\n    \"confirmed\": true\n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "resource": "downlink",
+                                    "target": "resource"
+                                }
+                            },
+                            "response": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "source": "request_response"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "",
+                                    "target": "resource_stream"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "am103": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "am103_.*"
+                            },
+                            "description": "Autoprovision AM103",
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "milesight_am103": {
+                            "backend": "influxdb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decode",
+                                "payload_type": "",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "/**\n * Payload Decoder\n *\n * Copyright 2024 Milesight IoT\n *\n * @product AM103 / AM103L\n */\n\nconst downlinkChannel = \"ff\";\n\nfunction decimalToHexString(number)\n{\n  if (number < 0)\n  {\n    number = 0xFFFFFFFF + number + 1;\n  }\n\n  let hexNumber = number.toString(16);\n\n  if ((hexNumber.length % 2) > 0) {\n    hexNumber = \"0\" + hexNumber;\n  }\n\n  if ((hexNumber.length % 4) > 0) {\n    hexNumber = \"000\" + hexNumber;\n  }\n\n  return hexNumber;\n}\n\nconst changeEndianness = (string) => {\n        const result = [];\n        let len = string.length - 2;\n        while (len >= 0) {\n          result.push(string.substr(len, 2));\n          len -= 2;\n        }\n        return result.join('');\n}\n\n\nfunction setReportingInterval(seconds) {\n    const type = \"03\";\n\n    return downlinkChannel+type+changeEndianness(decimalToHexString(seconds));\n}\n\nfunction reboot(input) {\n    if ( input ) {\n        return downlinkChannel+\"10ff\";\n    }\n}\n\n// Thinger Plugin\nfunction decode(input) {\n    console.log(\"jaimito1\", input.data);\n    return milesightDeviceDecode(Buffer.from(input.data, 'hex'))\n}\n\n// Chirpstack v4\nfunction decodeUplink(input) {\n    var decoded = milesightDeviceDecode(input.bytes);\n    return { data: decoded };\n}\n\n// Chirpstack v3\nfunction Decode(fPort, bytes) {\n    return milesightDeviceDecode(bytes);\n}\n\n// The Things Network\nfunction Decoder(bytes, port) {\n    return milesightDeviceDecode(bytes);\n}\n\nfunction milesightDeviceDecode(bytes) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length; ) {\n\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n        // BATTERY\n        if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = bytes[i];\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            // ℃\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n\n            // ℉\n            // decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10 * 1.8 + 32;\n            // i +=2;\n        }\n        // HUMIDITY\n        else if (channel_id === 0x04 && channel_type === 0x68) {\n            decoded.humidity = bytes[i] / 2;\n            i += 1;\n        }\n        // CO2\n        else if (channel_id === 0x07 && channel_type === 0x7d) {\n            decoded.co2 = readUInt16LE(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // HISTORY DATA\n        else if (channel_id === 0x20 && channel_type === 0xce) {\n            var data = {};\n            data.timestamp = readUInt32LE(bytes.slice(i, i + 4));\n            data.temperature = readInt16LE(bytes.slice(i + 4, i + 6)) / 10;\n            data.humidity = bytes[i + 6] / 2;\n            data.co2 = readUInt16LE(bytes.slice(i + 7, i + 9));\n            i += 9;\n\n            decoded.history = decoded.history || [];\n            decoded.history.push(data);\n        } else {\n            break;\n        }\n    }\n\n    return decoded;\n}\n\n/* ******************************************\n * bytes to number\n ********************************************/\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}\n\nfunction readUInt32LE(bytes) {\n    var value = (bytes[3] << 24) + (bytes[2] << 16) + (bytes[1] << 8) + bytes[0];\n    return (value & 0xffffffff) >>> 0;\n}\n\nfunction readInt32LE(bytes) {\n    var ref = readUInt32LE(bytes);\n    return ref > 0x7fffffff ? ref - 0x100000000 : ref;\n}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "endpoints": {},
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "controls": {
+                                    "ranges": {
+                                        "allowed": [
+                                            "relative",
+                                            "absolute"
+                                        ]
+                                    },
+                                    "timespan": {
+                                        "magnitude": "hour",
+                                        "mode": "relative",
+                                        "period": "latest",
+                                        "value": 6
+                                    }
+                                },
+                                "name": "Milesight AM103",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "properties": {
+                                    "border_radius": "5px",
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 10,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Current CO²"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "",
+                                                    "size": "75px",
+                                                    "unit": "PPm",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "value": 1
+                                                        },
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Current Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "",
+                                                    "size": "75px",
+                                                    "unit": "ºC",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 5,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Current Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "",
+                                                    "size": "75px",
+                                                    "unit": "%",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 13,
+                                                    "sizeX": 1,
+                                                    "sizeY": 2
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery"
+                                                },
+                                                "properties": {
+                                                    "icon": "",
+                                                    "iconSize": "",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "battery",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "progressbar"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "refresh_interval": 0
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "image_url": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/milesight-am103/img/AM103.png",
+                                                        "name": "Source 1",
+                                                        "source": "image_url"
+                                                    }
+                                                ],
+                                                "type": "image"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 1,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "EUI"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "far fa-fingerprint",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "24E124725D220221",
+                                                            "mapping": "EUI",
+                                                            "property": "uplink"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "api": {},
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 10,
+                                                    "sizeX": 3,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Past Day Co² Concentration",
+                                                    "updateTs": 1736949600000
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "30m",
+                                                            "type": "mean"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3d3846",
+                                                        "name": "CO²",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "api": {},
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 5,
+                                                    "sizeX": 3,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Past Day Humidity",
+                                                    "updateTs": 1736950500000
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "30m",
+                                                            "type": "mean"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3584e4",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "api": {},
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Past Day Temperature",
+                                                    "updateTs": 1736949600000
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "30m",
+                                                            "type": "mean"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "influxdb",
+                                                            "id": "milesight_am103",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "24E124725D220221"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e01b24",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
