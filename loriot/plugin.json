@@ -1,0 +1,53 @@
+{
+  "name" : "loriot",
+  "version" : "1.0.0",
+  "description" : "Plugin for integrating Thinger.io with LORIOT",
+  "author" : "Thinger.io",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory" : "loriot"
+  },
+  "metadata" : {
+    "name" : "LORIOT",
+    "description" : "LORIOT Integration",
+    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/loriot/img/loriot-logo-square.png",
+    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/loriot/img/loriot-icon.png"
+  },
+  "tokens" : {
+    "loriot_plugin" : {
+      "name" : "Access from LORIOT plugin to Thinger.io account",
+      "allow" : {
+        "Device" : {
+          "*" : ["AccessDeviceResources"]
+        },
+        "Plugin" : {
+          "loriot" : "*"
+        }
+      }
+    },
+    "loriot_plugin_callback" : {
+      "name" : "Access from LORIOT to Uplink callback",
+      "allow" : {
+        "Plugin" : {
+          "loriot" : ["CallPluginEndpoint"]
+        }
+      }
+    }
+  },
+  "task" : {
+    "type" : "docker",
+    "image" : "thinger/loriot-plugin",
+    "port" : 3000
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin": "loriot",
+        "port": 3000
+      }
+    }
+  }
+}
+
