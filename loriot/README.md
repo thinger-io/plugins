@@ -87,7 +87,7 @@ Please refer to the [LORIOT documentation](https://docs.loriot.io/) for more inf
 ## License
 
 <a href="http://opensource.org/">
-  <img style="float: right;" width="100px" height="137px" src="/assets/OSI_Standard_Logo_0.svg">
+  <img style="float: right;" width="100px" height="137px" src="/assets/OSI_Standard_Logo_0.svg" onerror="this.src='https://marketplace.thinger.io/assets/OSI_Standard_Logo_0.svg';this.onerror='';">
 </a>
 
 The plugin is licensed under the [MIT License](http://opensource.org/licenses/MIT):
