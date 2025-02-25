@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.9.1-1 - 2025-02-25
+
+### Changed
+
+- Bumped node-red-contrib-thinger to 1.9.1
+
 ## 1.9.0-1 - 2024-11-01
 
 ### Changed
