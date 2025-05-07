@@ -35,7 +35,17 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
   // Check if the downlink message is valid
   if ( req.body.data === '' || req.body.data === null || req.body.data === 'null' ) {
-    res.status(200).send({message: "Enter a valid downlink message"});
+    res.status(200).send(
+      {
+        cmd: "",
+        EUI: "",
+        data: "",
+        port: 0,
+        priority: 0,
+        success: "",
+        error: "Enter a valid downlink message"
+      }
+    );
     return;
   }
 
