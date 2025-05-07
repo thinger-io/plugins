@@ -84,10 +84,18 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
     body
   } = await request(`https://${server}/1/rest`, { method: 'POST', headers: msg_headers , body: JSON.stringify(msg) })
 
-  // TODO: Handle downlink result from LORIOT server
-  res.status(statusCode).send(body);
+  // Collect stream chunks into a string
+  let responseBody = '';
+  for await (const chunk of body) {
+    responseBody += chunk.toString(); // Assuming chunks are Buffer or string
+  }
 
-  //res.status(200).send({message: "Downlink message received"});
+  // Now parse if it's JSON
+  const parsedBody = JSON.parse(responseBody);
+  console.log(parsedBody);
+
+  Log.debug(`Downlink response:\n`, statusCode, body);
+  res.status(statusCode).send(parsedBody);
 
 });
 
@@ -96,7 +104,8 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
-  if ( req.body.cmd !== 'rx') res.status(200).send();
+  // Don't accept gateway messages
+  if ( req.body.cmd === 'gw') res.status(200).send();
   else {
 
     const device = req.body.EUI;
@@ -114,7 +123,8 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
   Log.log(`Received message for application ${req.params.applicationId} from device`, req.body?.EUI);
 
-  if ( req.body.cmd !== 'rx') res.status(200).send();
+  // Don't accept gateway messages
+  if ( req.body.cmd === 'gw') res.status(200).send();
 
 
   const applicationId = req.params.applicationId;
