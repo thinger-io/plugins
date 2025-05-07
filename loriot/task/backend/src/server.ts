@@ -31,7 +31,7 @@ app.use(express.json({strict: false, limit: '8mb'}))
 // Serve the API
 app.post(`/downlink`, async (req: Request, res: Response) => {
 
-  Log.log("Received downlink message", req.body);
+  Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
   // Check if the downlink message is valid
   if ( req.body.data === '' || req.body.data === null || req.body.data === 'null' ) {
@@ -42,10 +42,12 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
   // find data by token
   const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === req.body.uplink.appId);
   if ( typeof application === 'undefined' ) {
+    Log.error(`Application ${req.body.uplink.appId} not found`);
     res.status(404).send({message: "Application not found"});
     return;
   }
   if ( typeof application.accessToken === 'undefined' ) {
+    Log.error(`Access token not found for application ${req.body.uplink.appId}`);
     res.status(400).send({message: "Application access token not found"});
     return;
   }
@@ -62,6 +64,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
   const allDefined = Object.values(msg).every(value => value !== undefined);
   if ( !allDefined ) {
+    Log.error("Downlink message is not well defined:\n", JSON.stringify(msg, null, 2));
     res.status(400).send({message: "Downlink message is not well defined"});
     return;
   }
@@ -73,7 +76,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
   const token = parseEncodedToken(application.accessToken, null);
   const server = token.serverId;
-  Log.log("Sending downlink message", JSON.stringify(msg) );
+  Log.log("Sending downlink message:\n", JSON.stringify(msg, null, 2) );
 
   const {
     statusCode,
@@ -91,7 +94,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 // Default uplink endpoint
 app.post(`/uplink`, (req: Request, res: Response) => {
 
-  Log.log("Received message from device", req.body);
+  Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
   if ( req.body.cmd !== 'rx') res.status(200).send();
   else {
@@ -101,7 +104,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       Log.log("Uplink of callback handled:", device);
       res.status(200).send();
     }).catch((error: ApiException<any>) => {
-      Log.log(`Error while handling uplink ${error}`);
+      Log.log("Error while handling uplink", error);
       res.status(500).send();
     });
   }
@@ -109,7 +112,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
 app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
-  Log.log(`Received message for application ${req.params.applicationId} from device`, req.body);
+  Log.log(`Received message for application ${req.params.applicationId} from device`, req.body?.EUI);
 
   if ( req.body.cmd !== 'rx') res.status(200).send();
 
@@ -121,7 +124,7 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
   if ( typeof application !== 'undefined' ) {
 
-    Log.log(req.body)
+    Log.log(JSON.stringify(req.body, null, 2));
 
     const device = `${ application.deviceIdPrefix }${ req.body.EUI}`;
 
@@ -190,7 +193,7 @@ function readSettings(){
 
   pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: {applications: Application[]} }) => {
 
-    Log.log(`Retrieved settings: ${response}`);
+    Log.debug("Retrieved settings:\n", JSON.stringify(response, null, 2));
     settings = response.value;
 
   //}).catch((error: PluginsApiResponseProcessor) => {
