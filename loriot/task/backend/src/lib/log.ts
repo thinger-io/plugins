@@ -2,38 +2,40 @@
 
 export class Log {
 
-  static log(msg: string, label='log') {
+  static write( label='log', msg: string, ...params: any[]) {
 
     const date = (new Date()).toISOString();
 
     switch ( label ) {
 
       case 'log':
-        console.log(`${ date } - ${ label }: ${ msg }`);
+        console.log(`${ date } - ${ label }: ${ msg }`, ...params);
         break;
       case 'info':
-        console.info(`${ date } - ${ label }: ${ msg }`);
+        console.info(`${ date } - ${ label }: ${ msg }`, ...params);
         break;
       case 'debug':
-        console.debug(`${ date } - ${ label }: ${ msg }`);
+        console.debug(`${ date } - ${ label }: ${ msg }`, ...params);
         break;
       case 'warn':
-        console.debug(`${ date } - ${ label }: ${ msg }`);
+        console.debug(`${ date } - ${ label }: ${ msg }`, ...params);
         break;
       case 'error':
-        console.debug(`${ date } - ${ label }: ${ msg }`);
+        console.debug(`${ date } - ${ label }: ${ msg }`, ...params);
         break;
 
     }
 
   };
 
-  static info(msg: string) { Log.log(msg,'info'); }
+  static log(msg: string, ...params: any[]) { Log.write('log', msg, ...params); }
 
-  static debug(msg: string) { Log.log(msg,'debug'); }
+  static info(msg: string, ...params: any[]) { Log.write('info', msg, ...params); }
 
-  static warn(msg: string) { Log.log(msg,'warn'); }
+  static debug(msg: string, ...params: any[]) { Log.write('debug', msg, ...params); }
 
-  static error(msg: string) { Log.log(msg,'error'); }
+  static warn(msg: string, ...params: any[]) { Log.write('warn', msg, ...params); }
+
+  static error(msg: string, ...params: any[]) { Log.write('error', msg, ...params); }
 
 }
