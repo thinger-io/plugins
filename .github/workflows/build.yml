@@ -181,4 +181,5 @@ jobs:
           username: ${{ secrets.LAMBDA_USER }}
           password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
+          contentType: "application/octet-stream"
           file: "${{ github.workspace }}/body.json" 
