@@ -83,7 +83,6 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
       - name: Get image version
-        id: set_variables
         run: |
           if [[ "${{ env.branch }}" == "main" ]]; then
             echo docker_version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
@@ -92,7 +91,6 @@ jobs:
             echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
           fi
-          echo "plugin_file=`cat ./${{ matrix.plugin }}/plugin.json | jq -c .`" >> "$GITHUB_OUTPUT"
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
@@ -157,6 +155,24 @@ jobs:
           custom_tag: ${{ matrix.plugin }}/${{ env.version }}
           tag_prefix: ''
 
+      - name: Create body file
+        run: |
+          jq -n \
+            --arg plugin "${{ matrix.plugin }}" \
+            --arg version "${{ env.version }}" \
+            --arg commit "${{ github.sha }}" \
+            --arg repository "${{ github.repository }}" \
+            --arg server_url "${{ github.server_url }}" \
+            --slurpfile plugin_file ./"${{ matrix.plugin }}"/plugin.json \
+            '{
+              plugin: $plugin,
+              version: $version,
+              commit: $commit,
+              repository: $repository,
+              server_url: $server_url,
+              plugin_file: $plugin_file[0]
+            }' > ${{ github.workspace }}/body.json
+
       - name: Post tag to DB
         uses: fjogeleit/http-request-action@v1
         with:
@@ -165,13 +181,4 @@ jobs:
           username: ${{ secrets.LAMBDA_USER }}
           password: ${{ secrets.LAMBDA_PASSWORD }}
           timeout: 30000 # 30s
-          customHeaders: '{"Content-Type": "application/json"}'
-          data: |
-            {
-              "plugin": "${{ matrix.plugin }}",
-              "version": "${{ env.version }}",
-              "commit": "${{ github.sha }}",
-              "repository": "${{ github.repository }}",
-              "server_url": "${{ github.server_url }}",
-              "plugin_file": "${{ steps.set_variables.outputs.plugin_file }}"
-            }
+          file: "${{ github.workspace }}/body.json" 
