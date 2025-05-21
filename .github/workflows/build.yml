@@ -91,7 +91,7 @@ jobs:
             echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
           fi
-          echo plugin_file=`cat ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
+          #echo plugin_file=`cat ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
@@ -174,3 +174,4 @@ jobs:
               "server_url": "${{ github.server_url }}",
               "plugin_file": ${{ env.plugin_file }}
             }
+          file: '{ "file": "./${{ matrix-plugin}}/plugin.json" }'
