@@ -83,6 +83,7 @@ jobs:
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
       - name: Get image version
+        id: set_variables
         run: |
           if [[ "${{ env.branch }}" == "main" ]]; then
             echo docker_version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
@@ -91,7 +92,7 @@ jobs:
             echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
           fi
-          #echo plugin_file=`cat ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
+        echo "plugin_file=`cat ./${{ matrix.plugin }}/plugin.json`" >> "$GITHUB_OUTPUT"
 
       - name: Check if Dockerfile exists
         id: check_dockerfile
@@ -172,5 +173,5 @@ jobs:
               "commit": "${{ github.sha }}",
               "repository": "${{ github.repository }}",
               "server_url": "${{ github.server_url }}",
+              "plugin_file": "${{ steps.set_variables.outputs.plugin_file }}"
             }
-          files: '{ "plugin_file": "./${{ matrix.plugin }}/plugin.json" }'
