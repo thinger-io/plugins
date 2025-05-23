@@ -2,7 +2,7 @@
 # Siemens LOGO!
 
 <p align="center">
-  <img width="250" src="/plugins/siemens-logo/assets/logo-plc.svg" onerror="this.src='https://marketplace.thinger.io/plugins/siemens-logo/assets/logo-plc.svg';this.onerror='';" alt="RStudio logo" style="width: 25%" class="off-glb">
+  <img width="250" src="/plugins/siemens-logo/assets/logo-plc.svg" onerror="this.src='https://marketplace.thinger.io/plugins/siemens-logo/assets/logo-plc.svg';this.onerror='';" alt="Siemens LOGO!" style="width: 25%" class="off-glb">
 </p>
 
 Siemens LOGO! is a highly versatile logic module known for its simplicity, flexibility, and reliability. Widely used in industrial automation, building control, and various other applications, Siemens LOGO! allows for easy implementation of control tasks without requiring extensive programming knowledge.
