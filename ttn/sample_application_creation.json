@@ -1,0 +1,10 @@
+{
+    "applications": [
+        {
+            "applicationId": "my-ttn-app",
+            "deviceIdPrefix": "dragino_",
+            "accessToken": "NNSXS.MITU-TOKEN-REAL-DE-TTN",
+            "enabled": true
+        }
+    ]
+}
