@@ -133,6 +133,13 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
+
+    // In order to make downlink requests, it is necessary to store relevant data from
+    // the uplink payload in the device's properties.
+
+    const clusterId = req.body.uplink_message?.network_ids?.cluster_id; // ej: 'eu1'
+    const domain = clusterId ? `${clusterId}.cloud.thethings.network` : undefined;
+
     res.status(200).send();
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);

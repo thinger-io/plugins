@@ -18,8 +18,6 @@ import { faQuestionCircle } from "@fortawesome/free-regular-svg-icons"
 import { faEye, faEyeSlash, faPlus, faLayerGroup, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 
-import { IAppToken, parseEncodedToken } from "../../shared/loriot";
-
 export interface Application {
   applicationId: string;
   applicationName: string | null;
@@ -165,10 +163,6 @@ export class ApplicationsComponent {
       ]
 
     } else {
-
-      let LRTApp : IAppToken = parseEncodedToken(application.accessToken, null);
-      application.applicationId = LRTApp.appId.toString(16).toUpperCase();
-
       this.applications = [
         ...this.applications,
         application
@@ -184,5 +178,4 @@ export class ApplicationsComponent {
 
   protected readonly faEye = faEye;
   protected readonly faEyeSlash = faEyeSlash;
-  protected readonly parseEncodedToken = parseEncodedToken;
 }
