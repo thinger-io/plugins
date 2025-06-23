@@ -19,7 +19,7 @@ const pluginsApi = new PluginsApi(thingerApiConfig);
 export type Application = {
   applicationId: string;
   applicationName: string;
-  deviceIdPrefix: string; // TODO: NECESSARY?
+  deviceIdPrefix: string;
   accessToken: string;
   enabled: boolean;
 }
@@ -34,6 +34,14 @@ app.use(express.json({ strict: false, limit: '8mb' }))
 app.post(`/downlink`, async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
+
+  const { data, port, priority, confirmed, device_id, application_id } = req.body;
+
+  if (!data || !device_id) {
+    return res.status(400).send({ message: "Missing required fields: data or device_id" });
+  }
+
+  ///////////////////////////////////////////
 
   if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
     return res.status(200).send({
@@ -59,15 +67,13 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
     Log.error(`Access token not found for application ${req.body.uplink.appId}`);
     return res.status(400).send({ message: "Application access token not found" });
   }
-  const device = `${application.deviceIdPrefix}${req.body.uplink.EUI}`;
 
   try {
     //Obtain the device properties to get the downlink URL and API key
-    Log.log("Fetching device properties for downlink:", device);
-    const downlinkInfoResponse = await devicesApi.readProperty(_user, device, "downlink_info");
+    Log.log("Fetching device properties for downlink:", device_id);
+    const downlinkInfoResponse = await devicesApi.readProperty(_user, device_id, "downlink_info");
     const downlinkInfo = downlinkInfoResponse.value || {};
 
-    // Elige la URL (usa push_url por defecto, o replace_url si quieres reemplazar)
     const downlinkUrl = downlinkInfo.push_url || downlinkInfo.replace_url;
     const apiKey = downlinkInfo.api_key;
 
