@@ -18,95 +18,108 @@ const pluginsApi = new PluginsApi(thingerApiConfig);
 
 export type Application = {
   applicationId: string;
+  applicationName: string;
   deviceIdPrefix: string; // TODO: NECESSARY?
   accessToken: string;
   enabled: boolean;
 }
 
-let settings: {applications: Application[]} = { applications: [] };
+let settings: { applications: Application[] } = { applications: [] };
 
 const app: Express = express();
 app.enable('trust proxy');
-app.use(express.json({strict: false, limit: '8mb'}))
+app.use(express.json({ strict: false, limit: '8mb' }))
 
 // Serve the API
 app.post(`/downlink`, async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
-  // Check if the downlink message is valid
-  if ( req.body.data === '' || req.body.data === null || req.body.data === 'null' ) {
-    res.status(200).send(
-      {
-        cmd: "",
-        EUI: "",
-        data: "",
-        port: 0,
-        priority: 0,
-        success: "",
-        error: "Enter a valid downlink message"
-      }
-    );
-    return;
+  if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
+    return res.status(200).send({
+      cmd: "",
+      EUI: "",
+      data: "",
+      port: 0,
+      priority: 0,
+      success: "",
+      error: "Enter a valid downlink message"
+    });
   }
 
   // find data by token
-  const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === req.body.uplink.appId);
-  if ( typeof application === 'undefined' ) {
+  const application: Application | undefined = settings.applications.find(
+    (app: { applicationName: string }) => app.applicationName
+  );
+  if (typeof application === 'undefined') {
     Log.error(`Application ${req.body.uplink.appId} not found`);
-    res.status(404).send({message: "Application not found"});
-    return;
+    return res.status(404).send({ message: "Application not found" });
   }
-  if ( typeof application.accessToken === 'undefined' ) {
+  if (typeof application.accessToken === 'undefined') {
     Log.error(`Access token not found for application ${req.body.uplink.appId}`);
-    res.status(400).send({message: "Application access token not found"});
-    return;
+    return res.status(400).send({ message: "Application access token not found" });
   }
+  const device = `${application.deviceIdPrefix}${req.body.uplink.EUI}`;
 
-  // Build downlink message to send to the device
-  const msg: DownlinkMessage = {
-    cmd: "tx",
-    EUI: req.body.uplink.EUI,
-    port: req.body.port,
-    confirmed: req.body.confirmed || false,
-    data: req.body.data,
-    appid: req.body.uplink.appId,
+  try {
+    //Obtain the device properties to get the downlink URL and API key
+    Log.log("Fetching device properties for downlink:", device);
+    const downlinkInfoResponse = await devicesApi.readProperty(_user, device, "downlink_info");
+    const downlinkInfo = downlinkInfoResponse.value || {};
+
+    // Elige la URL (usa push_url por defecto, o replace_url si quieres reemplazar)
+    const downlinkUrl = downlinkInfo.push_url || downlinkInfo.replace_url;
+    const apiKey = downlinkInfo.api_key;
+
+    if (!downlinkUrl || !apiKey) {
+      Log.error("Downlink URL or API key not found in device properties");
+      return res.status(500).send({ message: "Downlink URL or API key not found in device properties" });
+    }
+
+    const downlinkPayload = {
+      downlinks: [
+        {
+          f_port: req.body.port,
+          frm_payload: req.body.data, // base64
+          priority: req.body.priority || "NORMAL",
+          confirmed: req.body.confirmed || false
+        }
+      ]
+    };
+
+    Log.log("Sending downlink to TTN:", JSON.stringify(downlinkPayload, null, 2));
+    Log.log("Using URL:", downlinkUrl);
+
+    const downlink_headers = {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    };
+
+    const { statusCode, body } = await request(downlinkUrl, {
+      method: 'POST',
+      headers: downlink_headers,
+      body: JSON.stringify(downlinkPayload)
+    });
+
+    // Process response
+    let responseBody = '';
+    for await (const chunk of body) {
+      responseBody += chunk.toString();
+    }
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(responseBody);
+    } catch {
+      parsedBody = responseBody;
+    }
+
+    Log.debug(`Downlink response:\n`, statusCode, parsedBody);
+    res.status(statusCode).send(parsedBody);
+
+  } catch (err: any) {
+    Log.error("Error while sending downlink:", err.message || err);
+    res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
   }
-
-  const allDefined = Object.values(msg).every(value => value !== undefined);
-  if ( !allDefined ) {
-    Log.error("Downlink message is not well defined:\n", JSON.stringify(msg, null, 2));
-    res.status(400).send({message: "Downlink message is not well defined"});
-    return;
-  }
-
-  const msg_headers = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${application.accessToken}`
-  }
-
-  const token = parseEncodedToken(application.accessToken, null);
-  const server = token.serverId;
-  Log.log("Sending downlink message:\n", JSON.stringify(msg, null, 2) );
-
-  const {
-    statusCode,
-    //headers,
-    body
-  } = await request(`https://${server}/1/rest`, { method: 'POST', headers: msg_headers , body: JSON.stringify(msg) })
-
-  // Collect stream chunks into a string
-  let responseBody = '';
-  for await (const chunk of body) {
-    responseBody += chunk.toString(); // Assuming chunks are Buffer or string
-  }
-
-  // Now parse if it's JSON
-  const parsedBody = JSON.parse(responseBody);
-  console.log(parsedBody);
-
-  Log.debug(`Downlink response:\n`, statusCode, body);
-  res.status(statusCode).send(parsedBody);
 
 });
 
@@ -114,22 +127,26 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
+  Log.info("Headers recibidos:", JSON.stringify(req.headers, null, 2));
 
   // Application id is recieved in payload from TTN according to
   // TTN-Data-Format specifications:
   // https://www.thethingsindustries.com/docs/integrations/data-formats/
   const applicationId = req.body.end_device_ids.application_ids.application_id;
 
-  const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === applicationId);
+  const application: Application | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
-    res.status(404).send({message: "Application not found"});
+    res.status(404).send({ message: "Application not found" });
     return;
   }
 
-  const device = `${application.deviceIdPrefix}${ req.body.end_device_ids.dev_eui}`;
+  const device = `${application.deviceIdPrefix}${req.body.end_device_ids.dev_eui}`;
   console.log("Device:", device);
+
+  // Add the source to handle other LNS
+  req.body["source"] = "ttn";
 
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
@@ -137,10 +154,29 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     // In order to make downlink requests, it is necessary to store relevant data from
     // the uplink payload in the device's properties.
 
-    const clusterId = req.body.uplink_message?.network_ids?.cluster_id; // ej: 'eu1'
-    const domain = clusterId ? `${clusterId}.cloud.thethings.network` : undefined;
+    Log.info("Headers recibidos:", JSON.stringify(req.headers, null, 2));
 
-    res.status(200).send();
+    const downlinkInfo = {
+      api_key: req.header("X-Downlink-Apikey") || "",
+      push_url: req.header("X-Downlink-Push") || "",
+      replace_url: req.header("X-Downlink-Replace") || "",
+      domain: req.body.uplink_message?.network_ids?.cluster_address || "",
+    };
+
+
+    const prop = new PropertyCreate();
+    prop.property = "downlink_info";
+    prop.value = downlinkInfo;
+
+    devicesApi.createProperty(_user, device, prop)
+      .then(() => {
+        Log.info("Downlink info updated for device", device);
+        res.status(200).send();
+      })
+      .catch((err: ApiException<any>) => {
+        Log.error("Error saving downlink info", err);
+        res.status(500).send({ message: "Error saving downlink info" });
+      });
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);
     res.status(500).send();
@@ -166,7 +202,7 @@ app.get("/settings", async (req: Request, res: Response) => {
 // Endpoint to send the plugins
 app.post("/settings", async (req: Request, res: Response) => {
   Log.log("Post settings", req.body);
-  saveSettings(req.body).then((response: { value: {applications: Application[]} }) => {
+  saveSettings(req.body).then((response: { value: { applications: Application[] } }) => {
     settings = response.value;
     res.status(200).send(settings);
   }).catch((error: any) => {
@@ -176,10 +212,10 @@ app.post("/settings", async (req: Request, res: Response) => {
 });
 
 // Serve the Angular app after the API
-app.use( FrontEndRouter );
+app.use(FrontEndRouter);
 
 // Settings functions
-function saveSettings(value: object = {}){
+function saveSettings(value: object = {}) {
 
   const prop = new PropertyCreate();
   prop.property = "settings";
@@ -188,23 +224,23 @@ function saveSettings(value: object = {}){
   return pluginsApi.createProperty(_user, _plugin, prop);
 }
 
-function readSettings(){
+function readSettings() {
 
-  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: {applications: Application[]} }) => {
+  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: Application[] } }) => {
 
     Log.debug("Retrieved settings:\n", JSON.stringify(response, null, 2));
     settings = response.value;
 
-  //}).catch((error: PluginsApiResponseProcessor) => {
+    //}).catch((error: PluginsApiResponseProcessor) => {
   }).catch((error: ApiException<any>) => {
 
-    if ( error.code === 404 ){
+    if (error.code === 404) {
       //Log.log(error.message);
       Log.log("Settings property not found, initializing...");
     }
 
     // Initialize empty value settings
-    saveSettings({"applications": []}).then((response: { value: {applications: Application[]} }) => {
+    saveSettings({ "applications": [] }).then((response: { value: { applications: Application[] } }) => {
       settings = response.value;
       Log.log(`Settings initialized: ${response}`);
     }).catch((error: any) => {
