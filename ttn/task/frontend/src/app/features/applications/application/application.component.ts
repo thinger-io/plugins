@@ -13,7 +13,6 @@ import {
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
-import {IAppToken, parseEncodedToken} from "../../../shared/loriot";
 
 @Component({
     selector: 'app-application',
@@ -36,10 +35,6 @@ export class ApplicationComponent implements OnInit {
     if (!control.value || typeof this.applications() === 'undefined' ) {
       // If the control is empty, consider it valid
       return null;
-    }
-    let LRTApp : IAppToken = parseEncodedToken(control.value, null);
-    if ( this.applications()?.find(app => app.applicationId === LRTApp.appId.toString(16).toUpperCase()) ) {
-        return { error: true, applicationIdUnique: true };
     }
     return null;
   }

@@ -55,8 +55,8 @@
             }
           </td>
           <td class="tw-hidden lg:tw-table-cell">
-            @let serverId = parseEncodedToken(application.accessToken, null).serverId;
-            <a href="https://{{serverId}}/applications/{{application.applicationId}}" target="_blank">{{serverId}}</a>
+            <span class="tw-text-gray-500" *ngIf="!application.enabled">Disabled</span>
+            <span class="tw-text-green-500" *ngIf="application.enabled">Enabled</span>
           </td>
           <td class="tw-hidden lg:tw-table-cell">
             <nz-switch nzSize="small" [(ngModel)]="application.enabled" (ngModelChange)="onSwitchChange(application.applicationId, $event)"></nz-switch>
