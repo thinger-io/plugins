@@ -1,7 +1,7 @@
 ---
 title: Siemens LOGO! Plugin Version 1.0.0-1
-image: "/announcements/2025-05-21-siemens-logo-v1.0.0-1/logo-plc.svg"
-date: 2025-05-21
+image: "/announcements/2025-06-24-siemens-logo-v1.0.0-1/logo-plc.svg"
+date: 2025-06-24
 authors: [thinger.io]
 categories:
   - Siemens
@@ -33,7 +33,7 @@ It provides the following settings:
 - A preconfigured **dashboard** to visualize relevant data of each Siemens LOGO! controller.
 
 <p align="center">
-  <img src="/announcements/2025-05-21-siemens-logo-v1.0.0-1/product_profile.png" onerror="this.src='/announcements/2025-05-21-product-profile-v1.0.0-1/product_profile.png';this.onerror='';" alt="Siemens LOGO! Thinger.io product profile">
+  <img src="/announcements/2025-06-24-siemens-logo-v1.0.0-1/product_profile.png" onerror="this.src='/announcements/2025-06-24-product-profile-v1.0.0-1/product_profile.png';this.onerror='';" alt="Siemens LOGO! Thinger.io product profile">
 </p>
 
 [Checkout the doc for the this plugin](/plugins/siemens-logo/).
