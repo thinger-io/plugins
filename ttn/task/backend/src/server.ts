@@ -68,7 +68,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
     const downlinkInfoResponse = await devicesApi.readProperty(_user, device_id, "downlink_info");
     const downlinkInfo = downlinkInfoResponse.value || {};
 
-    const downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
+    let downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
     const apiKey = downlinkInfo.api_key;
 
     if (!downlinkUrl || !apiKey) {
@@ -82,10 +82,18 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
           f_port: req.body.port,
           frm_payload: req.body.data, // base64
           priority: req.body.priority || "NORMAL",
-          confirmed: req.body.confirmed || false
+          confirmed: req.body.confirmed || false,
         }
       ]
     };
+
+    if (req.body.replace_downlink) {
+      Log.log("Replacing downlink message");
+      downlinkUrl = downlinkInfo.replace_url;
+    } else {
+      Log.log("Pushing downlink message");
+      downlinkUrl = downlinkInfo.push_url;
+    }
 
     Log.log("Sending downlink to TTN:", JSON.stringify(downlinkPayload, null, 2));
     Log.log("Using URL:", downlinkUrl);

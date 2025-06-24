@@ -1,5 +1,6 @@
 import { Component, ViewChild } from '@angular/core';
 import { FormsModule } from "@angular/forms";
+import { CommonModule } from "@angular/common";
 import { SettingsService } from "../../core/services/settings.service";
 import { ApplicationComponent } from "./application/application.component";
 
@@ -22,7 +23,6 @@ export interface Application {
   applicationId: string;
   applicationName: string | null;
   deviceIdPrefix: string;
-  accessToken: string;
   enabled: boolean;
 }
 
@@ -41,7 +41,8 @@ export interface Application {
         NzSkeletonComponent,
         NzSwitchModule,
         NzPopconfirmModule,
-        FormsModule
+        FormsModule,
+        CommonModule
     ],
     templateUrl: './applications.component.html',
 })
@@ -68,7 +69,6 @@ export class ApplicationsComponent {
     this.settingsService.loadSettings().then( () => {
 
       this.applications = settingsService.getApplications();
-      this.applications.forEach(app => this.tokenVisible[app.applicationId] = false);
 
     });
 

@@ -7,12 +7,13 @@
         [nzSpan]="8"
         [nzXs]="26"
         nzFor="applicationName"
-        nzTooltipTitle="Friendly application name"
+        nzTooltipTitle="Application name that will be used to link to the application in the TTN stack platform"
+        nzRequired
       >
         Application Name
       </nz-form-label>
       <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
-        <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName" placeholder="Optional application name" />
+        <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName" placeholder="Application name" />
       </nz-form-control>
   </nz-form-item>
 
@@ -28,31 +29,10 @@
       Device Id Prefix
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorPrefixField">
-      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix" placeholder="Ex: loriot_" />
+      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix" placeholder="Ex: my_device_" />
       <ng-template #errorPrefixField let-control>
         @if (control.errors?.['prefixUnique']) {
           The Device Id Prefix must be unique
-        }
-      </ng-template>
-    </nz-form-control>
-  </nz-form-item>
-
-  <!-- Access Token -->
-  <nz-form-item>
-    <nz-form-label
-      [nzSpan]="8"
-      [nzXs]="26"
-      nzFor="accessToken"
-      nzTooltipTitle="The Application Access Token of LORIOT network server. Required for downlinks to be sent to the devices"
-      nzRequired
-    >
-      Access Token
-    </nz-form-label>
-    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorAccessTokenField">
-      <input nz-input formControlName="accessToken" name="accessToken" type="text" id="accessToken" placeholder="vgEAAwAAAA1kZXYubG9yaW90LmlvzXTUl6ESlOrvJST-gsL_xQ==" />
-      <ng-template #errorAccessTokenField let-control>
-        @if (control.errors?.['applicationIdUnique']) {
-          The Application Id is already registered
         }
       </ng-template>
     </nz-form-control>

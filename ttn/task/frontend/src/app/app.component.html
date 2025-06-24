@@ -3,16 +3,20 @@
     <nz-header>
       <div class="app-header">
         <span class="header-trigger" (click)="isCollapsed = !isCollapsed">
-            <span>TTN</span>
+          <span>TTN</span>
         </span>
       </div>
-    </nz-header>
+    </nz-header>  
     <nz-content>
-      <div class="inner-content">
-        <nz-space nzDirection="vertical" [nzSize]="'large'" style="width: 100%">
-          <app-applications *nzSpaceItem></app-applications>
-          <app-settings *nzSpaceItem></app-settings>
-        </nz-space>
+      <div class="inner-content tw-px-2 tw-py-4 tw-max-w-6xl tw-mx-auto">
+        <div class="tw-grid tw-gap-6 tw-grid-cols-1 lg:tw-grid-cols-2">
+          <div>
+            <app-applications></app-applications>
+          </div>
+          <div>
+            <app-settings></app-settings>
+          </div>
+        </div>
       </div>
     </nz-content>
   </nz-layout>

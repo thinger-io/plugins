@@ -1,4 +1,3 @@
-
 <style>
   nz-table tr {
     height: 45px; /* Set a fixed row height */
@@ -7,18 +6,24 @@
 
 <nz-card [nzTitle]="titleTemplate" nzSize="small" [nzExtra]="extraTemplate" nzType="inner" [nzBodyStyle]='{ "padding": 0}'>
   <nz-table #applicationsTable [nzData]="applications" nzSize="small" [nzFrontPagination]="false" [nzShowPagination]="false">
+
+    <!-- Define fixed widths for checkbox and enabled columns -->
+    <colgroup>
+      <col>                         <!-- Checkbox column -->
+      <col>                         <!-- Application column takes remaining space -->
+      <col>                         <!-- Device Id Prefix takes remaining space -->
+      <col>                         <!-- Enabled column -->
+    </colgroup>
+
     <thead>
       <tr>
         <th [nzChecked]="allChecked"
             [nzDisabled]="disabled || applications.length === 0"
-            (nzCheckedChange)="onAllChecked($event)"
-            nzWidth="tw-w-1/12"
-        >
+            (nzCheckedChange)="onAllChecked($event)">
         </th>
-        <th class="tw-w-1/2 lg:tw-w-1/3 xl:tw-w-2/12">Application</th>
-        <th class="tw-w-1/2 lg:tw-w-1/3 xl:tw-w-2/12">Device Id Prefix</th>
-        <th class="tw-hidden xl:tw-table-cell xl:tw-w-4/12">Application Access Token</th>
-        <th class="tw-hidden lg:tw-table-cell lg:tw-w-1/3 xl:tw-w-1/12">Enabled</th>
+        <th>Application</th>
+        <th>Device Id Prefix</th>
+        <th class="tw-hidden lg:tw-table-cell">Enabled</th>
       </tr>
     </thead>
     <tbody>
@@ -40,26 +45,12 @@
             }
           </td>
           <td>{{ application.deviceIdPrefix }}</td>
-          <td class="tw-hidden xl:tw-table-cell">
-            @if (application.accessToken) {
-            <div nz-row>
-              <div nz-col nzFlex="1">
-                <span (click)="tokenVisible[application.applicationId] = !tokenVisible[application.applicationId]"><fa-icon [icon]="tokenVisible[application.applicationId] ? faEyeSlash : faEye"></fa-icon></span>
-              </div>
-              <div nz-col nzFlex="22" style="margin: 0">
-                <nz-skeleton style="margin: 0; max-width: 440px" [nzLoading]="!tokenVisible[application.applicationId]" [nzParagraph]="false">
-                  <pre style="margin: 0"><code>{{application.accessToken}}</code></pre>
-                </nz-skeleton>
-              </div>
-            </div>
-            }
-          </td>
-          <td class="tw-hidden lg:tw-table-cell">
-            <span class="tw-text-gray-500" *ngIf="!application.enabled">Disabled</span>
-            <span class="tw-text-green-500" *ngIf="application.enabled">Enabled</span>
-          </td>
-          <td class="tw-hidden lg:tw-table-cell">
-            <nz-switch nzSize="small" [(ngModel)]="application.enabled" (ngModelChange)="onSwitchChange(application.applicationId, $event)"></nz-switch>
+          <td class="tw-hidden lg:tw-table-cell tw-align-middle">
+            <nz-switch
+              nzSize="small"
+              [(ngModel)]="application.enabled"
+              (ngModelChange)="onSwitchChange(application.applicationId, $event)">
+            </nz-switch>
           </td>
         </tr>
       }
@@ -84,17 +75,14 @@
       (nzOnConfirm)="removeItems()"
       nzPopconfirmPlacement="bottom"
       type="button" nz-button nzType="default" nzSize="small" nzDanger
-            [disabled]="disabled"
-    >
+            [disabled]="disabled">
       <fa-icon [icon]="faTrashAlt" class="tw-mr-2"></fa-icon>Remove
-
     </button>
   }
   @if (checkedApplications.size === 0) {
     <button type="button" nz-button nzType="primary" nzSize="small"
             (click)="showModal()"
-            [disabled]="disabled"
-    >
+            [disabled]="disabled">
           <span class="tw-mr-2">
             <fa-icon [icon]="faPlus" class="tw-mr-2"></fa-icon>Add
           </span>
