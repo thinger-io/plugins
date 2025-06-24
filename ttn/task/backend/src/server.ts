@@ -45,12 +45,6 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
   if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
     return res.status(200).send({
-      cmd: "",
-      EUI: "",
-      data: "",
-      port: 0,
-      priority: 0,
-      success: "",
       error: "Enter a valid downlink message"
     });
   }
@@ -74,7 +68,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
     const downlinkInfoResponse = await devicesApi.readProperty(_user, device_id, "downlink_info");
     const downlinkInfo = downlinkInfoResponse.value || {};
 
-    const downlinkUrl = downlinkInfo.push_url || downlinkInfo.replace_url;
+    const downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
     const apiKey = downlinkInfo.api_key;
 
     if (!downlinkUrl || !apiKey) {
