@@ -5,7 +5,6 @@ import { DevicesApi, PluginsApi, ApiException, PropertyCreate } from "@thinger-i
 import { request } from 'undici'
 
 import { thingerApiConfig } from "./lib/api.js";
-import { DownlinkMessage, parseEncodedToken } from "./lib/loriot.js";
 import { Log } from "./lib/log.js";
 import { stringify } from 'node:querystring';
 
@@ -16,7 +15,7 @@ const _plugin = process.env.THINGER_PLUGIN || "";
 const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
-export type Application = {
+export type ttnApplication = {
   applicationId: string;
   applicationName: string;
   deviceIdPrefix: string;
@@ -24,42 +23,46 @@ export type Application = {
   enabled: boolean;
 }
 
-let settings: { applications: Application[] } = { applications: [] };
+let settings: { applications: ttnApplication[] } = { applications: [] };
 
 const app: Express = express();
 app.enable('trust proxy');
 app.use(express.json({ strict: false, limit: '8mb' }))
 
 // Serve the API
-app.post(`/downlink`, async (req: Request, res: Response) => {
+app.post("/downlink", async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
   const { data, port, priority, confirmed, device_id, application_id } = req.body;
 
   if (!data || !device_id) {
-    return res.status(400).send({ message: "Missing required fields: data or device_id" });
+    res.status(400).send({ message: "Missing required fields: data or device_id" });
+    return;
   }
 
   ///////////////////////////////////////////
 
   if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
-    return res.status(200).send({
+    res.status(200).send({
       error: "Enter a valid downlink message"
     });
+    return;
   }
 
   // find data by token
-  const application: Application | undefined = settings.applications.find(
+  const application: ttnApplication | undefined = settings.applications.find(
     (app: { applicationName: string }) => app.applicationName
   );
   if (typeof application === 'undefined') {
     Log.error(`Application ${req.body.uplink.appId} not found`);
-    return res.status(404).send({ message: "Application not found" });
+    res.status(404).send({ message: "Application not found" });
+    return;
   }
   if (typeof application.accessToken === 'undefined') {
     Log.error(`Access token not found for application ${req.body.uplink.appId}`);
-    return res.status(400).send({ message: "Application access token not found" });
+    res.status(400).send({ message: "Application access token not found" });
+    return;
   }
 
   try {
@@ -73,7 +76,8 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
     if (!downlinkUrl || !apiKey) {
       Log.error("Downlink URL or API key not found in device properties");
-      return res.status(500).send({ message: "Downlink URL or API key not found in device properties" });
+      res.status(500).send({ message: "Downlink URL or API key not found in device properties" });
+      return;
     }
 
     const downlinkPayload = {
@@ -142,7 +146,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   // https://www.thethingsindustries.com/docs/integrations/data-formats/
   const applicationId = req.body.end_device_ids.application_ids.application_id;
 
-  const application: Application | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+  const application: ttnApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
@@ -210,7 +214,7 @@ app.get("/settings", async (req: Request, res: Response) => {
 // Endpoint to send the plugins
 app.post("/settings", async (req: Request, res: Response) => {
   Log.log("Post settings", req.body);
-  saveSettings(req.body).then((response: { value: { applications: Application[] } }) => {
+  saveSettings(req.body).then((response: { value: { applications: ttnApplication[] } }) => {
     settings = response.value;
     res.status(200).send(settings);
   }).catch((error: any) => {
@@ -234,7 +238,7 @@ function saveSettings(value: object = {}) {
 
 function readSettings() {
 
-  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: Application[] } }) => {
+  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: ttnApplication[] } }) => {
 
     Log.debug("Retrieved settings:\n", JSON.stringify(response, null, 2));
     settings = response.value;
@@ -248,7 +252,7 @@ function readSettings() {
     }
 
     // Initialize empty value settings
-    saveSettings({ "applications": [] }).then((response: { value: { applications: Application[] } }) => {
+    saveSettings({ "applications": [] }).then((response: { value: { applications: ttnApplication[] } }) => {
       settings = response.value;
       Log.log(`Settings initialized: ${response}`);
     }).catch((error: any) => {

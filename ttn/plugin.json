@@ -1,5 +1,5 @@
 {
-  "name" : "TTN",
+  "name" : "ttn",
   "version" : "1.0.0",
   "description" : "Plugin for integrating Thinger.io with TTN",
   "author" : "Thinger.io",
@@ -23,7 +23,7 @@
           "*" : ["AccessDeviceResources"]
         },
         "Plugin" : {
-          "loriot" : "*"
+          "ttn" : "*"
         }
       }
     },
@@ -31,7 +31,7 @@
       "name" : "Access from ttn to Uplink callback",
       "allow" : {
         "Plugin" : {
-          "loriot" : ["CallPluginEndpoint"]
+          "ttn" : ["CallPluginEndpoint"]
         }
       }
     }

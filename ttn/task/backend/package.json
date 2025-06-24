@@ -1,7 +1,7 @@
 {
-  "name": "loriot-backend",
+  "name": "ttn-backend",
   "version": "1.0.0",
-  "description": "Plugin for handling LORIOT integration",
+  "description": "Plugin for handling TTN integration",
   "scripts": {
     "start": "NODE_ENV=production node --env-file=.env.production server.js",
     "build": "tsc -p .",
@@ -14,7 +14,7 @@
     "url": "git+https://github.com/thinger-io/plugins.git"
   },
   "keywords": [
-    "loriot",
+    "ttn",
     "thinger"
   ],
   "author": "Thinger.io",
@@ -22,7 +22,7 @@
   "bugs": {
     "url": "https://github.com/thinger-io/plugins/issues"
   },
-  "homepage": "https://marketplace.thinger.io/plugins/loriot",
+  "homepage": "https://marketplace.thinger.io/plugins/ttn",
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@types/express": "^5.0.0",
