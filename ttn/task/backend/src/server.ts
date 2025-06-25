@@ -41,8 +41,6 @@ app.post("/downlink", async (req: Request, res: Response) => {
     return;
   }
 
-  ///////////////////////////////////////////
-
   if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
     res.status(200).send({
       error: "Enter a valid downlink message"
@@ -50,18 +48,13 @@ app.post("/downlink", async (req: Request, res: Response) => {
     return;
   }
 
-  // find data by token
+  // find data
   const application: ttnApplication | undefined = settings.applications.find(
     (app: { applicationName: string }) => app.applicationName
   );
   if (typeof application === 'undefined') {
-    Log.error(`Application ${req.body.uplink.appId} not found`);
+    Log.error(`Application not found`);
     res.status(404).send({ message: "Application not found" });
-    return;
-  }
-  if (typeof application.accessToken === 'undefined') {
-    Log.error(`Access token not found for application ${req.body.uplink.appId}`);
-    res.status(400).send({ message: "Application access token not found" });
     return;
   }
 
@@ -92,14 +85,11 @@ app.post("/downlink", async (req: Request, res: Response) => {
     };
 
     if (req.body.replace_downlink) {
-      Log.log("Replacing downlink message");
       downlinkUrl = downlinkInfo.replace_url;
     } else {
-      Log.log("Pushing downlink message");
       downlinkUrl = downlinkInfo.push_url;
     }
 
-    Log.log("Sending downlink to TTN:", JSON.stringify(downlinkPayload, null, 2));
     Log.log("Using URL:", downlinkUrl);
 
     const downlink_headers = {
@@ -138,8 +128,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
 // Default uplink endpoint
 app.post(`/uplink`, (req: Request, res: Response) => {
 
-  Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
-  Log.info("Headers recibidos:", JSON.stringify(req.headers, null, 2));
+  Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
   // Application id is recieved in payload from TTN according to
   // TTN-Data-Format specifications:
@@ -166,15 +155,12 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     // In order to make downlink requests, it is necessary to store relevant data from
     // the uplink payload in the device's properties.
 
-    Log.info("Headers recibidos:", JSON.stringify(req.headers, null, 2));
-
     const downlinkInfo = {
       api_key: req.header("X-Downlink-Apikey") || "",
       push_url: req.header("X-Downlink-Push") || "",
       replace_url: req.header("X-Downlink-Replace") || "",
       domain: req.body.uplink_message?.network_ids?.cluster_address || "",
     };
-
 
     const prop = new PropertyCreate();
     prop.property = "downlink_info";
