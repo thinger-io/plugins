@@ -1,2 +1,2 @@
 
---8<-- "loriot/CHANGELOG.md"
+--8<-- "ttn/CHANGELOG.md"

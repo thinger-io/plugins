@@ -6,5 +6,5 @@ search:
 # Plugin file
 
 ```` json title="Plugin configuration file"
---8<-- "loriot/plugin.json"
+--8<-- "ttn/plugin.json"
 ````

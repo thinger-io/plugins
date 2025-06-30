@@ -1,2 +1,2 @@
 
---8<-- "loriot/README.md"
+--8<-- "ttn/README.md"
