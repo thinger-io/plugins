@@ -1,13 +1,13 @@
 {
-  "name" : "ttn",
-  "version" : "1.0.0",
-  "description" : "Plugin for integrating Thinger.io with TTN",
-  "author" : "Thinger.io",
-  "license" : "MIT",
-  "repository" : {
-    "type" : "git",
+  "name": "ttn",
+  "version": "1.0.0",
+  "description": "Plugin for integrating Thinger.io with TTN",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory" : "ttn"
+    "directory": "ttn"
   },
   "metadata": {
     "name": "The Things Stack",
@@ -15,39 +15,44 @@
     "image": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-logo.png",
     "icon": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-icon.png"
   },
-  "tokens" : {
-    "ttn_plugin" : {
-      "name" : "Access from TTN plugin to Thinger.io account",
-      "allow" : {
-        "Device" : {
-          "*" : ["AccessDeviceResources"]
+  "tokens": {
+    "ttn_plugin": {
+      "name": "Access from TTN plugin to Thinger.io account",
+      "allow": {
+        "Device": {
+          "*": [
+            "AccessDeviceResources",
+            "CreateDeviceProperty",
+            "ReadDeviceProperty"
+          ]
         },
-        "Plugin" : {
-          "ttn" : "*"
+        "Plugin": {
+          "ttn": "*"
         }
       }
     },
-    "ttn_plugin_callback" : {
-      "name" : "Access from ttn to Uplink callback",
-      "allow" : {
-        "Plugin" : {
-          "ttn" : ["CallPluginEndpoint"]
+    "ttn_plugin_callback": {
+      "name": "Access from ttn to Uplink callback",
+      "allow": {
+        "Plugin": {
+          "ttn": [
+            "CallPluginEndpoint"
+          ]
         }
       }
     }
   },
-  "task" : {
-    "type" : "docker",
-    "image" : "thinger/ttn-plugin",
-    "port" : 3000
+  "task": {
+    "type": "docker",
+    "image": "ttn-plugin:latest",
+    "port": 3000
   },
-  "interface" : {
-    "main" : {
-      "proxy_to" : {
+  "interface": {
+    "main": {
+      "proxy_to": {
         "plugin": "ttn",
         "port": 3000
       }
     }
   }
 }
-

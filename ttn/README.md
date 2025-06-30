@@ -1,88 +1,100 @@
-
-# LORIOT 
-
-<p align="center">
-  <img src="/plugins/loriot/assets/loriot-logo.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/loriot-logo.png';this.onerror='';" alt="LORIOT logo">
-</p>
-
-LORIOT is a LoRaWAN Network solution that simplifies the deployment of large IoT applications over a collaborative Internet of Things network that spans many countries around the world.
-
-From Thinger.io we wanted to offer an improved integration to LORIOT users by providing easy-to-configure tools for storing, analyzing, and showing device data in a simple way.
-
-This plugins integrates LORIOT messages into Thinger.io platform through the Products feature, allowing the autoprovisioning of devices and data buckets, and the definition of custom uplink and downlink processing functions, as well as the processing of uplink and downlink payloads.
-
-## Getting Started
-
-This plugin requires that devices in LORIOT applications to be of homogeneous type, that is, being of the same type and model, in order to handle autoprovision.
-
-The first step is to install the plugin in your Thinger.io account ([How to install a plugin](https://marketplace.thinger.io/plugins/managing/#install-and-deploy-an-existent-plugin)).
+# TTN Stack 
 
 <p align="center">
-  <img src="/plugins/loriot/assets/loriot_plugin_marketplace.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/loriot_plugin_marketplace.png';this.onerror='';" alt="LORIOT in Thinger.io Marketplace">
+  <img src="/plugins/ttn/assets/ttn-logo.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn-logo.png';this.onerror='';" alt="The Things Network logo">
 </p>
 
-### Plugin Configuration
+The Things Network (TTN) is an open, community‑driven LoRaWAN® network that simplifies the deployment of large‑scale IoT solutions across the globe.
 
-After installing this plugin, access the plugin configuration page and on the Applications table click on `Add +` to create a new application. You will need to provide the following information:
+From Thinger.io we aim to provide TTN users with seamless integration tools for storing, analysing and visualising device data.
 
-- **Application Name**: An optional friendly name for the application.
-- **Device Id Prefix**: A prefix to be used for the device identifiers. The plugin will automatically append the device EUI to this prefix to create the device identifier. This prefix is necessary for the device autoprovision features.
-- **LORIOT Access Token**: The LORIOT Application Access Token. Please refer to the [LORIOT Access Token documentation](https://docs.loriot.io/space/NMS/6031583/Access+Tokens) to learn how to obtain this token.
+This plugin brings TTN traffic into Thinger.io through the **Products** feature, enabling automatic provisioning of devices and data buckets, together with fully customisable uplink and downlink processing logic.
+
+---
+
+## Getting Started
+
+> **Prerequisite**  
+> Devices within the selected TTN Application must be **homogeneous**—same type and model—so that autoprovision can assign the correct product template.
+
+1. **Install the plugin** inside your Thinger.io account.  
+   See the guide **“How to install a plugin”** on the Marketplace if you are not familiar with the process.
 
 <p align="center">
-  <img src="/plugins/loriot/assets/add_application.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/add_application.png';this.onerror='';" alt="Add application modal in LORIOT Thinger.io Plugin">
+  <img src="/plugins/ttn/assets/ttn_plugin_marketplace.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn_plugin_marketplace.png';this.onerror='';" alt="TTN plugin in Thinger.io Marketplace">
 </p>
 
-Don't close the plugin configuration page yet, you will need to configure the LORIOT Webhook to send the device data to Thinger.io.
+---
+
+## Plugin Configuration
+
+Open the plugin settings page. In the **Applications** table click **Add +** and fill in:
+
+| Field | Description |
+| ----- | ----------- |
+| **Application Name** | Must match **exactly** the Application ID defined in the TTN Console. The plugin uses this value to route outgoing requests to the correct TTN application. |
+| **Device ID Prefix** | Prefix used when generating the device identifier; the Device EUI is appended automatically. Required for autoprovision. |
 
 <p align="center">
-  <img src="/plugins/loriot/assets/loriot_plugin.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/loriot_plugin.png';this.onerror='';" alt="LORIOT Thinger.io Plugin Settings">
+  <img src="/plugins/ttn/assets/add_application.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/add_application.png';this.onerror='';" alt="Add application modal in TTN Thinger.io Plugin">
 </p>
 
- 
-###  LORIOT Webhook Configuration
+Keep this page open—you will need the **Webhook URL** and **secret** generated by the plugin in the next step.
 
-To integrate LORIOT with Thinger.io, you need to configure a Webhook in LORIOT to send the device data to Thinger.io. To do this, follow these steps:
+---
 
-1. Access the LORIOT platform and go to the `Applications` section. Select the application you want to integrate with Thinger.io.
-2. In the application configuration, go to `Output` and click on `Add new output`.
-3. Select `HTTP Push` as the output type and fill out the configuration with the seetings found in the plugin configuration page:
+## TTN Webhook Configuration
+
+1. Log in to the **TTN Console** and select the target **Application**.  
+2. Navigate to **Integrations → Webhooks** and click **Add Webhooks**.  
+3. Choose **Custom Webhook** and complete the form with the values shown in your plugin:
+
+| TTN Field | Value (example) |
+|-----------|-----------------|
+| **Webhook ID** | `thinger-io` |
+| **Base URL** | `https://<YOUR_THINGER_DOMAIN>/users/<YOUR_THINGER_USER>/plugins/ttn` |
+| **Uplink Message** | `/uplink` |
+| **Headers** | `X-THINGER-SECRET: <auto‑generated secret>` |
 
 <p align="center">
-  <img src="/plugins/loriot/assets/loriot_webhook_settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/loriot_webhook_settings.png';this.onerror='';" alt="LORIOT Webhook Settings for Thinger.io integration">
+  <img src="/plugins/ttn/assets/ttn_webhook_settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn_webhook_settings.png';this.onerror='';" alt="TTN Webhook Settings for Thinger.io integration">
 </p>
 
-If you [check the logs](https://marketplace.thinger.io/plugins/managing/#analyzing-the-logs) in the LORIOT Thinger.io Plugin, you should see the messages being received from LORIOT. However, the devices are not yet provisioned in Thinger.io, so the messages are being discarded.
+After saving, uplink traffic will appear in the plugin **Logs** panel.  
+At this point the devices may still be unrecognised; autoprovision occurs once a matching **Device Template** is installed or created.
 
-Currently only device uplink messages and downlink confirmations are supported, meaning that gateway messages will not be processed.
+> Currently only **device uplinks** and **downlink confirmations** are handled. Gateway status messages are ignored.
 
-More information on LORIOT Application Output can be found in the [LORIOT documentation](https://docs.loriot.io/space/NMS/6033171/Application+Outputs).
+More details on Webhooks can be found in the [The Things Stack documentation](https://www.thethingsindustries.com/docs/integrations/webhooks/).
 
-### Device Templates
+---
 
-Device templates define the device data structure and the processing functions for uplink and downlink messages, as well as dashboards and data buckets.
+## Device Templates
 
-#### Install a Device Template
+Device templates define:
 
-In Thinger.io device templates are also plugins, checkout the Plugins Marketplace to find the device template that fits your device. In case you cannot find a device template for your device, you can create your own device template, please refer to section [Create Your Own Device Template](#create-your-own-device-template).
+* The expected data structure  
+* Uplink / downlink processing scripts  
+* Default dashboards and data buckets
+
+### Install a Device Template
+
+Search the Marketplace for a template that matches your device model. If none exists, you can [create your own template](https://docs.thinger.io/products).
+
+> **Important**  
+> Ensure the template **prefix** matches the **Device ID Prefix** configured in the plugin.
 
 <p align="center">
-  <img src="/plugins/loriot/assets/am103_plugin.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/am103_plugin.png';this.onerror='';" alt="AM103 Marketplace plugin">
+  <img src="/plugins/ttn/assets/example_device_plugin.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/example_device_plugin.png';this.onerror='';" alt="Example device template plugin">
 </p>
 
-Once installed, in Products you'll see your new installed device templates. By default the device templates have a predefined prefix, make sure to change it to match the prefix you used when creating the LORIOT application in the plugin.
+---
 
-<p align="center">
-  <img src="/plugins/loriot/assets/am103_product_profile.png" onerror="this.src='https://marketplace.thinger.io/plugins/loriot/assets/am103_product_profile.png';this.onerror='';" alt="AM103 Product profile">
-</p>
+## TTN Documentation
 
-#### Create your own Device Template
+For more information about The Things Network and The Things Stack, please refer to the [official documentation](https://www.thethingsindustries.com/docs/).
 
-You can create your own device template through the Products feature, refer to the [Thinger.io documentation](https://docs.thinger.io/products) to learn how to create a new product.
-
-## LORIOT Documentation
-
-Please refer to the [LORIOT documentation](https://docs.loriot.io/) for more information about the LORIOT platform.
+---
 
 ## License
 
@@ -90,12 +102,26 @@ Please refer to the [LORIOT documentation](https://docs.loriot.io/) for more inf
   <img style="float: right;" width="100px" height="137px" src="/assets/OSI_Standard_Logo_0.svg" onerror="this.src='https://marketplace.thinger.io/assets/OSI_Standard_Logo_0.svg';this.onerror='';">
 </a>
 
-The plugin is licensed under the [MIT License](http://opensource.org/licenses/MIT):
+This plugin is released under the **MIT License**:
 
-Copyright &copy; [Thinger.io](http://thinger.io)
+```
+Copyright © Thinger.io
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
