@@ -11,6 +11,28 @@
       <code class="tw-text-blue-800">{{endpointUrl}}downlink</code>
     </pre>
 
+    <!-- Línea de token: misma alineación que títulos de endpoints -->
+    <div class="tw-mb-1 tw-font-semibold tw-text-base tw-text-gray-800 tw-mt-4">TTN API Token</div>
+    <div
+      class="tw-flex tw-items-center tw-bg-gray-100 tw-rounded-md tw-px-3 tw-py-2 tw-gap-2 tw-max-w-full tw-mb-4 tw-text-sm">
+      <span class="tw-text-gray-600 tw-select-none">Bearer</span>
+      <span *ngIf="!tokenVisible" class="tw-tracking-widest tw-text-gray-400">•••••••••••••••••••••••••••••••</span>
+      <span *ngIf="tokenVisible"
+        class="tw-font-mono tw-break-all tw-bg-white tw-rounded tw-px-2 tw-py-1 tw-border tw-border-gray-200 tw-shadow-sm tw-text-blue-800 tw-cursor-text"
+        style="max-width: 350px; overflow-x: auto;">
+        {{ ttnToken }}
+      </span>
+      <!-- botón ver/ocultar -->
+      <button nz-button nzType="text" nzSize="small" (click)="showTokenModal()"
+        nz-tooltip="Show full token">
+        <fa-icon [icon]="tokenVisible ? faEyeSlash : faEye"></fa-icon>
+      </button>
+      <!-- botón copiar -->
+      <button nz-button nzType="text" nzSize="small" (click)="copyToken()" nz-tooltip="Copy token">
+        <fa-icon [icon]="faCopy"></fa-icon>
+      </button>
+    </div>
+
     <!-- Info Panel -->
     <div
       class="tw-bg-blue-50 tw-border tw-border-blue-300 tw-text-blue-900 tw-p-4 tw-rounded-xl tw-flex tw-items-start tw-gap-3 tw-shadow-sm">
