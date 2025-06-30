@@ -42,11 +42,7 @@ export class SettingsComponent {
   ) {
     const config = this.appConfigService.getConfig();
     this.endpointUrl = window.location.origin + window.location.pathname;
-
-    // RECUPERA EL TOKEN DEL BACKEND (/env)
-    fetch('/env')
-      .then(resp => resp.json())
-      .then(env => this.ttnToken = env['THINGER_TOKEN_TTN_PLUGIN'] ?? '');
+    this.ttnToken = config?.THINGER_TOKEN_TTN_PLUGIN || 'UNKNOWN';
   }
 
   showTokenModal(): void {
