@@ -46,7 +46,7 @@ Keep this page open—you will need the **Webhook URL** and the **TTN TOKEN** ge
 3. Choose **Thinger.io Template** and complete the form with the values shown in your plugin:
 
 <p align="center">
-  <img src="/plugins/ttn/assets/thinger_webhook.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/thinger_webhook.png';this.onerror='';" alt="TTN Webhook Settings for Thinger.io integration">
+  <img src="/plugins/ttn/assets/thinger_webhook.png" style="max-width: 650px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/thinger_webhook.png';this.onerror='';" alt="TTN Webhook Settings for Thinger.io integration">
 </p>
 
 | Template Field | Value |
