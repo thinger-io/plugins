@@ -44,7 +44,7 @@
   },
   "task": {
     "type": "docker",
-    "image": "ttn-plugin:latest",
+    "image": "thinger/ttn-plugin",
     "port": 3000
   },
   "interface": {
