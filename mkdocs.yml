@@ -84,6 +84,7 @@ plugins:
       fallback_to_build_date: true
   - minify:
       minify_html: true
+  - glightbox
   #- meta -> insiders
 
 # Customization
@@ -184,7 +185,7 @@ nav:
       - Shelly Plug S: '!include ./shelly-plug-s/mkdocs.yml'
       - Shelly Plus 1PM: '!include ./shelly-plus-1pm/mkdocs.yml'
       - Sigfox: '!include ./sigfox/mkdocs.yml'
-      - TTN: '!include ./ttn/mkdocs.yml'
+      - Siemens LOGO!: '!include ./siemens-logo/mkdocs.yml'
       - The Things Stack: '!include ./ttn-stack/mkdocs.yml'
       - VS Code: '!include ./vscode/mkdocs.yml'
   - Contributing:
