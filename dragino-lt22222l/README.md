@@ -6,7 +6,7 @@ The Dragino LT series I/O Modules are Long Range LoRa I/O Controller. It contain
 
 ## Requirements
 
-A LoRaWAN server is required to communicate the Milesight AM103 into Thinger.io, some options are:
+A LoRaWAN server is required to communicate the Dragino LT-22222-L into Thinger.io, some options are:
 
 - [The Things Stack](https://www.thethingsindustries.com/stack/)
 - [LORIOT](https://loriot.io/)
@@ -32,6 +32,6 @@ This product also provides a predefined dashboard and downlinks.
 
 ## Additional Resources
 
-Milesight resources can be found at:
+Dragino resources can be found at:
 
 - [Documentation](https://www.dragino.com/products/lora-lorawan-end-node/item/156-lt-22222-l.html)
