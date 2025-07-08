@@ -5,7 +5,13 @@
       class="tw-bg-gray-100 tw-rounded-md tw-p-2 tw-mb-4 tw-text-sm tw-overflow-x-auto tw-whitespace-pre-wrap">
       <code class="tw-text-blue-800">{{endpointUrl}}uplink</code>
     </pre>
-    <div class="tw-mb-1 tw-font-semibold tw-text-base tw-text-gray-800 tw-mt-4">Endpoint Base URL for Downlinks</div>
+    <div class="tw-mb-1 tw-font-semibold tw-text-base tw-text-gray-800 tw-mt-4">Endpoint Base URL for Downlinks
+      <span class="tw-ml-2">
+        <fa-icon [icon]="faQuestionCircle"
+          nz-tooltip="Designed for integration with third-party services (e.g., Node-RED or custom HTTP endpoints on Thinger.io), this URL serves as an interface for external system communication.">
+        </fa-icon>
+      </span>
+    </div>
     <pre style="max-width: 90vw;"
       class="tw-bg-gray-100 tw-rounded-md tw-p-2 tw-mb-6 tw-text-sm tw-overflow-x-auto tw-whitespace-pre-wrap">
       <code class="tw-text-blue-800">{{endpointUrl}}downlink</code>
