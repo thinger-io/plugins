@@ -1,0 +1,40 @@
+{
+  "name": "ttn-backend",
+  "version": "1.0.0",
+  "description": "Plugin for handling TTN integration",
+  "scripts": {
+    "start": "NODE_ENV=production node --env-file=.env.production server.js",
+    "build": "tsc -p .",
+    "dev": "NODE_ENV=development node --import=tsx --env-file=.env.development --watch-path=./src src/server.ts ",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thinger-io/plugins.git"
+  },
+  "keywords": [
+    "ttn",
+    "thinger"
+  ],
+  "author": "Thinger.io",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thinger-io/plugins/issues"
+  },
+  "homepage": "https://marketplace.thinger.io/plugins/ttn",
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.9.0",
+    "eslint": "^9.15.0",
+    "globals": "^15.12.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.15.0"
+  },
+  "dependencies": {
+    "@thinger-io/thinger-node": "0.1.0-alpha.4",
+    "express": "^4.21.1"
+  }
+}
