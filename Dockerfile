@@ -4,4 +4,5 @@ RUN pip install \
   mkdocs-git-revision-date-localized-plugin \
   mkdocs-monorepo-plugin \
   mkdocs-rss-plugin \
+  mkdocs-glightbox \
   "mkdocs-material[imaging]"
