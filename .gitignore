@@ -2,7 +2,6 @@
 node_modules/
 *swp
 .cache
-*.zip
 
 # jekyll
 _site/
