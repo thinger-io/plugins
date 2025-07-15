@@ -166,6 +166,7 @@ nav:
     - Integrations:
       - Alertmanager: '!include ./alertmanager/mkdocs.yml'
       - Docker Registry: '!include ./docker-registry/mkdocs.yml'
+      - Dragino LT22222L: '!include ./dragino-lt22222l/mkdocs.yml'
       - Grafana: '!include ./grafana/mkdocs.yml'
       - HTTP Devices: '!include ./http-device/mkdocs.yml'
       - InfluxDB2: '!include ./influxdb2/mkdocs.yml'
