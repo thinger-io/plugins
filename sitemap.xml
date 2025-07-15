@@ -73,6 +73,10 @@
          <lastmod>2025-07-15</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/announcements/the-things-network-ttn-plugin-version-100-1/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/contributing/</loc>
          <lastmod>2025-07-15</lastmod>
     </url>
@@ -178,18 +182,6 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/docker-registry/plugin_file/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/plugins/dragino-lt22222l/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/plugins/dragino-lt22222l/changelog/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/plugins/dragino-lt22222l/plugin_file/</loc>
          <lastmod>2025-07-15</lastmod>
     </url>
     <url>
@@ -429,6 +421,18 @@
          <lastmod>2025-07-15</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/plugins/ttn/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/ttn/changelog/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/ttn/plugin_file/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/plugins/ttn-stack/</loc>
          <lastmod>2025-07-15</lastmod>
     </url>
@@ -465,6 +469,14 @@
          <lastmod>2025-07-15</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/announcements/category/ttn/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/announcements/category/lns/</loc>
+         <lastmod>2025-07-15</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/announcements/category/siemens/</loc>
          <lastmod>2025-07-15</lastmod>
     </url>
@@ -482,14 +494,6 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/lora/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/announcements/category/ttn/</loc>
-         <lastmod>2025-07-15</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/announcements/category/lns/</loc>
          <lastmod>2025-07-15</lastmod>
     </url>
     <url>
