@@ -1,2 +1,2 @@
 
---8<-- "milesight-am103/README.md"
+--8<-- "wika-pew1000/README.md"

@@ -6,5 +6,5 @@ search:
 # Plugin file
 
 ```` json title="Plugin configuration file"
---8<-- "milesight-am103/plugin.json"
+--8<-- "wika-pew1000/plugin.json"
 ````

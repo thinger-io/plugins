@@ -1,2 +1,2 @@
 
---8<-- "milesight-am103/CHANGELOG.md"
+--8<-- "wika-pew1000/CHANGELOG.md"
