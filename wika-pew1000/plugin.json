@@ -12,7 +12,7 @@
     "metadata": {
         "name": "WIKA PEW-1000",
         "description": "Wireless pressure sensor",
-        "image": "assets/wikapew1000.png"
+        "image": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/wika-pew1000/img/wikapew1000.png"
     },
     "resources": {
         "products": [
