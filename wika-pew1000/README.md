@@ -39,26 +39,26 @@ This plugin also includes:
 
 ## Features Overview
 
-- **Wireless Protocols**:
-  - LoRaWAN® for long-range communication.
-  - Bluetooth® for local configuration.
+-  **Wireless Protocols**:
+    - LoRaWAN® for long-range communication.
+    - Bluetooth® for local configuration.
 
-- **Sensor Capabilities**:
-  - High-accuracy pressure and temperature measurement.
-  - Battery status and technical diagnostics.
-  - Smart alarm triggering based on threshold or slope.
+-  **Sensor Capabilities**:
+    - High-accuracy pressure and temperature measurement.
+    - Battery status and technical diagnostics.
+    - Smart alarm triggering based on threshold or slope.
 
 - **Remote Configuration** via Downlinks:
-  - Sampling and transmission interval.
-  - Alarm thresholds and hysteresis.
-  - Reset to factory defaults.
-  - Battery indicator reset.
+    - Sampling and transmission interval.
+    - Alarm thresholds and hysteresis.
+    - Reset to factory defaults.
+    - Battery indicator reset.
 
 - **Power**:
-  - Replaceable battery with up to 10 years of lifetime (depending on transmission interval and environment).
+    - Replaceable battery with up to 10 years of lifetime (depending on transmission interval and environment).
 
 - **Rugged Design**:
-  - IP65-rated enclosure for outdoor and industrial use.
+    - IP65-rated enclosure for outdoor and industrial use.
 
 ## Additional Resources
 
