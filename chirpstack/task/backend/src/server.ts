@@ -130,7 +130,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
-  const applicationId = req.body.end_device_ids.application_ids.application_id;
+  const applicationId = req.body.deviceInfo.applicationName;
 
   const application: chirpstackApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
 
@@ -140,11 +140,14 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     return;
   }
 
-  const device = `${application.deviceIdPrefix}${req.body.end_device_ids.dev_eui}`;
+  const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui}`;
   console.log("Device:", device);
 
   // Add the source to handle other LNS
   req.body["source"] = "chirpstack";
+
+  console.log("Cabeceras de la petición recibida:");
+  console.log(req.headers);
 
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
