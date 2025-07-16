@@ -15,7 +15,7 @@ const _plugin = process.env.THINGER_PLUGIN || "";
 const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
-export type ttnApplication = {
+export type chirpstackApplication = {
   applicationId: string;
   applicationName: string;
   deviceIdPrefix: string;
@@ -23,7 +23,7 @@ export type ttnApplication = {
   enabled: boolean;
 }
 
-let settings: { applications: ttnApplication[] } = { applications: [] };
+let settings: { applications: chirpstackApplication[] } = { applications: [] };
 
 const app: Express = express();
 app.enable('trust proxy');
@@ -49,7 +49,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
   }
 
   // find data
-  const application: ttnApplication | undefined = settings.applications.find(
+  const application: chirpstackApplication | undefined = settings.applications.find(
     (app: { applicationName: string }) => app.applicationName
   );
   if (typeof application === 'undefined') {
@@ -130,12 +130,9 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
-  // Application id is recieved in payload from TTN according to
-  // TTN-Data-Format specifications:
-  // https://www.thethingsindustries.com/docs/integrations/data-formats/
   const applicationId = req.body.end_device_ids.application_ids.application_id;
 
-  const application: ttnApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+  const application: chirpstackApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
@@ -147,7 +144,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   console.log("Device:", device);
 
   // Add the source to handle other LNS
-  req.body["source"] = "ttn";
+  req.body["source"] = "chirpstack";
 
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
@@ -200,7 +197,7 @@ app.get("/settings", async (req: Request, res: Response) => {
 // Endpoint to send the plugins
 app.post("/settings", async (req: Request, res: Response) => {
   Log.log("Post settings", req.body);
-  saveSettings(req.body).then((response: { value: { applications: ttnApplication[] } }) => {
+  saveSettings(req.body).then((response: { value: { applications: chirpstackApplication[] } }) => {
     settings = response.value;
     res.status(200).send(settings);
   }).catch((error: any) => {
@@ -224,7 +221,7 @@ function saveSettings(value: object = {}) {
 
 function readSettings() {
 
-  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: ttnApplication[] } }) => {
+  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: chirpstackApplication[] } }) => {
 
     Log.debug("Retrieved settings:\n", JSON.stringify(response, null, 2));
     settings = response.value;
@@ -238,9 +235,9 @@ function readSettings() {
     }
 
     // Initialize empty value settings
-    saveSettings({ "applications": [] }).then((response: { value: { applications: ttnApplication[] } }) => {
+    saveSettings({ "applications": [] }).then((response: { value: { applications: chirpstackApplication[] } }) => {
       settings = response.value;
-      Log.log(`Settings initialized: ${response}`);
+      Log.log(`Settings initialized: ${JSON.stringify(response)}`);
     }).catch((error: any) => {
       // TODO: Do something, show an error message, etc.
       Log.error(`Error initializing settings: ${error.message}`);
@@ -252,6 +249,6 @@ function readSettings() {
 // Read settings on startup
 readSettings();
 
-app.listen(3000, () => {
-  Log.log("Server running on port 3000");
+app.listen(4444, () => {
+  Log.log("Server running on port 4444");
 });
