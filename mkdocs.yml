@@ -187,6 +187,7 @@ nav:
       - TTN: '!include ./ttn/mkdocs.yml'
       - Siemens LOGO!: '!include ./siemens-logo/mkdocs.yml'
       - VS Code: '!include ./vscode/mkdocs.yml'
+      - Wika PEW1000: '!include ./wika-pew1000/mkdocs.yml'
   - Contributing:
     - 'contributing/index.md'
     - Plugin System Infrastructure: 'contributing/plugin-system-infrastructure.md'
