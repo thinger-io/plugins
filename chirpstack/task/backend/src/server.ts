@@ -142,17 +142,34 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   }
 
   const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui}`;
-  console.log("Device:", device);
 
   // Add the source to handle other LNS
   req.body["source"] = "chirpstack";
 
+  Log.log("HTTP PUSH 'uplink' for user ", _user, "device", device, "application", applicationId);
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
-    res.status(200).send({ message: "Uplink handled successfully" });
+
+    const urlDownlinkInfo = {
+      domain: req.header("x-forwarded-for") || "",
+    };
+
+    const prop = new PropertyCreate();
+    prop.property = "downlink_info";
+    prop.value = urlDownlinkInfo;
+
+    devicesApi.createProperty(_user, device, prop)
+      .then(() => {
+        Log.info("Downlink info updated for device", device);
+        res.status(200).send();
+      })
+      .catch((err: ApiException<any>) => {
+        Log.error("Error saving downlink info", err);
+        res.status(500).send({ message: "Error saving downlink info" });
+      });
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);
-    res.status(500).send({ message: "Error while handling uplink", error: error.message || error });
+    res.status(500).send();
   });
 });
 
