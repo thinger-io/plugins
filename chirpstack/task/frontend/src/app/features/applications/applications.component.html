@@ -1,97 +1,102 @@
 <style>
   nz-table tr {
-    height: 45px; /* Set a fixed row height */
+    height: 45px;
+    /* Set a fixed row height */
   }
 </style>
 
-<nz-card [nzTitle]="titleTemplate" nzSize="small" [nzExtra]="extraTemplate" nzType="inner" [nzBodyStyle]='{ "padding": 0}'>
-  <nz-table #applicationsTable [nzData]="applications" nzSize="small" [nzFrontPagination]="false" [nzShowPagination]="false">
+<nz-card [nzTitle]="titleTemplate" nzSize="small" [nzExtra]="extraTemplate" nzType="inner"
+  [nzBodyStyle]='{ "padding": 0}'>
+  <nz-table #applicationsTable [nzData]="applications" nzSize="small" [nzFrontPagination]="false"
+    [nzShowPagination]="false">
 
     <!-- Define fixed widths for checkbox and enabled columns -->
     <colgroup>
-      <col>                         <!-- Checkbox column -->
-      <col>                         <!-- Application column takes remaining space -->
-      <col>                         <!-- Device Id Prefix takes remaining space -->
-      <col>                         <!-- Enabled column -->
+      <col> <!-- Checkbox column -->
+      <col> <!-- Application column takes remaining space -->
+      <col> <!-- Device Id Prefix takes remaining space -->
+      <col> <!-- Access Token -->
+      <col> <!-- Enabled column -->
     </colgroup>
 
     <thead>
       <tr>
-        <th [nzChecked]="allChecked"
-            [nzDisabled]="disabled || applications.length === 0"
-            (nzCheckedChange)="onAllChecked($event)">
+        <th [nzChecked]="allChecked" [nzDisabled]="disabled || applications.length === 0"
+          (nzCheckedChange)="onAllChecked($event)">
         </th>
         <th>Application</th>
         <th>Device Id Prefix</th>
+        <th>Access Token</th>
         <th class="tw-hidden lg:tw-table-cell">Enabled</th>
       </tr>
     </thead>
     <tbody>
       @for (application of applicationsTable.data; track application) {
-        <tr>
-          <td [nzChecked]="checkedApplications.has(application.applicationId)" (nzCheckedChange)="onItemChecked(application.applicationId, $event)"></td>
-          <td>
-            <a (click)="showModal(application.applicationId)" >
-              <span class="tw-text-gray-700 tw-font-semibold">
-                @if ( application.applicationName ) {
-                  {{ application.applicationName }}
-                } @else {
-                  {{ application.applicationId }}
-                }
-              </span>
-            </a>
-            @if ( application.applicationName ) {
-              <div class="tw-text-gray-500">{{ application.applicationId }}</div>
-            }
-          </td>
-          <td>{{ application.deviceIdPrefix }}</td>
-          <td class="tw-hidden lg:tw-table-cell tw-align-middle">
-            <nz-switch
-              nzSize="small"
-              [(ngModel)]="application.enabled"
-              (ngModelChange)="onSwitchChange(application.applicationId, $event)">
-            </nz-switch>
-          </td>
-        </tr>
+      <tr>
+        <td [nzChecked]="checkedApplications.has(application.applicationId)"
+          (nzCheckedChange)="onItemChecked(application.applicationId, $event)"></td>
+        <td>
+          <a (click)="showModal(application.applicationId)">
+            <span class="tw-text-gray-700 tw-font-semibold">
+              @if ( application.applicationName ) {
+              {{ application.applicationName }}
+              } @else {
+              {{ application.applicationId }}
+              }
+            </span>
+          </a>
+          @if ( application.applicationName ) {
+          <div class="tw-text-gray-500">{{ application.applicationId }}</div>
+          }
+        </td>
+        <td>{{ application.deviceIdPrefix }}</td>
+        <td>
+          <span *ngIf="application.accessToken">
+            {{ truncateToken(application.accessToken) }}
+          </span>
+          <span *ngIf="!application.accessToken" class="tw-text-gray-400">—</span>
+        </td>
+        <td class="tw-hidden lg:tw-table-cell tw-align-middle">
+          <nz-switch nzSize="small" [(ngModel)]="application.enabled"
+            (ngModelChange)="onSwitchChange(application.applicationId, $event)">
+          </nz-switch>
+        </td>
+      </tr>
       }
       <ng-content></ng-content>
     </tbody>
   </nz-table>
 </nz-card>
 <ng-template #titleTemplate>
-    <span class="tw-mr-2">
-      <fa-icon [icon]="faLayerGroup"></fa-icon>
-    </span>
+  <span class="tw-mr-2">
+    <fa-icon [icon]="faLayerGroup"></fa-icon>
+  </span>
   <span class="tw-font-bold">Applications</span>
   <span class="tw-ml-2">
-      <fa-icon [icon]="faQuestionCircle" nz-tooltip="List of TTN applications"></fa-icon>
+    <fa-icon [icon]="faQuestionCircle" nz-tooltip="List of TTN applications"></fa-icon>
   </span>
 </ng-template>
 <ng-template #extraTemplate>
   @if (checkedApplications.size > 0) {
-    <button
-      nz-popconfirm
-      nzPopconfirmTitle="Are you sure delete this task?"
-      (nzOnConfirm)="removeItems()"
-      nzPopconfirmPlacement="bottom"
-      type="button" nz-button nzType="default" nzSize="small" nzDanger
-            [disabled]="disabled">
-      <fa-icon [icon]="faTrashAlt" class="tw-mr-2"></fa-icon>Remove
-    </button>
+  <button nz-popconfirm nzPopconfirmTitle="Are you sure delete this task?" (nzOnConfirm)="removeItems()"
+    nzPopconfirmPlacement="bottom" type="button" nz-button nzType="default" nzSize="small" nzDanger
+    [disabled]="disabled">
+    <fa-icon [icon]="faTrashAlt" class="tw-mr-2"></fa-icon>Remove
+  </button>
   }
   @if (checkedApplications.size === 0) {
-    <button type="button" nz-button nzType="primary" nzSize="small"
-            (click)="showModal()"
-            [disabled]="disabled">
-          <span class="tw-mr-2">
-            <fa-icon [icon]="faPlus" class="tw-mr-2"></fa-icon>Add
-          </span>
-    </button>
+  <button type="button" nz-button nzType="primary" nzSize="small" (click)="showModal()" [disabled]="disabled">
+    <span class="tw-mr-2">
+      <fa-icon [icon]="faPlus" class="tw-mr-2"></fa-icon>Add
+    </span>
+  </button>
   }
 </ng-template>
 
-<nz-modal [(nzVisible)]="modalVisible" nzTitle="{{ selectedApplication ? 'Edit Application' : 'Add Application'}}" (nzOnCancel)="handleCancel()" (nzOnOk)="submitForm()">
+<nz-modal [(nzVisible)]="modalVisible" nzTitle="{{ selectedApplication ? 'Edit Application' : 'Add Application'}}"
+  (nzOnCancel)="handleCancel()" (nzOnOk)="submitForm()">
   <ng-container *nzModalContent>
-    <app-application #applicationForm [applications]="applications" [application]="selectedApplication" (applicationChange)="onFormSubmit($event)"></app-application>
+    <app-application #applicationForm [applications]="applications" [application]="selectedApplication"
+      (applicationChange)="onFormSubmit($event)"></app-application>
   </ng-container>
 </nz-modal>

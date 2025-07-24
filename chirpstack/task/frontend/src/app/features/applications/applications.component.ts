@@ -23,6 +23,7 @@ export interface Application {
   applicationId: string;
   applicationName: string | null;
   deviceIdPrefix: string;
+  accessToken: string;
   enabled: boolean;
 }
 
@@ -174,6 +175,12 @@ export class ApplicationsComponent {
       this.selectedApplication = undefined;
     });
 
+  }
+
+  truncateToken(token: string): string {
+    const start = token.slice(0, 6);
+    const end = token.slice(-4);
+    return `${start}...${end}`;
   }
 
   protected readonly faEye = faEye;

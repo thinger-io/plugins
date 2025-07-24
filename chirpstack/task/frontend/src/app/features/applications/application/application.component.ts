@@ -13,6 +13,7 @@ import {
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { access } from 'fs';
 
 @Component({
     selector: 'app-application',
@@ -30,7 +31,6 @@ export class ApplicationComponent implements OnInit {
 
   protected applicationForm: FormGroup;
 
-  /** Makes sure the application Id is not repeated given the LORIOT Access Token */
   applicationIdValidator(control: AbstractControl)  {
     if (!control.value || typeof this.applications() === 'undefined' ) {
       // If the control is empty, consider it valid
@@ -67,9 +67,9 @@ export class ApplicationComponent implements OnInit {
   ngOnInit() {
 
     this.applicationForm = this.fb.group({
-      applicationId: [this.application()?.applicationId],
       applicationName: [this.application()?.applicationName || ''],
       deviceIdPrefix: [this.application()?.deviceIdPrefix || '', [Validators.required, this.deviceIdPrefixValidator.bind(this)]],
+      accessToken: [this.application()?.accessToken || '', [Validators.minLength(16)]],
       enabled: [true]
     });
 
