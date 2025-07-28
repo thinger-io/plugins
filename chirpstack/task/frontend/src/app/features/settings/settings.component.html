@@ -18,7 +18,7 @@
     </pre>
 
     <!-- Línea de token: misma alineación que títulos de endpoints -->
-    <div class="tw-mb-1 tw-font-semibold tw-text-base tw-text-gray-800 tw-mt-4">TTN API Token</div>
+    <div class="tw-mb-1 tw-font-semibold tw-text-base tw-text-gray-800 tw-mt-4">ChirpStack API Token</div>
     <div
       class="tw-flex tw-items-center tw-bg-gray-100 tw-rounded-md tw-px-3 tw-py-2 tw-gap-2 tw-max-w-full tw-mb-4 tw-text-sm">
       <span class="tw-text-gray-600 tw-select-none">Bearer</span>
@@ -26,7 +26,7 @@
       <span *ngIf="tokenVisible"
         class="tw-font-mono tw-break-all tw-bg-white tw-rounded tw-px-2 tw-py-1 tw-border tw-border-gray-200 tw-shadow-sm tw-text-blue-800 tw-cursor-text"
         style="max-width: 350px; overflow-x: auto;">
-        {{ ttnToken }}
+        {{ chirpstackToken }}
       </span>
       <!-- botón ver/ocultar -->
       <button nz-button nzType="text" nzSize="small" (click)="showTokenModal()"
@@ -50,7 +50,7 @@
         <div>
           To send <span class="tw-font-semibold">downlink messages</span>, your device must first have sent an <span
             class="tw-font-semibold">uplink message</span>.
-          This allows the application to store the TTN token and the URLs required to <span
+          This allows the application to store the ChirpStack token and the URLs required to <span
             class="tw-font-semibold">push</span> or <span class="tw-font-semibold">replace</span> the device's downlink
           queue in the application metadata.
         </div>
@@ -64,6 +64,6 @@
   </span>
   <span class="tw-font-bold">Webhook Settings</span>
   <span class="tw-ml-2">
-    <fa-icon [icon]="faQuestionCircle" nz-tooltip="Application Output Settings for TTN HTTP Push"></fa-icon>
+    <fa-icon [icon]="faQuestionCircle" nz-tooltip="Application Output Settings for ChirpStack HTTP Push"></fa-icon>
   </span>
 </ng-template>

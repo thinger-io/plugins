@@ -129,6 +129,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
 app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
+  Log.debug("Headers:", req.headers);
 
   const applicationId = req.body.deviceInfo.applicationName;
 
@@ -141,30 +142,21 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   }
 
   const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui}`;
-  console.log("Device:", device);
 
   // Add the source to handle other LNS
   req.body["source"] = "chirpstack";
 
-  console.log("Cabeceras de la petición recibida:");
-  console.log(req.headers);
-
+  Log.log("HTTP PUSH 'uplink' for user ", _user, "device", device, "application", applicationId);
   devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
     Log.log("Uplink of callback handled:", device);
 
-    // In order to make downlink requests, it is necessary to store relevant data from
-    // the uplink payload in the device's properties.
-
-    const downlinkInfo = {
-      api_key: req.header("X-Downlink-Apikey") || "",
-      push_url: req.header("X-Downlink-Push") || "",
-      replace_url: req.header("X-Downlink-Replace") || "",
-      domain: req.body.uplink_message?.network_ids?.cluster_address || "",
+    const urlDownlinkInfo = {
+      domain: req.header("x-forwarded-for") || "",
     };
 
     const prop = new PropertyCreate();
     prop.property = "downlink_info";
-    prop.value = downlinkInfo;
+    prop.value = urlDownlinkInfo;
 
     devicesApi.createProperty(_user, device, prop)
       .then(() => {

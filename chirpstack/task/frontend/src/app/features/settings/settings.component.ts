@@ -32,7 +32,7 @@ export class SettingsComponent {
 
   protected endpointUrl: string;
   protected tokenVisible = false;
-  protected ttnToken = '';
+  protected chirpstackToken = '';
 
   constructor(
     private appConfigService: AppConfigService,
@@ -42,16 +42,16 @@ export class SettingsComponent {
   ) {
     const config = this.appConfigService.getConfig();
     this.endpointUrl = window.location.origin + window.location.pathname;
-    this.ttnToken = config?.THINGER_TOKEN_TTN_PLUGIN || 'UNKNOWN';
+    this.chirpstackToken = config?.THINGER_TOKEN_CHIRPSTACK_PLUGIN || 'UNKNOWN';
   }
 
   showTokenModal(): void {
     this.modal.create({
-      nzTitle: 'TTN API Token',
+      nzTitle: 'ChirpStack API Token',
       nzContent: `
         <div style="width: 520px; word-break: break-all; padding: 18px 0;">
           <span style="color: #888;">Bearer </span>
-          <span style="font-family: monospace; user-select: all;">${this.ttnToken}</span>
+          <span style="font-family: monospace; user-select: all;">${this.chirpstackToken}</span>
         </div>
       `,
       nzFooter: [
@@ -75,7 +75,7 @@ export class SettingsComponent {
   }
 
   copyToken(): void {
-    this.clipboard.copy(`Bearer ${this.ttnToken}`);
+    this.clipboard.copy(`Bearer ${this.chirpstackToken}`);
     this.message.success('Copied!');
   }
 }

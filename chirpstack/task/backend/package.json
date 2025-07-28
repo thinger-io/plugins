@@ -1,7 +1,7 @@
 {
-  "name": "ttn-backend",
+  "name": "chirpstack-backend",
   "version": "1.0.0",
-  "description": "Plugin for handling TTN integration",
+  "description": "Plugin for handling ChirpStack integration",
   "scripts": {
     "start": "NODE_ENV=production node --env-file=.env.production server.js",
     "build": "tsc -p .",
@@ -14,15 +14,17 @@
     "url": "git+https://github.com/thinger-io/plugins.git"
   },
   "keywords": [
-    "ttn",
-    "thinger"
+    "chirpstack",
+    "thinger",
+    "LNS",
+    "LoRaWAN"
   ],
   "author": "Thinger.io",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/thinger-io/plugins/issues"
   },
-  "homepage": "https://marketplace.thinger.io/plugins/ttn",
+  "homepage": "https://marketplace.thinger.io/plugins/chirpstack",
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@types/express": "^5.0.0",

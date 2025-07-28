@@ -7,7 +7,7 @@
         [nzSpan]="8"
         [nzXs]="26"
         nzFor="applicationName"
-        nzTooltipTitle="Application name that will be used to link to the application in the TTN stack platform"
+        nzTooltipTitle="Application name that will be used to link to the application in the ChirpStack stack platform"
         nzRequired
       >
         Application Name
@@ -33,6 +33,23 @@
       <ng-template #errorPrefixField let-control>
         @if (control.errors?.['prefixUnique']) {
           The Device Id Prefix must be unique
+        }
+      </ng-template>
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Access token -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="accessToken"
+      nzTooltipTitle="ChirpStack access token. This is used to authenticate the application with the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
+      Access Token
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorAccessTokenField">
+      <input nz-input formControlName="accessToken" name="accessToken" type="text" id="accessToken"
+        placeholder="Ex: 36ac9588-2f3b-4a..." />
+      <ng-template #errorAccessTokenField let-control>
+        @if (control.errors?.['prefixUnique']) {
+        The Access Token must be unique
         }
       </ng-template>
     </nz-form-control>
