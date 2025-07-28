@@ -24,6 +24,7 @@ export interface Application {
   applicationName: string | null;
   deviceIdPrefix: string;
   accessToken: string;
+  serverUrl: string;
   enabled: boolean;
 }
 

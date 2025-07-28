@@ -14,7 +14,8 @@
     <colgroup>
       <col> <!-- Checkbox column -->
       <col> <!-- Application column takes remaining space -->
-      <col> <!-- Device Id Prefix takes remaining space -->
+      <col> <!-- Device Id Prefix takes remaining space -->ç
+      <col> <!-- Server Url -->
       <col> <!-- Access Token -->
       <col> <!-- Enabled column -->
     </colgroup>
@@ -26,6 +27,7 @@
         </th>
         <th>Application</th>
         <th>Device Id Prefix</th>
+        <th>Server URL</th>
         <th>Access Token</th>
         <th class="tw-hidden lg:tw-table-cell">Enabled</th>
       </tr>
@@ -50,6 +52,12 @@
           }
         </td>
         <td>{{ application.deviceIdPrefix }}</td>
+        <td>
+          <span *ngIf="application.serverUrl">
+            {{ application.serverUrl }}
+          </span>
+          <span *ngIf="!application.serverUrl" class="tw-text-gray-400">—</span>
+        </td>
         <td>
           <span *ngIf="application.accessToken">
             {{ truncateToken(application.accessToken) }}

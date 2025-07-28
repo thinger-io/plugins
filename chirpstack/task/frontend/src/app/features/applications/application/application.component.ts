@@ -70,6 +70,7 @@ export class ApplicationComponent implements OnInit {
       applicationName: [this.application()?.applicationName || ''],
       deviceIdPrefix: [this.application()?.deviceIdPrefix || '', [Validators.required, this.deviceIdPrefixValidator.bind(this)]],
       accessToken: [this.application()?.accessToken || '', [Validators.minLength(16)]],
+      serverUrl: [this.application()?.serverUrl || '', [Validators.required]],
       enabled: [true]
     });
 
