@@ -15,6 +15,12 @@ const _plugin = process.env.THINGER_PLUGIN || "";
 const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
+// Initialize chirpstack gRPC api
+import * as grpc from '@grpc/grpc-js';
+import * as device_grpc from "@chirpstack/chirpstack-api/api/device_grpc_pb";
+import * as device_pb from "@chirpstack/chirpstack-api/api/device_pb";
+
+
 export type chirpstackApplication = {
   applicationId: string;
   applicationName: string;
@@ -31,16 +37,29 @@ app.enable('trust proxy');
 app.use(express.json({ strict: false, limit: '8mb' }))
 
 // Serve the API
+/*
+Downlink endpoint expects a JSON body with the following fields:
+- data: poayload to send (base64 encoded)
+- port: port to use for the downlink message
+- priority: priority of the downlink message
+- confirmed: whether the downlink message is confirmed or not
+- uplink: last uplink message to use for the downlink (stored in the device properties)
+
+This JSON body is used by all LNS plugins supported by Thinger.io, including ChirpStack, TTN and LORIOT.
+*/
 app.post("/downlink", async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
-  const { data, port, priority, confirmed, device_id, application_id } = req.body;
+  const { data, port, priority, confirmed, uplink } = req.body;
 
-  if (!data || !device_id) {
-    res.status(400).send({ message: "Missing required fields: data or device_id" });
+  if (!data || !uplink) {
+    res.status(400).send({ message: "Missing required fields: data or uplink" });
     return;
   }
+
+  // Obtain the device ID from the uplink message
+  const deviceId = uplink.deviceInfo.devEui;
 
   if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
     res.status(200).send({
@@ -60,64 +79,46 @@ app.post("/downlink", async (req: Request, res: Response) => {
   }
 
   try {
-    //Obtain the device properties to get the downlink URL and API key
-    Log.log("Fetching device properties for downlink:", device_id);
-    const downlinkInfoResponse = await devicesApi.readProperty(_user, device_id, "downlink_info");
-    const downlinkInfo = downlinkInfoResponse.value || {};
+    Log.log("Fetching data for downlink:", deviceId);
+    
+    const server = application.serverUrl;
+    const apiKey = application.accessToken;
 
-    let downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
-    const apiKey = downlinkInfo.api_key;
-
-    if (!downlinkUrl || !apiKey) {
-      Log.error("Downlink URL or API key not found in device properties");
-      res.status(500).send({ message: "Downlink URL or API key not found in device properties" });
+    if (!server || !apiKey) {
+      Log.error("Downlink URL or API key not found in application settings");
+      res.status(500).send({ message: "Downlink URL or API key not found in application settings" });
       return;
     }
 
-    const downlinkPayload = {
-      downlinks: [
-        {
-          f_port: req.body.port,
-          frm_payload: req.body.data, // base64
-          priority: req.body.priority || "NORMAL",
-          confirmed: req.body.confirmed || false,
-        }
-      ]
-    };
+    // Create the client for the DeviceService.
+    const deviceService = new device_grpc.DeviceServiceClient(
+      server,
+      grpc.credentials.createInsecure(),
+    );
 
-    if (req.body.replace_downlink) {
-      downlinkUrl = downlinkInfo.replace_url;
-    } else {
-      downlinkUrl = downlinkInfo.push_url;
-    }
+    // Create the Metadata object.
+    const metadata = new grpc.Metadata();
+    metadata.set("authorization", "Bearer " + apiKey);
 
-    Log.log("Using URL:", downlinkUrl);
+    const item = new device_pb.DeviceQueueItem(); 
+    item.setDevEui(deviceId);
+    item.setFPort(port || 1); // Default to port 1 if not provided
+    item.setConfirmed(confirmed || false); // Default to false if not provided
+    item.setData(Buffer.from(data, 'base64')); // Decode base64 data
 
-    const downlink_headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    };
+    const enqueueReq = new device_pb.EnqueueDeviceQueueItemRequest();
+    enqueueReq.setQueueItem(item);
 
-    const { statusCode, body } = await request(downlinkUrl, {
-      method: 'POST',
-      headers: downlink_headers,
-      body: JSON.stringify(downlinkPayload)
+    deviceService.enqueue(enqueueReq, metadata, (err, resp) => {
+      if (err !== null) {
+        Log.error("Error while sending downlink:", err.message || err);
+        res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
+        return;
+      }
     });
 
-    // Process response
-    let responseBody = '';
-    for await (const chunk of body) {
-      responseBody += chunk.toString();
-    }
-    let parsedBody;
-    try {
-      parsedBody = JSON.parse(responseBody);
-    } catch {
-      parsedBody = responseBody;
-    }
-
-    Log.debug(`Downlink response:\n`, statusCode, parsedBody);
-    res.status(statusCode).send(parsedBody);
+    Log.log("Downlink message sent successfully for device:", deviceId);
+    res.status(200).send({ message: "Downlink message sent successfully", deviceId: deviceId });
 
   } catch (err: any) {
     Log.error("Error while sending downlink:", err.message || err);
@@ -130,7 +131,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
 app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
-  Log.debug("Headers:", req.headers);
+  //Log.debug("Headers:", req.headers);
 
   const applicationId = req.body.deviceInfo.applicationName;
 

@@ -1,0 +1,53 @@
+{
+    "deduplicationId": "e2dff5be-d68f-4968-bbbc-d313af6fc974",
+    "time": "2025-07-28T07:51:38.102+00:00",
+    "deviceInfo": {
+        "tenantId": "b78bc195-52b3-487f-8ce3-f7d09b83e60f",
+        "tenantName": "ChirpStack",
+        "applicationId": "daacd5fe-2f9f-4b59-9acc-75b34edec37f",
+        "applicationName": "test_app",
+        "deviceProfileId": "d66b8f34-4389-4f62-abb4-a1fb9b90564a",
+        "deviceProfileName": "wika",
+        "deviceName": "PEW 1000",
+        "devEui": "70b3d597b0000d15",
+        "deviceClassEnabled": "CLASS_A",
+        "tags": {}
+    },
+    "devAddr": "001378a0",
+    "adr": true,
+    "dr": 5,
+    "fCnt": 5825,
+    "fPort": 1,
+    "confirmed": false,
+    "data": "AUcjCcUcKA==",
+    "rxInfo": [
+        {
+            "gatewayId": "24e124fffef66c8a",
+            "uplinkId": 40141,
+            "gwTime": "2025-07-28T07:51:38.102906+00:00",
+            "nsTime": "2025-07-28T07:51:38.135209668+00:00",
+            "timeSinceGpsEpoch": "1437724316.102s",
+            "rssi": -36,
+            "snr": 13.8,
+            "channel": 1,
+            "rfChain": 1,
+            "location": {
+                "latitude": 40.521125,
+                "longitude": -3.8907923
+            },
+            "context": "dUoLZg==",
+            "crcStatus": "CRC_OK"
+        }
+    ],
+    "txInfo": {
+        "frequency": 868300000,
+        "modulation": {
+            "lora": {
+                "bandwidth": 125000,
+                "spreadingFactor": 7,
+                "codeRate": "CR_4_5"
+            }
+        }
+    },
+    "regionConfigId": "eu868"
+}
