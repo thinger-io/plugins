@@ -109,13 +109,45 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
 });
 
+/**
+ * Convert a LORIOT uplink message into a common Thinger.io uplink format.
+ * This "common" format can be found in the Thinger.io LoRaWAN plugins documentation.
+ * 
+ * @param {Object} msg - LORIOT uplink message.
+ * @returns {Object} - Thinger.io uplink message.
+ */
+function loriotToThinger(msg: any, appId: string, deviceId: string): any {
+  if (!msg) throw new Error('Invalid message: msg is undefined or null');
+  if (msg.cmd !== 'rx') return null; // Only process 'rx' commands
+
+  // Pick payload: prefer 'data' (decrypted) over 'encdata'
+  const payloadHex = (msg.data || msg.encdata || '').toUpperCase() || null;
+
+  return {
+    deviceEui: msg.EUI,
+    deviceId: deviceId,
+    source: 'loriot',
+    appId: appId || '',
+    fPort: msg.port ?? null,
+    fCnt: msg.fcnt ?? null,
+    payload: payloadHex,
+    decodedPayload: msg.decoded || null,
+    metadata: {
+      ack: msg.ack ?? null,
+      battery: msg.bat ?? null,
+      offline: msg.offline ?? null,
+      seqNo: msg.seqno ?? null
+    }
+  };
+} 
+
 // Default uplink endpoint
 app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
   // Don't accept gateway messages
-  if ( req.body.cmd === 'gw') res.status(200).send();
+  if (req.body.cmd == "gw") { res.status(200).send(); return; }
   else {
 
     const device = req.body.EUI;
@@ -134,8 +166,7 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
   Log.log(`Received message for application ${req.params.applicationId} from device`, req.body?.EUI);
 
   // Don't accept gateway messages
-  if ( req.body.cmd === 'gw') res.status(200).send();
-
+  if ( req.body.cmd == "gw") {res.status(200).send(); return; }
 
   const applicationId = req.params.applicationId;
 
@@ -148,13 +179,9 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
     const device = `${ application.deviceIdPrefix }${ req.body.EUI}`;
 
-    // Add the source to handle other LNS
-    req.body["source"] = "loriot";
+    const thingerUplink = loriotToThinger(req.body, applicationId, device);
 
-    // Add the applicationId to the uplink body as appId matching what loriot server expects
-    req.body["appId"] = req.params.applicationId;
-
-    devicesApi.accessInputResources(_user, device, 'uplink', req.body).then((response: object) => {
+    devicesApi.accessInputResources(_user, device, 'uplink', thingerUplink).then((response: object) => {
       Log.log(`handling uplink callback for device ${device} and 'uplink ${response}'`);
       res.status(200).send();
     }).catch((error: ApiException<any>) => {
@@ -163,6 +190,7 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
     });
 
   } else {
+    Log.error(`Application ${applicationId} not found`);
     res.status(404).send();
   }
 
