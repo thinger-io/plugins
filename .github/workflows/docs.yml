@@ -46,5 +46,6 @@ jobs:
           pip install mkdocs-rss-plugin
           pip install mkdocs-git-revision-date-localized-plugin
           pip install "mkdocs-material[imaging]"
+          pip install mkdocs-glightbox
 
       - run: mkdocs gh-deploy --force

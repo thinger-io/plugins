@@ -1,0 +1,927 @@
+{
+    "name": "dragino-lt22222l",
+    "version": "1.0.0",
+    "description": "Dragino LT-22222-L LoRa I/O Controller plugin for Thinger.io",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "dragino-lt22222l"
+    },
+    "metadata": {
+        "name": "Dragino LT-22222-L LoRa I/O Controller",
+        "description": "Dragino LT-22222-L integration with Thinger.io",
+        "image": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/dragino-lt22222l/img/LT-22222-L.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "enabled": true,
+                "name": "Dragino LT-22222-L LoRa I/O Controller",
+                "product": "dragino_lt22222l",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"payload\":      {{payload}},\n    \"device_id\":    \"{{device}}\"\n}",
+                                    "payload_function": "prepareDownlink",
+                                    "payload_type": "",
+                                    "plugin": "ttn",
+                                    "target": "plugin_endpoint"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "get_id",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "decodeUplink",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "dragino_provisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "dragino_[a-fA-F0-9]+"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {},
+                    "code": {
+                        "code": "\nfunction get_id(payload) {\n  const deviceId = payload.end_device_ids.dev_eui;\n  return \"dragino_\" + deviceId;\n}\n\nfunction get_ACI1_mA(input){\n  return input.ACI1_mA;\n}\n\nfunction get_ACI2_mA(input){\n  return input.ACI2_mA;\n}\n\nfunction get_AVI1_V(input){\n  return input.AVI1_V;\n}\n\nfunction get_AVI2_V(input){\n  return input.AVI2_V;\n}\n\nfunction get_DI1_status(input){\n  return input.DI1_status;\n}\n\nfunction get_DI2_status(input){\n  return input.DI2_status;\n}\n\nfunction get_DO1_status(input){\n  return input.DO1_status;\n}\n\nfunction get_DO2_status(input){\n  return input.DO2_status;\n}\n\nfunction get_Hardware_mode(input){\n  return input.Hardware_mode;\n}\n\nfunction get_RO1_status(input){\n  return input.RO1_status;\n}\n\nfunction get_RO2_status(input){\n  return input.RO2_status;\n}\n\nfunction get_Work_mode(input){\n  return input.Work_mode;\n}\n\nfunction get_battery_percent(input){\n  return input.battery_percent;\n}\n\nfunction get_device(input){\n  return input.device_id;\n}\n\nfunction get_plugin_source(input) {\n  return input.source;\n}\n\nfunction decodeUplink(input) {\n  // Verificar que el payload decodificado existe\n  if (\n    !input.uplink_message ||\n    !input.uplink_message.decoded_payload ||\n    typeof input.uplink_message.decoded_payload !== 'object'\n  ) {\n    return { errors: [\"No decoded payload found in input\"] };\n  }\n\n  const payload = input.uplink_message.decoded_payload;\n  const metadata = input.uplink_message;\n  const deviceInfo = input.end_device_ids;\n  \n  payload[\"battery_percent\"] = metadata.last_battery_percentage?.value ?? null;\n  payload[\"device_id\"] = deviceInfo.device_id;\n  payload[\"source\"] = input.source; // Injected from TTN or LORIOT plugin\n\n  return payload;\n}\n\nfunction prepareDownlink(payload) {\n\n  console.log(\"PPPBDA \" + JSON.stringify(payload));\n  let result = {\n    data: hexToBase64(payload.payload[\"Message\"]),\n    device_id: payload[\"device_id\"],\n    port: 2,\n    priority: payload.payload[\"Priority\"],\n    replace_downlink: payload.payload[\"Replace_downlink\"],\n    confirmed: payload.payload[\"Confirmed\"]\n  };\n\n  return result;\n}\n\nfunction hexToBase64(hexStr) {\n    const hex = hexStr.replace(/\\s+/g, '');\n    const bytes = [];\n    for(let i = 0; i < hex.length; i += 2) {\n        bytes.push(parseInt(hex.substr(i, 2), 16));\n    }\n    return Buffer.from(bytes).toString('base64');\n}\n\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "endpoints": {},
+                    "flows": {
+                        "downlink_flow": {
+                            "data": {
+                                "event": "device_property_update",
+                                "filter": {
+                                    "property": "dragino_downlink_sender"
+                                },
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "source": "event"
+                            },
+                            "enabled": true,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "downlink",
+                                "target": "resource"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "ACI1_mA": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_ACI1_mA",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Current reading of Analog Input 1 in milliamps",
+                            "enabled": true
+                        },
+                        "ACI2_mA": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_ACI2_mA",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Current reading of Analog Input 2 in milliamps",
+                            "enabled": true
+                        },
+                        "AVI1_V": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_AVI1_V",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Voltage reading of Analog Input 1 in volts",
+                            "enabled": true
+                        },
+                        "AVI2_V": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_AVI2_V",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Voltage reading of Analog Input 2 in volts",
+                            "enabled": true
+                        },
+                        "DI1_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_DI1_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Digital Input 1 (0 = LOW, 1 = HIGH)",
+                            "enabled": true
+                        },
+                        "DI2_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_DI2_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Digital Input 2 (0 = LOW, 1 = HIGH)",
+                            "enabled": true
+                        },
+                        "DO1_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_DO1_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Digital Output 1 (0 = OFF, 1 = ON)",
+                            "enabled": true
+                        },
+                        "DO2_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_DO2_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Digital Output 2 (0 = OFF, 1 = ON)",
+                            "enabled": true
+                        },
+                        "Hardware_mode": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_Hardware_mode",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "RO1_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_RO1_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Relay Output 1 (0 = OFF, 1 = ON)",
+                            "enabled": true
+                        },
+                        "RO2_status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_RO2_status",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Status of Relay Output 2 (0 = OFF, 1 = ON)",
+                            "enabled": true
+                        },
+                        "Work_mode": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_Work_mode",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Logical operating mode",
+                            "enabled": true
+                        },
+                        "battery_percent": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_battery_percent",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "device": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_device",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "dragino_downlink_sender": {
+                            "data": {},
+                            "default": {
+                                "source": "value",
+                                "value": ""
+                            },
+                            "enabled": true,
+                            "form": {
+                                "fields": [
+                                    {
+                                        "key": "Message",
+                                        "props": {
+                                            "description": "Message of Downlink (in hexadecimal)",
+                                            "label": "Message",
+                                            "placeholder": "Message",
+                                            "required": true
+                                        },
+                                        "type": "input"
+                                    },
+                                    {
+                                        "key": "Priority",
+                                        "props": {
+                                            "description": "Priority of Downlink Message",
+                                            "label": "Priority",
+                                            "options": [
+                                                {
+                                                    "label": "LOW",
+                                                    "value": "LOW"
+                                                },
+                                                {
+                                                    "label": "NORMAL",
+                                                    "value": "NORMAL"
+                                                },
+                                                {
+                                                    "label": "HIGH",
+                                                    "value": "HIGH"
+                                                }
+                                            ],
+                                            "placeholder": "Choose Priority",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    },
+                                    {
+                                        "key": "Replace_downlink",
+                                        "props": {
+                                            "description": "Select Replace Downlink or Push to Queue",
+                                            "label": "Mode",
+                                            "options": [
+                                                {
+                                                    "label": "Replace",
+                                                    "value": true
+                                                },
+                                                {
+                                                    "label": "Push",
+                                                    "value": false
+                                                }
+                                            ],
+                                            "placeholder": "Select Mode",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    },
+                                    {
+                                        "key": "Confirmed",
+                                        "props": {
+                                            "description": "Confirmed Downlink Message",
+                                            "label": "Confirmed",
+                                            "options": [
+                                                {
+                                                    "label": "True",
+                                                    "value": true
+                                                },
+                                                {
+                                                    "label": "False",
+                                                    "value": false
+                                                }
+                                            ],
+                                            "placeholder": "Select Confirmation Mode",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    }
+                                ]
+                            }
+                        },
+                        "plugin_source": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "get_plugin_source",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Device information source",
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "description": "",
+                            "form": {
+                                "fields": [
+                                    {
+                                        "key": "Message",
+                                        "props": {
+                                            "description": "Message of Downlink (in hexadecimal)",
+                                            "label": "Message",
+                                            "placeholder": "Message",
+                                            "required": true
+                                        },
+                                        "type": "input"
+                                    },
+                                    {
+                                        "key": "Priority",
+                                        "props": {
+                                            "description": "Priority of Downlink Message",
+                                            "label": "Priority",
+                                            "options": [
+                                                {
+                                                    "label": "LOW",
+                                                    "value": "LOW"
+                                                },
+                                                {
+                                                    "label": "NORMAL",
+                                                    "value": "NORMAL"
+                                                },
+                                                {
+                                                    "label": "HIGH",
+                                                    "value": "HIGH"
+                                                }
+                                            ],
+                                            "placeholder": "Choose Priority",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    },
+                                    {
+                                        "key": "Replace_downlink",
+                                        "props": {
+                                            "description": "Select Replace Downlink or Push to Queue",
+                                            "label": "Mode",
+                                            "options": [
+                                                {
+                                                    "label": "Replace",
+                                                    "value": true
+                                                },
+                                                {
+                                                    "label": "Push",
+                                                    "value": false
+                                                }
+                                            ],
+                                            "placeholder": "Select Mode",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    },
+                                    {
+                                        "key": "Confirmed",
+                                        "props": {
+                                            "description": "Confirmed Downlink Message",
+                                            "label": "Confirmed",
+                                            "options": [
+                                                {
+                                                    "label": "True",
+                                                    "value": true
+                                                },
+                                                {
+                                                    "label": "False",
+                                                    "value": false
+                                                }
+                                            ],
+                                            "placeholder": "Select Confirmation Mode",
+                                            "required": true
+                                        },
+                                        "type": "select"
+                                    }
+                                ]
+                            },
+                            "name": "",
+                            "property": "dragino_downlink_sender",
+                            "type": "",
+                            "value": ""
+                        },
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "name": "Dragino LT-22222-L",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "properties": {
+                                    "background_image": "#E7ECEF",
+                                    "border_radius": "10",
+                                    "hide_header": true,
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff0F",
+                                                    "currentColor": "#ffffff0F",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Downlink Sender"
+                                                },
+                                                "properties": {
+                                                    "icon": "fal fa-angle-double-right"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "dragino_downlink_sender"
+                                                        },
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "property_button"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "subtitle": "Current Reading of Analog Input 1",
+                                                    "title": "Analog Input 1"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "gradient": true,
+                                                    "icon": "",
+                                                    "iconSize": "",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "mA"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "ACI2_mA"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "gauge"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "subtitle": "Current Reading of Analog Input 1",
+                                                    "title": "Analog Input 1"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "gradient": true,
+                                                    "icon": "",
+                                                    "iconSize": "",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "mA"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "ACI1_mA"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "gauge"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#274C77",
+                                                    "currentColor": "#274C77",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Digital Input 2 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "DI2_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 5,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#6096BA",
+                                                    "currentColor": "#6096BA",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Digital Output 1 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "DO1_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#274C77",
+                                                    "currentColor": "#274C77",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Digital Input 1 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "DI1_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 5,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#A3CEF1",
+                                                    "currentColor": "#A3CEF1",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Relay Output 2 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "RO2_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 5,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#6096BA",
+                                                    "currentColor": "#6096BA",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Digital Output 1 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "DO1_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 5,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#A3CEF1",
+                                                    "currentColor": "#A3CEF1",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Relay Output 1 Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#000000",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff1414",
+                                                            "max": 1,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#01c101",
+                                                            "max": 2,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "RO1_status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 5,
+                                                    "sizeX": 2,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Device Battery"
+                                                },
+                                                "properties": {
+                                                    "icon": "",
+                                                    "iconSize": "",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "dragino_A84041E98182ABFE",
+                                                            "property": "battery_percent"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "progressbar"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
