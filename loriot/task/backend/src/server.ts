@@ -65,7 +65,7 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
   // Build downlink message to send to the device
   const msg: DownlinkMessage = {
     cmd: "tx",
-    EUI: req.body.uplink.EUI,
+    EUI: req.body.uplink.deviceEui,
     port: req.body.port,
     confirmed: req.body.confirmed || false,
     data: req.body.data,
@@ -144,10 +144,10 @@ function loriotToThinger(msg: any, appId: string, deviceId: string): any {
 // Default uplink endpoint
 app.post(`/uplink`, (req: Request, res: Response) => {
 
-  Log.info("Received message from device:\n", JSON.stringify(req.body, null, 2));
+  Log.info("[/uplink] Received message from device:\n", JSON.stringify(req.body, null, 2));
 
   // Don't accept gateway messages
-  if (req.body.cmd == "gw") { res.status(200).send(); return; }
+  if (req.body.cmd != "rx") { res.status(200).send(); return; }
   else {
 
     const device = req.body.EUI;
@@ -163,10 +163,11 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
 app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
-  Log.log(`Received message for application ${req.params.applicationId} from device`, req.body?.EUI);
+  Log.log(`[/applicationId/uplink] Received message for application ${req.params.applicationId} from device`, req.body?.EUI);
 
   // Don't accept gateway messages
-  if ( req.body.cmd == "gw") {res.status(200).send(); return; }
+  if (req.body.cmd != "rx") {res.status(200).send(); return; }
+  Log.log(JSON.stringify(req.body, null, 2));
 
   const applicationId = req.params.applicationId;
 
@@ -174,8 +175,6 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
   const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === applicationId);
 
   if ( typeof application !== 'undefined' ) {
-
-    Log.log(JSON.stringify(req.body, null, 2));
 
     const device = `${ application.deviceIdPrefix }${ req.body.EUI}`;
 
