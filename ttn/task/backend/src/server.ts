@@ -29,6 +29,34 @@ const app: Express = express();
 app.enable('trust proxy');
 app.use(express.json({ strict: false, limit: '8mb' }))
 
+/**
+ * Convert a TTN uplink message into a common Thinger.io uplink format.
+ * This "common" format can be found in the Thinger.io LoRaWAN plugins documentation.
+ *
+ * @param {Object} msg - TTN uplink message.
+ * @returns {Object} - Thinger.io uplink message.
+ */
+function ttnToThinger(msg: any, appId: string, deviceId: string): any {
+  if (!msg) throw new Error('Invalid message: msg is undefined or null');
+
+  return {
+    deviceEui: msg.end_device_ids.dev_eui,
+    deviceId: deviceId,
+    source: 'ttn',
+    appId: appId || '',
+    fPort: msg.uplink_message.f_port ?? null,
+    fCnt: msg.uplink_message.f_cnt ?? null,
+    payload: null,
+    decodedPayload: msg.uplink_message.decoded_payload || null,
+    metadata: {
+      ack: msg.ack ?? null,
+      battery: msg.uplink_message.last_battery_percentage.value ?? null,
+      offline: msg.offline ?? null,
+      seqNo: msg.seqno ?? null
+    }
+  };
+} 
+
 // Serve the API
 app.post("/downlink", async (req: Request, res: Response) => {
 
@@ -146,10 +174,10 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   const device = `${application.deviceIdPrefix}${req.body.end_device_ids.dev_eui}`;
   console.log("Device:", device);
 
-  // Add the source to handle other LNS
-  req.body["source"] = "ttn";
+  const ttnMessage = ttnToThinger(req.body, applicationId, device);
+  console.log("TTN Message:", ttnMessage);
 
-  devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
+  devicesApi.accessInputResources(_user, device, 'uplink', ttnMessage).then(() => {
     Log.log("Uplink of callback handled:", device);
 
     // In order to make downlink requests, it is necessary to store relevant data from
