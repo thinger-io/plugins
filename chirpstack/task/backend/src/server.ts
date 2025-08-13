@@ -17,9 +17,11 @@ const pluginsApi = new PluginsApi(thingerApiConfig);
 
 // Initialize chirpstack gRPC api
 import * as grpc from '@grpc/grpc-js';
-import * as device_grpc from "@chirpstack/chirpstack-api/api/device_grpc_pb";
-import * as device_pb from "@chirpstack/chirpstack-api/api/device_pb";
 
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const device_grpc = require('@chirpstack/chirpstack-api/api/device_grpc_pb');
+const device_pb = require('@chirpstack/chirpstack-api/api/device_pb');
 
 export type chirpstackApplication = {
   applicationId: string;
@@ -69,9 +71,8 @@ app.post("/downlink", async (req: Request, res: Response) => {
   }
 
   // find data
-  const application: chirpstackApplication | undefined = settings.applications.find(
-    (app: { applicationName: string }) => app.applicationName
-  );
+  const application = settings.applications.find(app => app.applicationName === uplink.appId);
+
   if (typeof application === 'undefined') {
     Log.error(`Application not found`);
     res.status(404).send({ message: "Application not found" });
@@ -86,6 +87,9 @@ app.post("/downlink", async (req: Request, res: Response) => {
     const server = application.serverUrl;
     const apiKey = application.accessToken;
 
+    Log.log("Using server:", server);
+    Log.log("Using API key:", apiKey);
+
     if (!server || !apiKey) {
       Log.error("Downlink URL or API key not found in application settings");
       res.status(500).send({ message: "Downlink URL or API key not found in application settings" });
@@ -95,7 +99,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     // Create the client for the DeviceService.
     const deviceService = new device_grpc.DeviceServiceClient(
       server,
-      grpc.credentials.createInsecure(),
+      grpc.credentials.createSsl(),
     );
 
     console.log("Sending downlink message:", {
@@ -119,7 +123,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     const enqueueReq = new device_pb.EnqueueDeviceQueueItemRequest();
     enqueueReq.setQueueItem(item);
 
-    deviceService.enqueue(enqueueReq, metadata, (err, resp) => {
+    deviceService.enqueue(enqueueReq, metadata, (err: any, resp: any) => {
       if (err !== null) {
         Log.error("Error while sending downlink:", err.message || err);
         res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
