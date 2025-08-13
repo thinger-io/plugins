@@ -39,7 +39,7 @@ app.use(express.json({ strict: false, limit: '8mb' }))
 // Serve the API
 /*
 Downlink endpoint expects a JSON body with the following fields:
-- data: poayload to send (base64 encoded)
+- data: payload to send
 - port: port to use for the downlink message
 - priority: priority of the downlink message
 - confirmed: whether the downlink message is confirmed or not
@@ -59,9 +59,9 @@ app.post("/downlink", async (req: Request, res: Response) => {
   }
 
   // Obtain the device ID from the uplink message
-  const deviceId = uplink.deviceInfo.devEui;
+  const deviceId = uplink.deviceEui;
 
-  if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
+  if (data === '' || data === null || data === 'null') {
     res.status(200).send({
       error: "Enter a valid downlink message"
     });
@@ -77,6 +77,8 @@ app.post("/downlink", async (req: Request, res: Response) => {
     res.status(404).send({ message: "Application not found" });
     return;
   }
+
+  console.log("All data found.");
 
   try {
     Log.log("Fetching data for downlink:", deviceId);
@@ -95,6 +97,14 @@ app.post("/downlink", async (req: Request, res: Response) => {
       server,
       grpc.credentials.createInsecure(),
     );
+
+    console.log("Sending downlink message:", {
+      deviceId: deviceId,
+      data: data,
+      port: port,
+      priority: priority,
+      confirmed: confirmed
+    });
 
     // Create the Metadata object.
     const metadata = new grpc.Metadata();
@@ -127,6 +137,37 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
 });
 
+/**
+ * Convert a Chirpstack uplink message into a common Thinger.io uplink format.
+ * This "common" format can be found in the Thinger.io LoRaWAN plugins documentation.
+ *
+ * @param {Object} msg - Chirpstack uplink message.
+ * @returns {Object} - Thinger.io uplink message.
+ */
+function chirpstackToThinger(msg: any, appId: string, deviceId: string): any {
+  if (!msg) throw new Error('Invalid message: msg is undefined or null');
+
+  // Chirpstack "data" field use to come in base64 format yet StringHEX is expected
+  const payloadHex = Buffer.from(msg.data, 'base64').toString('hex') || null;
+
+  return {
+    deviceEui: msg.deviceInfo.devEui.toUpperCase(),
+    deviceId: deviceId,
+    source: 'chirpstack',
+    appId: appId || '',
+    fPort: msg.fPort ?? null,
+    fCnt: msg.fCnt ?? null,
+    payload: payloadHex,
+    decodedPayload: msg.decoded || null,
+    metadata: {
+      ack: msg.ack ?? null,
+      battery: msg.bat ?? null,
+      offline: msg.offline ?? null,
+      seqNo: msg.seqno ?? null
+    }
+  };
+} 
+
 // Default uplink endpoint
 app.post(`/uplink`, (req: Request, res: Response) => {
 
@@ -143,13 +184,13 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     return;
   }
 
-  const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui}`;
-
-  // Add the source to handle other LNS
-  req.body["source"] = "chirpstack";
+  const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui.toUpperCase()}`;
 
   Log.log("HTTP PUSH 'uplink' for user ", _user, "device", device, "application", applicationId);
-  devicesApi.accessInputResources(_user, device, 'uplink', req.body).then(() => {
+
+  const chirpstackMessage = chirpstackToThinger(req.body, applicationId, device);
+
+  devicesApi.accessInputResources(_user, device, 'uplink', chirpstackMessage).then(() => {
     Log.log("Uplink of callback handled:", device);
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);
@@ -228,6 +269,6 @@ function readSettings() {
 // Read settings on startup
 readSettings();
 
-app.listen(4444, () => {
-  Log.log("Server running on port 4444");
+app.listen(3000, () => {
+  Log.log("Server running on port 3000");
 });
