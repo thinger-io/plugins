@@ -1,0 +1,75 @@
+<form nz-form [formGroup]="applicationForm" (ngSubmit)="onSubmit()">
+
+  <!-- Application Name -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="applicationName"
+      nzTooltipTitle="Application name that will be used to link to the application in the ChirpStack stack platform"
+      nzRequired>
+      Application Name
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName"
+        placeholder="Application name" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Prefix -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="deviceIdPrefix"
+      nzTooltipTitle="The prefix for the device IDs and which will be used to match against the Thinger.io Product autoprovision feature"
+      nzRequired>
+      Device Id Prefix
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorPrefixField">
+      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix"
+        placeholder="Ex: my_device_" />
+      <ng-template #errorPrefixField let-control>
+        @if (control.errors?.['prefixUnique']) {
+        The Device Id Prefix must be unique
+        }
+      </ng-template>
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Access token -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="accessToken"
+      nzTooltipTitle="ChirpStack access token. This is used to authenticate the application with the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
+      Access Token
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorAccessTokenField">
+      <input nz-input formControlName="accessToken" name="accessToken" type="text" id="accessToken"
+        placeholder="Ex: 36ac9588-2f3b-4a..." />
+      <ng-template #errorAccessTokenField let-control>
+        @if (control.errors?.['prefixUnique']) {
+        The Access Token must be unique
+        }
+      </ng-template>
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Server URL -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="serverUrl"
+      nzTooltipTitle="ChirpStack server URL. This is used to connect to the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
+      Server URL
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="serverUrl" name="serverUrl" type="text" id="serverUrl"
+        placeholder="Ex: chirpstack.example.com" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Enabled -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="enabled"
+      nzTooltipTitle="Enable or disable the application data proccesing" nzRequired>
+      Enabled
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <nz-switch formControlName="enabled"></nz-switch>
+    </nz-form-control>
+  </nz-form-item>
+
+
+</form>
