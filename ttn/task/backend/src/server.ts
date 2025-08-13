@@ -62,14 +62,14 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
-  const { data, port, priority, confirmed, device_id, application_id } = req.body;
+  const { data, port, priority, confirmed, uplink } = req.body;
 
-  if (!data || !device_id) {
-    res.status(400).send({ message: "Missing required fields: data or device_id" });
+  if (!data || !uplink) {
+    res.status(400).send({ message: "Missing required fields: data or uplink" });
     return;
   }
 
-  if (req.body.data === '' || req.body.data === null || req.body.data === 'null') {
+  if (data === '' || data === null || data === 'null') {
     res.status(200).send({
       error: "Enter a valid downlink message"
     });
@@ -88,8 +88,8 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   try {
     //Obtain the device properties to get the downlink URL and API key
-    Log.log("Fetching device properties for downlink:", device_id);
-    const downlinkInfoResponse = await devicesApi.readProperty(_user, device_id, "downlink_info");
+    Log.log("Fetching device properties for downlink:", uplink.deviceId);
+    const downlinkInfoResponse = await devicesApi.readProperty(_user, uplink.deviceId, "downlink_info");
     const downlinkInfo = downlinkInfoResponse.value || {};
 
     let downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
@@ -101,16 +101,26 @@ app.post("/downlink", async (req: Request, res: Response) => {
       return;
     }
 
+    // Parse priority. Given Thinger.io standard downlink format. "Priority" is a unsigned
+    // integer from 0 (lowest priority) to 6 (highest priority)
+    const priorityLevels = ["LOW","LOW","NORMAL", "NORMAL", "NORMAL", "HIGH", "HIGH"];
+    const priority_str = priorityLevels[priority] || "NORMAL";
+
+    // Data is StringHex encoded
+    const data_base64 = Buffer.from(data, 'hex').toString('base64');
+
     const downlinkPayload = {
       downlinks: [
         {
-          f_port: req.body.port,
-          frm_payload: req.body.data, // base64
-          priority: req.body.priority || "NORMAL",
-          confirmed: req.body.confirmed || false,
+          f_port: port,
+          frm_payload: data_base64,
+          priority: priority_str,
+          confirmed: confirmed || false,
         }
       ]
     };
+
+    console.log("Downlink Payload:", downlinkPayload);
 
     if (req.body.replace_downlink) {
       downlinkUrl = downlinkInfo.replace_url;
