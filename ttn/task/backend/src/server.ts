@@ -39,6 +39,11 @@ app.use(express.json({ strict: false, limit: '8mb' }))
 function ttnToThinger(msg: any, appId: string, deviceId: string): any {
   if (!msg) throw new Error('Invalid message: msg is undefined or null');
 
+  // If no device template was selected in TTN workspace, encoded data
+  // will be sent as raw payload 
+
+  const rawPayload = msg.uplink_message.frm_payload || null;
+
   return {
     deviceEui: msg.end_device_ids.dev_eui,
     deviceId: deviceId,
@@ -46,7 +51,7 @@ function ttnToThinger(msg: any, appId: string, deviceId: string): any {
     appId: appId || '',
     fPort: msg.uplink_message.f_port ?? null,
     fCnt: msg.uplink_message.f_cnt ?? null,
-    payload: null,
+    payload: rawPayload ? Buffer.from(rawPayload, 'base64').toString('hex') : null,
     decodedPayload: msg.uplink_message.decoded_payload || null,
     metadata: {
       ack: msg.ack ?? null,
