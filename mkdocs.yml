@@ -165,6 +165,7 @@ nav:
     #- Plugins: '*include ./*/mkdocs.yml'
     - Integrations:
       - Alertmanager: '!include ./alertmanager/mkdocs.yml'
+      - Comet-Tx5xx-Tx6xx: '!include ./comet-tx5xx-tx6xx/mkdocs.yml'
       - Docker Registry: '!include ./docker-registry/mkdocs.yml'
       - Grafana: '!include ./grafana/mkdocs.yml'
       - HTTP Devices: '!include ./http-device/mkdocs.yml'
