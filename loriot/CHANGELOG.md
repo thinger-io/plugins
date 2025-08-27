@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0] - 2025-08-11
+
+### Fix
+
+- Fixed support for other LNS plugins by parsing uplinks to match thinger.io format
+
 ## [1.1.0] - 2025-05-07
 
 ### Added
