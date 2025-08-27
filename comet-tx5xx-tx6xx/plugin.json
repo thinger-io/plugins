@@ -1,0 +1,701 @@
+{
+    "name": "comet-tx5xx-tx6xx",
+    "version": "1.0.0",
+    "description": "Integration of Comet Tx6xx and Tx5xx Series",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "comet-tx5xx-tx6xx"
+    },
+    "metadata": {
+        "name": "Comet Tx",
+        "description": "Integration of Comet Tx6xx and Tx5xx Series",
+        "image": "assets/comet-tx5xx-tx6xx.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "icons": []
+                },
+                "description": "Comet Tx6xx and Tx5xx Series",
+                "enabled": true,
+                "name": "Comet Tx6xx and Tx5xx Series",
+                "product": "comet_tx5xx_tx6xx",
+                "profile": {
+                    "api": {
+                        "comet_data_resource": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "target": "resource_stream"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "comet_common_identifier": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "comet_[0-9]{4}_[0-9]{8}"
+                            },
+                            "description": "Device id and pass key of Comet Tx5xx and Tx6xx",
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "comet_tx5xx_tx6xx_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload:cleanPayloadData}}",
+                                "payload_function": "",
+                                "payload_type": "",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "description": "Data bucket for storing all incoming processed data for Comet Tx5xx and Tx6xx",
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "/**\n * Alberto Penas Díaz (Thinger.io)\n * June 5, 2025\n * \n * cleanPayloadData: Parses incoming SOAP XML from Comet Tx5xx/Tx6xx devices.\n * Detects if the device is CO₂-capable (has a <co2> tag) or Pressure-capable (has a <pressure> tag)\n * and returns an object with the appropriate fields plus a \"group\" property.\n */\nfunction cleanPayloadData(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n\n  let alarmsStr = extractTag(rawXml, \"alarms\");\n  const [temp, hum, dew, co2] = alarmsStr.split(\",\");\n\n  // Base object with COMMON FIELDS BETWEEN DEVICES\n  const result = {\n    temp: parseFloat(extractTag(rawXml, \"temp\")),\n    relHum: parseFloat(extractTag(rawXml, \"relHum\")),\n    compQuant: parseFloat(extractTag(rawXml, \"compQuant\")),\n    tempAlarm: temp,\n    humAlarm: hum,\n    dewAlarm: dew,\n    co2Alarm: co2\n  };\n\n  const co2Value = extractTag(rawXml, \"co2\");\n  if (co2Value !== null) {\n    result.group = \"v1.1\";\n    result.co2 = parseFloat(co2Value);\n    return result;\n  }\n  \n  const pressureValue = extractTag(rawXml, \"pressure\");\n  if (pressureValue !== null) {\n    result.group = \"v1.0\";\n    result.pressure = parseFloat(pressureValue);\n    result.pressureU = extractTag(rawXml, \"pressureU\");\n    return result;\n  }\n\n  result.group = \"unknown\";\n  return result;\n}\n\n// Helper\nfunction extractTag(xml, tag) {\n  const regex = new RegExp(\"<\" + tag + \">(.*?)</\" + tag + \">\");\n  const match = xml.match(regex);\n  return match ? match[1] : null;\n}\n\n/**\n * getId: constructs the new device-id with passKey and Device Type sections in XML\n */\nfunction getId(payload) {\n    let xml = (payload || \"\").toString('utf8').trim();\n\n    let passKey = xml.match(/<passKey>(.*?)<\\/passKey>/);\n    let device = xml.match(/<device>(.*?)<\\/device>/);\n\n    if (!passKey || !device) {\n        return null;\n    }\n\n    let pass = passKey[1];\n    let dev = device[1];\n    let deviceId = `comet_${dev}_${pass}`;\n\n    return deviceId;\n}\n\nfunction getCompType(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return extractTag(rawXml, \"compType\");\n}\n\nfunction getLev1(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return parseInt(extractTag(rawXml, \"lev1\"), 10);\n}\n\nfunction getLev2(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return parseInt(extractTag(rawXml, \"lev2\"), 10);\n}\n\nfunction getLev3(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return parseInt(extractTag(rawXml, \"lev3\"), 10);\n}\n\nfunction getTempU(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return extractTag(rawXml, \"tempU\");\n}\n\nfunction getTimer(payload) {\n  const rawXml = (payload || \"\").toString(\"utf8\").trim();\n  return parseFloat(extractTag(rawXml, \"timer\"));\n}\n\nfunction parseAlarms(alarmsStr) {\n  if (typeof alarmsStr !== \"string\") return null;\n\n  const alarmMap = { no: 0, lo: 1, hi: 2 };\n\n  const [temp, hum, dew, co2] = alarmsStr.split(\",\");\n\n  return {\n    tempAlarm: alarmMap[temp] ?? null,\n    humAlarm: alarmMap[hum] ?? null,\n    dewPointAlarm: alarmMap[dew] ?? null,\n    co2_pressureAlarm: alarmMap[co2] ?? null\n  };\n}\n\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "compType": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getCompType",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Computed value/quantity.",
+                            "enabled": true,
+                            "name": "Computed value/quantity."
+                        },
+                        "lev1": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getLev1",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "State of Green CO2 LED.",
+                            "enabled": true,
+                            "name": "Green Co2 Led"
+                        },
+                        "lev2": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getLev2",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "State of Yellow CO2 LED.",
+                            "enabled": true,
+                            "name": "Yellow Co2 Led"
+                        },
+                        "lev3": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getLev3",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "State of Red CO2 LED.",
+                            "enabled": true,
+                            "name": "Red Co2 Led"
+                        },
+                        "tempU": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getTempU",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "Temperature and Dew point unit. Values: C, F, n/a",
+                            "enabled": true,
+                            "name": "Temperature Unit"
+                        },
+                        "timer": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getTimer",
+                                "payload_type": "source_payload",
+                                "resource": "comet_data_resource",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "description": "SOAP sending interval in [sec].",
+                            "enabled": true,
+                            "name": "Timer"
+                        }
+                    }
+                },
+                "services": {
+                    "webs": {}
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "controls": {
+                                    "aggregation": {
+                                        "auto": true,
+                                        "period": "1m"
+                                    },
+                                    "timespan": {
+                                        "magnitude": "minute",
+                                        "mode": "relative",
+                                        "period": "latest",
+                                        "value": 30
+                                    }
+                                },
+                                "name": "Comet Tx Series",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "properties": {
+                                    "background_image": "#3a3f51",
+                                    "columns": 7,
+                                    "hide_header": true,
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 18,
+                                                    "sizeX": 4,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Computed Value/Quantity"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": "compQuant",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "comet_4179_20961986"
+                                                                ],
+                                                                "group": [
+                                                                    "v1.1"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#c62df0",
+                                                        "device": {
+                                                            "id": "comet_4179_20961986"
+                                                        },
+                                                        "name": "Computed Value/Quantity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 4,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Co2"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "comet_4179_20961986"
+                                                                ],
+                                                                "group": [
+                                                                    "v1.1"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "device": {
+                                                            "id": "comet_4179_20961986"
+                                                        },
+                                                        "name": "Co2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 4,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": "relHum",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "comet_4179_20961986"
+                                                                ],
+                                                                "group": [
+                                                                    "v1.1"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#1a3abc",
+                                                        "device": {
+                                                            "id": "comet_4179_20961986"
+                                                        },
+                                                        "name": "Co2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "refresh_interval": 0
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "image_url": "https://www.cometsystem.es/userfiles/fotogalerie/1384/t6640_1_big.jpg",
+                                                        "name": "Source 1",
+                                                        "source": "image_url"
+                                                    }
+                                                ],
+                                                "type": "image"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 10,
+                                                    "sizeX": 3,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "subtitle": "(seconds)",
+                                                    "title": "Rrefresh Rate"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 0,
+                                                    "icon": "",
+                                                    "size": "75px",
+                                                    "unit": "Seconds",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-bold"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": "timer",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "comet_4179_20961986",
+                                                            "property": "timer"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 4,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": "temp",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "comet_4179_20961986"
+                                                                ],
+                                                                "group": [
+                                                                    "v1.1"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "color": "#f0d62d",
+                                                        "device": {
+                                                            "id": "comet_4179_20961986"
+                                                        },
+                                                        "name": "Temp",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 6,
+                                                    "row": 14,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Red CO2 LED"
+                                                },
+                                                "properties": {
+                                                    "color": "#050505",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#3d0a0a",
+                                                            "max": 0,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ff0000",
+                                                            "max": 1,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "comet_4179_20961986",
+                                                            "property": "lev3"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 14,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Green CO2 LED"
+                                                },
+                                                "properties": {
+                                                    "color": "#050505",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#0f480f",
+                                                            "max": 0,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#00ff00",
+                                                            "max": 1,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "comet_4179_20961986",
+                                                            "property": "lev1"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 14,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Yellow CO2 LED"
+                                                },
+                                                "properties": {
+                                                    "color": "#050505",
+                                                    "colors": [
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#48400f",
+                                                            "max": 0,
+                                                            "min": 0
+                                                        },
+                                                        {
+                                                            "blink": false,
+                                                            "color": "#ffea00",
+                                                            "max": 1,
+                                                            "min": 1
+                                                        }
+                                                    ],
+                                                    "size": "75px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "comet_4179_20961986",
+                                                            "property": "lev2"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "led"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#3a3f51",
+                                                    "currentColor": "#3a3f51",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<style>\n  .alarm-container {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));\n    gap: 16px;\n    font-family: 'Segoe UI', 'Inter', sans-serif;\n    padding: 8px;\n  }\n\n  .alarm-box {\n    padding: 20px;\n    border-radius: 5px;\n    background: rgba(255, 255, 255);\n    backdrop-filter: blur(5px);\n    color: black;\n    text-align: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);\n    transition: transform 0.2s ease;\n  }\n\n  .alarm-box:hover {\n    transform: translateY(-4px);\n  }\n\n  .alarm-title {\n    font-size: 1.05em;\n    font-weight: 600;\n    margin-bottom: 10px;\n    letter-spacing: 0.3px;\n  }\n\n  .alarm-status {\n    font-size: 1.4em;\n    font-weight: 500;\n    padding: 10px 0;\n    border-radius: 8px;\n  }\n\n  .level-no {\n    background-color: #2e7d32;\n    color: white;\n  }\n\n  .level-lo {\n    background-color: #f9a825;\n    color: black;\n  }\n\n  .level-hi {\n    background-color: #c62828;\n    color: white;\n  }\n\n  .level-unknown {\n    background-color: #607d8b;\n    color: white;\n  }\n\n  .alarm-icon {\n    font-size: 1.8em;\n    margin-bottom: 4px;\n    display: block;\n  }\n</style>\n\n<div class=\"alarm-container\">\n  <div class=\"alarm-box\">\n    <div class=\"alarm-title\">Temperature Alarm</div>\n    <div class=\"alarm-status level-{{value.tempAlarm || 'unknown'}}\">\n      <span class=\"alarm-icon\">\n        {{ value.tempAlarm === 'hi' ? '🔴' :\n           value.tempAlarm === 'lo' ? '⚠️' :\n           value.tempAlarm === 'no' ? '✅' : '❓' }}\n      </span>\n      {{ value.tempAlarm === 'hi' ? 'High Alarm' :\n         value.tempAlarm === 'lo' ? 'Low Alarm' :\n         value.tempAlarm === 'no' ? 'No Alarm' : 'Unknown' }}\n    </div>\n  </div>\n\n  <div class=\"alarm-box\">\n    <div class=\"alarm-title\">Humidity Alarm</div>\n    <div class=\"alarm-status level-{{value.humAlarm || 'unknown'}}\">\n      <span class=\"alarm-icon\">\n        {{ value.humAlarm === 'hi' ? '🔴' :\n           value.humAlarm === 'lo' ? '⚠️' :\n           value.humAlarm === 'no' ? '✅' : '❓' }}\n      </span>\n      {{ value.humAlarm === 'hi' ? 'High Alarm' :\n         value.humAlarm === 'lo' ? 'Low Alarm' :\n         value.humAlarm === 'no' ? 'No Alarm' : 'Unknown' }}\n    </div>\n  </div>\n\n  <div class=\"alarm-box\">\n    <div class=\"alarm-title\">Dew Point Alarm</div>\n    <div class=\"alarm-status level-{{value.dewAlarm || 'unknown'}}\">\n      <span class=\"alarm-icon\">\n        {{ value.dewAlarm === 'hi' ? '🔴' :\n           value.dewAlarm === 'lo' ? '⚠️' :\n           value.dewAlarm === 'no' ? '✅' : '❓' }}\n      </span>\n      {{ value.dewAlarm === 'hi' ? 'High Alarm' :\n         value.dewAlarm === 'lo' ? 'Low Alarm' :\n         value.dewAlarm === 'no' ? 'No Alarm' : 'Unknown' }}\n    </div>\n  </div>\n\n  <div class=\"alarm-box\">\n    <div class=\"alarm-title\">CO₂ / Pressure Alarm</div>\n    <div class=\"alarm-status level-{{value.co2Alarm || 'unknown'}}\">\n      <span class=\"alarm-icon\">\n        {{ value.co2Alarm === 'hi' ? '🔴' :\n           value.co2Alarm === 'lo' ? '⚠️' :\n           value.co2Alarm === 'no' ? '✅' : '❓' }}\n      </span>\n      {{ value.co2Alarm === 'hi' ? 'High Alarm' :\n         value.co2Alarm === 'lo' ? 'Low Alarm' :\n         value.co2Alarm === 'no' ? 'No Alarm' : 'Unknown' }}\n    </div>\n  </div>\n</div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "comet_tx5xx_tx6xx_data",
+                                                            "mapping": [
+                                                                "co2Alarm",
+                                                                "dewAlarm",
+                                                                "humAlarm",
+                                                                "tempAlarm"
+                                                            ],
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "comet_4179_20961986",
+                                                            "property": "timer"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
