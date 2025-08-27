@@ -1,6 +1,6 @@
 {
     "name": "dragino-lt22222l",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Dragino LT-22222-L LoRa I/O Controller plugin for Thinger.io",
     "author": "Thinger.io",
     "license": "MIT",
@@ -27,11 +27,12 @@
                             "handle_connectivity": false,
                             "request": {
                                 "data": {
-                                    "endpoint": "downlink",
+                                    "path": "/downlink",
                                     "payload": "{\n    \"payload\": {{payload}},\n    \"uplink\": {{property.uplink}}\n}",
                                     "payload_function": "prepareDownlink",
                                     "payload_type": "",
-                                    "target": "endpoint_call"
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
                                 }
                             },
                             "response": {
