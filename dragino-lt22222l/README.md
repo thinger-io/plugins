@@ -1,5 +1,9 @@
 # LT-22222-L LoRa I/O Controller
 
+<p align="center">
+  <img src="/plugins/dragino-lt22222l/assets/LT-22222-L.png" alt="Dragino LT-22222-L logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/dragino-lt22222l/assets/LT-22222-L.png';this.onerror='';">
+</p>
+
 The Dragino LT series I/O Modules are Long Range LoRa I/O Controller. It contains different I/O Interfaces such as: analog current Input, analog voltage input, relay output, digital input and digital output etc. The LT I/O Modules are designed to simplify the installation of I/O monitoring.
 
 ## Thinger.io Integration
