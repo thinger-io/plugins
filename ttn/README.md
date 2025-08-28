@@ -10,7 +10,8 @@ From Thinger.io we aim to provide TTN users with seamless integration tools for 
 
 This plugin brings TTN traffic into Thinger.io through the **Products** feature, enabling automatic provisioning of devices and data buckets, together with fully customisable uplink and downlink processing logic.
 
----
+> **Warning**  
+> Please note that implementations made with versions higher than 2.0.0 of this plugin are not compatible with previous implementations.
 
 ## Getting Started
 
