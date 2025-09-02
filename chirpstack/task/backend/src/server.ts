@@ -2,11 +2,9 @@ import express, { Express, Request, Response } from 'express';
 import { FrontEndRouter } from './frontend/routes.js';
 import process from "node:process";
 import { DevicesApi, PluginsApi, ApiException, PropertyCreate } from "@thinger-io/thinger-node";
-import { request } from 'undici'
 
 import { thingerApiConfig } from "./lib/api.js";
 import { Log } from "./lib/log.js";
-import { stringify } from 'node:querystring';
 
 const _user: string = process.env.THINGER_USER || "";
 const _plugin = process.env.THINGER_PLUGIN || "";
@@ -38,6 +36,16 @@ const app: Express = express();
 app.enable('trust proxy');
 app.use(express.json({ strict: false, limit: '8mb' }))
 
+/*
+Ensure the server URL has a port, if not, add the default port.
+*/
+function ensurePortInServer(server: string, defaultPort: number): string {
+  if (server.includes(':')) {
+    return server;
+  }
+  return `${server}:${defaultPort}`;
+}
+
 // Serve the API
 /*
 Downlink endpoint expects a JSON body with the following fields:
@@ -49,6 +57,8 @@ Downlink endpoint expects a JSON body with the following fields:
 
 This JSON body is used by all LNS plugins supported by Thinger.io, including ChirpStack, TTN and LORIOT.
 */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
 app.post("/downlink", async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
@@ -98,8 +108,8 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
     // Create the client for the DeviceService.
     const deviceService = new device_grpc.DeviceServiceClient(
-      server,
-      grpc.credentials.createSsl(),
+      ensurePortInServer(server, 8080),
+      grpc.credentials.createInsecure(),
     );
 
     console.log("Sending downlink message:", {
@@ -118,21 +128,21 @@ app.post("/downlink", async (req: Request, res: Response) => {
     item.setDevEui(deviceId);
     item.setFPort(port || 1); // Default to port 1 if not provided
     item.setConfirmed(confirmed || false); // Default to false if not provided
-    item.setData(Buffer.from(data, 'base64')); // Decode base64 data
+    item.setData(Buffer.from(data, 'hex'));
 
     const enqueueReq = new device_pb.EnqueueDeviceQueueItemRequest();
     enqueueReq.setQueueItem(item);
 
-    deviceService.enqueue(enqueueReq, metadata, (err: any, resp: any) => {
-      if (err !== null) {
-        Log.error("Error while sending downlink:", err.message || err);
-        res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
-        return;
-      }
+    const resp = await new Promise((resolve, reject) => {
+      deviceService.enqueue(enqueueReq, metadata, (err: never, r: never) => {
+        if (err) return reject(err);
+        resolve(r);
+      });
     });
 
     Log.log("Downlink message sent successfully for device:", deviceId);
-    res.status(200).send({ message: "Downlink message sent successfully", deviceId: deviceId });
+    return res.status(200).json({ message: "Downlink message sent successfully", deviceId });
+
 
   } catch (err: any) {
     Log.error("Error while sending downlink:", err.message || err);
@@ -193,6 +203,8 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   Log.log("HTTP PUSH 'uplink' for user ", _user, "device", device, "application", applicationId);
 
   const chirpstackMessage = chirpstackToThinger(req.body, applicationId, device);
+
+  console.log("Converted Chirpstack message to Thinger.io format:\n", JSON.stringify(chirpstackMessage, null, 2));
 
   devicesApi.accessInputResources(_user, device, 'uplink', chirpstackMessage).then(() => {
     Log.log("Uplink of callback handled:", device);

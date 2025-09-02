@@ -3,29 +3,29 @@
   <!-- Application Name -->
   <nz-form-item>
     <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="applicationName"
-      nzTooltipTitle="Application name that will be used to link to the application in the ChirpStack stack platform"
-      nzRequired>
+                   nzTooltipTitle="Application name that will be used to link to the application in the ChirpStack stack platform"
+                   nzRequired>
       Application Name
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
       <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName"
-        placeholder="Application name" />
+             placeholder="Application name" />
     </nz-form-control>
   </nz-form-item>
 
   <!-- Prefix -->
   <nz-form-item>
     <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="deviceIdPrefix"
-      nzTooltipTitle="The prefix for the device IDs and which will be used to match against the Thinger.io Product autoprovision feature"
-      nzRequired>
+                   nzTooltipTitle="The prefix for the device IDs and which will be used to match against the Thinger.io Product autoprovision feature"
+                   nzRequired>
       Device Id Prefix
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorPrefixField">
       <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix"
-        placeholder="Ex: my_device_" />
+             placeholder="Ex: my_device_" />
       <ng-template #errorPrefixField let-control>
         @if (control.errors?.['prefixUnique']) {
-        The Device Id Prefix must be unique
+          The Device Id Prefix must be unique
         }
       </ng-template>
     </nz-form-control>
@@ -34,15 +34,15 @@
   <!-- Access token -->
   <nz-form-item>
     <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="accessToken"
-      nzTooltipTitle="ChirpStack access token. This is used to authenticate the application with the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
+                   nzTooltipTitle="ChirpStack access token. This is used to authenticate the application with the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
       Access Token
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorAccessTokenField">
       <input nz-input formControlName="accessToken" name="accessToken" type="text" id="accessToken"
-        placeholder="Ex: 36ac9588-2f3b-4a..." />
+             placeholder="Ex: 36ac9588-2f3b-4a..." />
       <ng-template #errorAccessTokenField let-control>
         @if (control.errors?.['prefixUnique']) {
-        The Access Token must be unique
+          The Access Token must be unique
         }
       </ng-template>
     </nz-form-control>
@@ -51,19 +51,31 @@
   <!-- Server URL -->
   <nz-form-item>
     <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="serverUrl"
-      nzTooltipTitle="ChirpStack server URL. This is used to connect to the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
+                   nzTooltipTitle="ChirpStack server URL. This is used to connect to the ChirpStack server. If left empty, no downlink messages will be sent to the devices.">
       Server URL
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
       <input nz-input formControlName="serverUrl" name="serverUrl" type="text" id="serverUrl"
-        placeholder="Ex: chirpstack.example.com" />
+             placeholder="Ex: chirpstack.example.com" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Port  -->
+  <nz-form-item>
+    <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="port"
+                   nzTooltipTitle="Port used by the backend to connect to ChirpStack (gRPC). If empty, a default will be applied.">
+      Port
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="port" name="port" type="number" min="1" max="65535" id="port"
+             placeholder="Ex: 8080 o 443/8443" />
     </nz-form-control>
   </nz-form-item>
 
   <!-- Enabled -->
   <nz-form-item>
     <nz-form-label [nzSpan]="8" [nzXs]="26" nzFor="enabled"
-      nzTooltipTitle="Enable or disable the application data proccesing" nzRequired>
+                   nzTooltipTitle="Enable or disable the application data proccesing" nzRequired>
       Enabled
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
@@ -71,5 +83,23 @@
     </nz-form-control>
   </nz-form-item>
 
-
 </form>
+
+<div
+  class="tw-bg-blue-50 tw-border tw-border-blue-300 tw-text-blue-900 tw-p-4 tw-rounded-xl tw-flex tw-items-start tw-gap-3 tw-shadow-sm tw-mt-4">
+  <span class="tw-mt-1">
+    <fa-icon [icon]="faInfoCircle"></fa-icon>
+  </span>
+  <div>
+    <div class="tw-font-semibold tw-mb-1">Note on gRPC connectivity</div>
+    <div>
+      The plugin backend uses <span class="tw-font-semibold">gRPC (HTTP/2)</span> to communicate with ChirpStack.
+      Depending on your setup you may need to:
+      <ul class="tw-list-disc tw-ml-6 tw-mt-2">
+        <li>Expose the correct <strong>gRPC port</strong></li>
+        <li>Or configure your reverse proxy (e.g. Nginx, Traefik, etc) with <span class="tw-font-semibold">HTTP/2 + grpc_pass</span> support.</li>
+      </ul>
+      If the proxy is not properly configured, you may encounter errors like <em>“no application protocol”</em> or <em>HTTP 400</em> and no Downlink message will be sent to the devices.
+    </div>
+  </div>
+</div>
