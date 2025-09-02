@@ -1,4 +1,4 @@
-# TTN Stack 
+  # ChirpStack 
 
 <p align="center">
   <img src="/plugins/ttn/assets/ttn-logo.png" alt="The Things Network logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn-logo.png';this.onerror='';">
