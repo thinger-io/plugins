@@ -101,7 +101,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     Log.log("Using API key:", apiKey);
 
     if (!server || !apiKey) {
-      Log.error("Downlink URL or API key not found in application settings");
+      Log.error("Downlink URL or API key not found in application settings.");
       res.status(500).send({ message: "Downlink URL or API key not found in application settings" });
       return;
     }
