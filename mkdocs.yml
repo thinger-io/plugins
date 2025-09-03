@@ -166,6 +166,7 @@ nav:
     - Integrations:
       - Alertmanager: '!include ./alertmanager/mkdocs.yml'
       - Comet-Tx5xx-Tx6xx: '!include ./comet-tx5xx-tx6xx/mkdocs.yml'
+      - ChirpStack: '!include ./chirpstack/mkdocs.yml'
       - Docker Registry: '!include ./docker-registry/mkdocs.yml'
       - Dragino LT22222L: '!include ./dragino-lt22222l/mkdocs.yml'
       - Grafana: '!include ./grafana/mkdocs.yml'

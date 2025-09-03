@@ -1,2 +1,2 @@
 
---8<-- "ttn/README.md"
+--8<-- "chirpstack/README.md"

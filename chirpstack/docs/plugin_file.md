@@ -6,5 +6,5 @@ search:
 # Plugin file
 
 ```` json title="Plugin configuration file"
---8<-- "ttn/plugin.json"
+--8<-- "chirpstack/plugin.json"
 ````

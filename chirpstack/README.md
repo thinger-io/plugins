@@ -1,24 +1,24 @@
-  # ChirpStack 
+# ChirpStack 
 
 <p align="center">
-  <img src="/plugins/ttn/assets/ttn-logo.png" alt="The Things Network logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn-logo.png';this.onerror='';">
+  <img src="/plugins/chirpstack/assets/chirpstack-logo.png" alt="ChirpStack logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/chirpstack-logo.png';this.onerror='';">
 </p>
 
-The Things Network (TTN) is an open, community‑driven LoRaWAN® network that simplifies the deployment of large‑scale IoT solutions across the globe.
+ChirpStack is a flexible, open-source LoRaWAN® Network Server that allows organisations to deploy and operate their own private or public IoT networks with full control over infrastructure and data. It is widely used by companies, research institutions, and communities looking for reliable large-scale LoRaWAN deployments without vendor lock-in.
 
-From Thinger.io we aim to provide TTN users with seamless integration tools for storing, analysing and visualising device data.
+With Thinger.io, ChirpStack users can easily extend their networks by adding powerful tools for storing, analysing, and visualising device data in real time. This integration helps transform raw LoRaWAN traffic into actionable insights, dashboards, and long-term records.
 
-This plugin brings TTN traffic into Thinger.io through the **Products** feature, enabling automatic provisioning of devices and data buckets, together with fully customisable uplink and downlink processing logic.
+The plugin bridges ChirpStack with Thinger.io through the **Products** feature, enabling automatic device and bucket provisioning, as well as flexible uplink and downlink processing pipelines that can be fully customised to the needs of each project.
 
 ---
 
 ## Getting Started
 
 > **Prerequisite**  
-> Devices within the selected TTN Application must be **homogeneous**—same type and model—so that autoprovision can assign the correct product template.
+> Devices within the selected ChirpStack Application must be **homogeneous**—same type and model—so that autoprovision can assign the correct product template.
 
 1. **Install the plugin** inside your Thinger.io account.  
-   See the guide **“How to install a plugin”** on the Marketplace if you are not familiar with the process.
+   See the guide [**“How to install a plugin”**](https://marketplace.thinger.io/plugins/managing/) on the Marketplace if you are not familiar with the process.
 
 ---
 
@@ -26,51 +26,51 @@ This plugin brings TTN traffic into Thinger.io through the **Products** feature,
 
 Open the plugin settings page. In the **Applications** table click **Add +** and fill in:
 
-| Field | Description |
-| ----- | ----------- |
-| **Application Name** | Must match **exactly** the Application ID defined in the TTN Console. The plugin uses this value to route outgoing requests to the correct TTN application. |
-| **Device ID Prefix** | Prefix used when generating the device identifier; the Device EUI is appended automatically. Required for autoprovision. |
+| Field                | Description                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Application Name** | Must match **exactly** the Application ID defined in ChirpStack. The plugin uses this value to correctly associate uplinks and downlinks with the right application.            |
+| **Device ID Prefix** | Prefix used when generating the device identifier; the Device EUI is appended automatically. Required for autoprovision of devices in Thinger.io.                               |
+| **Access Token**     | API token generated in ChirpStack to allow secure communication with the Network Server. This is required to authenticate all requests.                                         |
+| **Server URL**       | The base URL of your ChirpStack instance. Since ChirpStack is self-hosted, you must provide the public or private endpoint where your server is running.                        |
+| **Port**             | The gRPC service port exposed by ChirpStack (default is `8080`). If you are running ChirpStack behind a reverse proxy, make sure this port is accessible or properly forwarded. |
+| **Enabled**          | Toggles the application integration on or off.                                                                                                                                  |
+
 
 <p align="center">
-  <img src="/plugins/ttn/assets/add_application.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/add_application.png';this.onerror='';" alt="Add application modal in TTN Thinger.io Plugin">
+  <img src="/plugins/chirpstack/assets/add_application.png" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/add_application.png';this.onerror='';" alt="Add application modal in ChirpStack Thinger.io Plugin">
 </p>
 
-Keep this page open—you will need the **Webhook URL** and the **TTN TOKEN** generated by the plugin in the next step.
+Unlike TTN or LORIOT, ChirpStack must be deployed and managed by the user. The plugin backend communicates with ChirpStack using gRPC (HTTP/2), which provides efficient and real-time interaction but also requires that the gRPC service port is reachable by Thinger.io.
 
----
+In most cases, you will need to either:
 
-## TTN Webhook Configuration
+- Expose the correct gRPC port on your ChirpStack instance, or
 
-1. Log in to the **TTN Console** and select the target **Application**.  
-2. Navigate to **Integrations → Webhooks** and click **Add Webhooks**.  
-3. Choose **Thinger.io Template** and complete the form with the values shown in your plugin:
+- Configure your reverse proxy (e.g., Nginx, Traefik, etc.) to support HTTP/2 + grpc_pass.
 
-<p align="center">
-  <img src="/plugins/ttn/assets/thinger_webhook.png" style="max-width: 650px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/thinger_webhook.png';this.onerror='';" alt="TTN Webhook Settings for Thinger.io integration">
-</p>
+Since ChirpStack is self-hosted, network accessibility is critical. In our tests we verified connectivity by forwarding the gRPC port from the router directly to the ChirpStack server, ensuring uplinks and downlinks were processed correctly.
 
-| Template Field | Value |
-|-----------|-----------------|
-| **Webhook ID** | `Your prefered webhook id` |
-| **Thinger.io instance** | `Your thinger.io instance domain e.g. acme.thinger.io or console.thinger.io` |
-| **Thinger.io user** | `Your thinger.io username` |
-| **Authoritation Header** | `Your thinger.io TTN API TOKEN` |
-| **Plugin Endpoint** | `Plugin endpoint (leave default value if using this plugin)` |
 
-> **Tip**
-> You can find your **TTN API TOKEN** in the plugin settings page, under the **TTN API TOKEN** field,
-> just click the "copy" button and paste it into the **Authoritation Header** field in the TTN Console.
+## ChirpStack Webhook Configuration
 
-<p align="center">
-  <img src="/plugins/ttn/assets/ttn_api_token.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn/assets/ttn_api_token.png';this.onerror='';" alt="TTN Webhook Settings for Thinger.io integration">
-</p>
+Log in to the ChirpStack Application Server and select the target Application.
 
-After saving, uplink traffic will appear in the plugin **Logs** panel.  
-At this point the devices may still be unrecognised; autoprovision occurs once a matching **Device Template** is installed or created.
+Navigate to Integrations → Add Integration and choose the generic HTTP integration (since there is no specific Thinger.io template available yet).
 
-> Currently only **device uplinks** and **downlink confirmations** are handled. Gateway status messages are ignored.
+Complete the form with the values provided by the Thinger.io plugin:
 
-More details on Webhooks can be found in the [The Things Stack documentation](https://www.thethingsindustries.com/docs/integrations/webhooks/).
+<p align="center"> <img src="/plugins/chirpstack/assets/chirpstack_webhook.png" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/chirpstack_webhook.png';this.onerror='';" alt="ChirpStack HTTP Webhook Settings for Thinger.io integration"> </p>
+
+| Field                     | Value                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Event endpoint URL(s)** | Copy the value shown in the plugin under **Endpoint Base URL for Uplinks**. ChirpStack will send all application traffic (uplinks, join events, acknowledgements) to this endpoint. |
+| **Headers**               | Add a new header with key **Authorization** and value equal to the **ChirpStack API Token** provided in the plugin settings page.                                                   |
+
+
+After saving, uplink traffic will start appearing in the plugin Logs panel.
+At this point the devices may still be unrecognised; autoprovision occurs once a matching Device Template is installed or created.
+
+More details on HTTP integrations can be found in the [ChirpStack documentation](https://www.chirpstack.io/docs/).
 
 ---
 
@@ -89,12 +89,6 @@ Search the Marketplace for a template that matches your device model. If none ex
 > **Important**  
 > Ensure the template **autoprovision prefix** matches the **Device ID Prefix** configured in the plugin.
 
-
----
-
-## TTN Documentation
-
-For more information about The Things Network and The Things Stack, please refer to the [official documentation](https://www.thethingsindustries.com/docs/).
 
 ---
 
