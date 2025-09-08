@@ -1,0 +1,41 @@
+{
+  "name": "mcp-server",
+  "version": "2.0.0",
+  "description": "Plugin for integrating Thinger.io with TTN",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "mcp-server"
+  },
+  "metadata": {
+    "name": "Thinger MCP Server",
+    "description": "Thinger.io custom MCP Server Integration",
+    "image": "https://avatars.githubusercontent.com/u/182288589?s=200&v=4",
+    "icon": "https://avatars.githubusercontent.com/u/182288589?s=200&v=4"
+  },
+  "tokens": {
+    "ttn_plugin": {
+      "name": "Access from Thinger MCP Server plugin to Thinger.io account",
+      "allow": {
+        "Plugin": {
+          "mcp-server": "*"
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "thinger/mcp-server-plugin",
+    "port": 3000
+  },
+  "interface": {
+    "main": {
+      "proxy_to": {
+        "plugin": "mcp-server",
+        "port": 3000
+      }
+    }
+  }
+}
