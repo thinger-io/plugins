@@ -1,14 +1,19 @@
 import express, {Request, Response, NextFunction, RequestHandler} from 'express';
 import cors from 'cors';
-import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
+import { DevicesApi, ApiException } from '@thinger-io/thinger-node'
 
 import { Log } from "./lib/log.js";
+import {thingerApiConfig} from "./lib/api";
+import {FrontEndRouter} from "./frontend/routes";
 
+// Initialize thinger API
+const devicesApi = new DevicesApi(thingerApiConfig);
 
 const PORT = Number(process.env.PORT ?? 3000);
-const REQUIRED_TOKEN = process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN ?? '';
+const REQUIRED_TOKEN = process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? '';
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? '*')
   .split(',')
   .map(s => s.trim())
@@ -20,7 +25,7 @@ const server = new McpServer({
 });
 
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26'];                               // MCP Protocol spec
-const REQUIRED_CLIENT_CAPABILITIES = ['sampling'];                                // Client capabilities
+const REQUIRED_CLIENT_CAPABILITIES = ['tools'];                                // Client capabilities
 const REQUEST_TIMEOUT_MS = Number(process.env.MCP_REQUEST_TIMEOUT_MS ?? 10000);   // Response timeout (default: 10s)
 
 // HELPERS
@@ -92,27 +97,45 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 
 // SERVER CAPABILITIES
 server.registerTool(
-  'add',
+'Get Devices',
   {
-    title: 'Addition Tool',
-    description: 'Add two numbers',
-    inputSchema: { a: z.number(), b: z.number() },
+    title: 'Get All thinger.io Devices from Account',
+    description: 'Retrieve a list of all devices available for the specified thinger.io account.',
+    inputSchema: { user: z.string().describe("Thinger.io username account") },
   },
-  async ({ a, b }) => ({
-    content: [{ type: 'text', text: String(a + b) }],
-  })
-);
-
-server.registerResource(
-  'greeting',
-  new ResourceTemplate('greeting://{name}', { list: undefined }),
-  {
-    title: 'Greeting Resource',
-    description: 'Dynamic greeting generator',
-  },
-  async (uri, { name }) => ({
-    contents: [{ uri: uri.href, text: `Hello, ${name}!` }],
-  })
+  async ({ user }) => {
+  try {
+    const devices = await devicesApi.list(user);
+    return {
+      content: [
+        {
+          type: "json",
+          data: devices
+        }
+      ]
+    };
+  } catch (error: any) {
+    // Handle Thinger.io API errors
+    if (error instanceof ApiException) {
+      Log.error(`Thinger.io API Exception: ${error.status} - ${error.body}`);
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: `Thinger API error (HTTP ${err.code ?? 'n/a'}): ${err.message ?? 'unknown error'}`,
+          },
+        ],
+      };
+    }
+    // Handle other errors
+    Log.error(`Unexpected error: ${error.message}`);
+    return {
+      isError: true,
+      content: [{ type: 'text', text: `Failed to list devices: ${err?.message ?? String(err)}` }],
+    };
+  }
+  }
 );
 
 const app = express();
@@ -198,6 +221,22 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
     }
   }
 });
+
+app.get("/env", (req: Request, res: Response) => {
+  const thingerEnv = Object.keys(process.env)
+    .filter((key) => key.startsWith("THINGER"))
+    .reduce((obj: { [key: string]: string }, key) => {
+      obj[key] = process.env[key] as string;
+      return obj;
+    }, {});
+  res.json(thingerEnv);
+});
+
+app.get('/api/mcp/config', (_req, res) => {
+  res.json({ url: 'wss://tu-servidor-mcp/ws', token: 'Bearer xxx' });
+});
+
+app.use(FrontEndRouter);
 
 app.listen(PORT, () => {
   Log.info("MCP Server listening on port", PORT);

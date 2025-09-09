@@ -1,0 +1,78 @@
+<div class="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
+  <div class="w-full max-w-3xl">
+    <!-- Header / Branding -->
+    <div class="mb-6 text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900/70 ring-1 ring-white/10">
+        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        <span class="text-xs tracking-wide text-neutral-300">MCP Server • Thinger</span>
+      </div>
+      <h1 class="mt-4 text-3xl font-semibold tracking-tight">MCP Connection</h1>
+      <p class="mt-2 text-neutral-400">Conecta tu LLM usando esta URL y el token Bearer.</p>
+    </div>
+
+    <nz-card nzTitle="Parámetros de acceso" class="rounded-2xl bg-neutral-900/60 !border-white/10 !border backdrop-blur">
+      <!-- Loading -->
+      <ng-container *ngIf="loading(); else loaded">
+        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 2 }" [nzTitle]="false"></nz-skeleton>
+      </ng-container>
+
+      <ng-template #loaded>
+        <ng-container *ngIf="!error(); else errorTpl">
+          <div nz-row nzGutter="16" class="mb-4">
+            <div nz-col nzSpan="24">
+              <label class="block text-xs font-medium text-neutral-400 mb-2">MCP Server URL</label>
+              <div class="flex items-center gap-2 rounded-xl bg-neutral-950/60 ring-1 ring-white/10 px-3 py-3">
+                <span nz-icon nzType="link" nzTheme="outline" class="text-neutral-400"></span>
+                <span class="truncate text-sm" [title]="config().url">{{ config().url }}</span>
+                <span class="ml-auto"></span>
+                <button nz-button nzSize="small" nzType="default" (click)="copy(config().url, 'url')">
+                  <span nz-icon nzType="copy"></span>
+                  <span class="ml-1">{{ copied()==='url' ? 'Copiado' : 'Copiar' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div nz-row nzGutter="16" class="mb-2">
+            <div nz-col nzSpan="24">
+              <label class="block text-xs font-medium text-neutral-400 mb-2">Bearer Token</label>
+              <div class="flex items-center gap-2 rounded-xl bg-neutral-950/60 ring-1 ring-white/10 px-3 py-3">
+                <span nz-icon nzType="key" nzTheme="outline" class="text-neutral-400"></span>
+                <span class="flex-1 font-mono text-sm truncate" [attr.title]="revealToken() ? config().token : ''">
+                  <ng-container *ngIf="revealToken(); else hidden">{{ config().token }}</ng-container>
+                  <ng-template #hidden>••••••••••••••••••••••••••••••</ng-template>
+                </span>
+                <button nz-button nzSize="small" nzType="default" (click)="revealToken.set(!revealToken())" class="mr-1">
+                  <span nz-icon [nzType]="revealToken() ? 'eye-invisible' : 'eye'"></span>
+                  <span class="ml-1">{{ revealToken() ? 'Ocultar' : 'Mostrar' }}</span>
+                </button>
+                <button nz-button nzSize="small" nzType="default" (click)="copy(config().token, 'token')">
+                  <span nz-icon nzType="copy"></span>
+                  <span class="ml-1">{{ copied()==='token' ? 'Copiado' : 'Copiar' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mt-3">
+            <p class="text-[11px] text-neutral-500 m-0">Guárdalo de forma segura. Puedes rotar el token desde el backend cuando quieras.</p>
+            <nz-space>
+              <button
+                nz-button nzType="default" nzSize="small"
+                nz-tooltip="Abre en nuevo tab"
+                [attr.disabled]="!config().url ? true : null"
+                (click)="openUrl()">
+                <span nz-icon nzType="export"></span>
+                <span class="tw-ml-1">Abrir URL</span>
+              </button>
+            </nz-space>
+          </div>
+        </ng-container>
+
+        <ng-template #errorTpl>
+          <nz-alert nzType="error" [nzMessage]="error()" nzShowIcon></nz-alert>
+        </ng-template>
+      </ng-template>
+    </nz-card>
+  </div>
+</div>
