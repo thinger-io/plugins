@@ -1,7 +1,7 @@
 {
-  "name": "ttn-backend",
+  "name": "mcp-server-backend",
   "version": "1.0.0",
-  "description": "Plugin for handling TTN integration",
+  "description": "Thinger.io MCP server backend",
   "scripts": {
     "start": "NODE_ENV=production node --env-file=.env.production server.js",
     "build": "tsc -p .",
@@ -14,7 +14,10 @@
     "url": "git+https://github.com/thinger-io/plugins.git"
   },
   "keywords": [
-    "ttn",
+    "MCP",
+    "MCP Server",
+    "LLM",
+    "AI",
     "thinger"
   ],
   "author": "Thinger.io",
@@ -35,6 +38,7 @@
   },
   "dependencies": {
     "@thinger-io/thinger-node": "0.1.0-alpha.4",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "@modelcontextprotocol/sdk": "^1.17.5"
   }
 }

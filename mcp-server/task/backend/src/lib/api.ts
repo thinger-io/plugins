@@ -3,7 +3,7 @@ import process from "node:process";
 
 class EnvTokenProvider implements thingerApi.TokenProvider {
   public getToken(): string {
-    return process.env.THINGER_TOKEN_TTN_PLUGIN || "";
+    return process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN || "";
   }
 }
 
