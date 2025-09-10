@@ -1,77 +1,35 @@
-<div class="tw-min-h-screen tw-bg-neutral-950 tw-text-neutral-100 tw-flex tw-items-center tw-justify-center tw-p-6">
-  <div class="tw-w-full tw-max-w-3xl">
-    <div class="tw-mb-6 tw-text-center">
-      <div class="tw-inline-flex tw-items-center tw-gap-2 tw-px-3 tw-py-1 tw-rounded-full tw-bg-neutral-900/70 tw-ring-1 tw-ring-white/10">
-        <span class="tw-h-2 tw-w-2 tw-rounded-full tw-bg-emerald-400"></span>
-        <span class="tw-text-xs tw-tracking-wide tw-text-neutral-300">MCP Server • Thinger</span>
+<div class="mcp-wrapper">
+  <div class="mcp-status">
+    <span class="mcp-status-text">Servidor MCP en funcionamiento</span>
+  </div>
+
+  <div class="mcp-card">
+    <h1 class="mcp-title">MCP Connection</h1>
+    <p class="mcp-sub">Comparte la URL del endpoint y el token.</p>
+
+    <div class="mcp-fields">
+      <!-- URL -->
+      <div class="mcp-group">
+        <label class="mcp-label">MCP Server URL</label>
+        <div class="mcp-row">
+          <input type="text" class="mcp-input" [value]="url()" readonly />
+          <button class="mcp-btn" (click)="copyToClipboard(url(), 'URL')">Copiar</button>
+        </div>
       </div>
-      <h1 class="tw-mt-4 tw-text-3xl tw-font-semibold tw-tracking-tight">MCP Connection</h1>
-      <p class="tw-mt-2 tw-text-neutral-400">Conecta tu LLM usando esta URL y el token Bearer.</p>
+
+      <!-- Token -->
+      <div class="mcp-group">
+        <label class="mcp-label">Bearer Token</label>
+        <div class="mcp-row">
+          <input type="text" class="mcp-input" [value]="token()" readonly />
+          <button class="mcp-btn" (click)="copyToClipboard(token(), 'Token')">Copiar</button>
+        </div>
+      </div>
     </div>
 
-    <nz-card nzTitle="Parámetros de acceso" class="tw-rounded-2xl tw-bg-neutral-900/60 !tw-border-white/10 !tw-border tw-backdrop-blur">
-      <!-- Loading -->
-      <ng-container *ngIf="loading(); else loaded">
-        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 2 }" [nzTitle]="false"></nz-skeleton>
-      </ng-container>
-
-      <ng-template #loaded>
-        <ng-container *ngIf="!error(); else errorTpl">
-          <div nz-row nzGutter="16" class="mb-4">
-            <div nz-col nzSpan="24">
-              <label class="block text-xs font-medium text-neutral-400 mb-2">MCP Server URL</label>
-              <div class="flex items-center gap-2 rounded-xl bg-neutral-950/60 ring-1 ring-white/10 px-3 py-3">
-                <span nz-icon nzType="link" nzTheme="outline" class="text-neutral-400"></span>
-                <span class="truncate text-sm" [title]="config().url">{{ config().url }}</span>
-                <span class="ml-auto"></span>
-                <button nz-button nzSize="small" nzType="default" (click)="copy(config().url, 'url')">
-                  <span nz-icon nzType="copy"></span>
-                  <span class="ml-1">{{ copied()==='url' ? 'Copiado' : 'Copiar' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div nz-row nzGutter="16" class="mb-2">
-            <div nz-col nzSpan="24">
-              <label class="block text-xs font-medium text-neutral-400 mb-2">Bearer Token</label>
-              <div class="flex items-center gap-2 rounded-xl bg-neutral-950/60 ring-1 ring-white/10 px-3 py-3">
-                <span nz-icon nzType="key" nzTheme="outline" class="text-neutral-400"></span>
-                <span class="flex-1 font-mono text-sm truncate" [attr.title]="revealToken() ? config().token : ''">
-                  <ng-container *ngIf="revealToken(); else hidden">{{ config().token }}</ng-container>
-                  <ng-template #hidden>••••••••••••••••••••••••••••••</ng-template>
-                </span>
-                <button nz-button nzSize="small" nzType="default" (click)="revealToken.set(!revealToken())" class="mr-1">
-                  <span nz-icon [nzType]="revealToken() ? 'eye-invisible' : 'eye'"></span>
-                  <span class="ml-1">{{ revealToken() ? 'Ocultar' : 'Mostrar' }}</span>
-                </button>
-                <button nz-button nzSize="small" nzType="default" (click)="copy(config().token, 'token')">
-                  <span nz-icon nzType="copy"></span>
-                  <span class="ml-1">{{ copied()==='token' ? 'Copiado' : 'Copiar' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between mt-3">
-            <p class="text-[11px] text-neutral-500 m-0">Guárdalo de forma segura. Puedes rotar el token desde el backend cuando quieras.</p>
-            <nz-space>
-              <button
-                nz-button nzType="default" nzSize="small"
-                nz-tooltip="Abre en nuevo tab"
-                [attr.disabled]="!config().url ? true : null"
-                (click)="openUrl()">
-                <span nz-icon nzType="export"></span>
-                <span class="tw-ml-1">Abrir URL</span>
-              </button>
-            </nz-space>
-          </div>
-        </ng-container>
-
-        <ng-template #errorTpl>
-          <nz-alert nzType="error" [nzMessage]="error()" nzShowIcon></nz-alert>
-        </ng-template>
-      </ng-template>
-    </nz-card>
+    <!-- Mensaje de copiado -->
+    <div *ngIf="copiedMessage()" class="mcp-copied">
+      {{ copiedMessage() }}
+    </div>
   </div>
 </div>

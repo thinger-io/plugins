@@ -12,7 +12,7 @@ module.exports = {
     "./src/**/*.{html,ts}"
   ],
   corePlugins: {
-    preflight: true,
+    preflight: false,
   },
   theme: {
     extend: {

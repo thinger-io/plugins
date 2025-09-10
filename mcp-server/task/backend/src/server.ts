@@ -24,8 +24,8 @@ const server = new McpServer({
   version: '1.0.0',
 });
 
-const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26'];                               // MCP Protocol spec
-const REQUIRED_CLIENT_CAPABILITIES = ['tools'];                                // Client capabilities
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18'];                               // MCP Protocol spec
+const REQUIRED_CLIENT_CAPABILITIES: string[] = [];                                // Client capabilities
 const REQUEST_TIMEOUT_MS = Number(process.env.MCP_REQUEST_TIMEOUT_MS ?? 10000);   // Response timeout (default: 10s)
 
 // HELPERS
@@ -143,7 +143,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use(FrontEndRouter);
+
 
 // Auth Bearer (development, this is useless)
 const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
@@ -219,19 +219,16 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
   }
 });
 
-app.get("/env", (req: Request, res: Response) => {
-  const thingerEnv = Object.keys(process.env)
-    .filter((key) => key.startsWith("THINGER"))
-    .reduce((obj: { [key: string]: string }, key) => {
-      obj[key] = process.env[key] as string;
-      return obj;
-    }, {});
-  res.json(thingerEnv);
+app.get('/api/mcp/config', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+  res.json({
+    url: `${baseUrl}/mcp`,
+    token: `Bearer ${process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? ''}`,
+  });
 });
 
-app.get('/api/mcp/config', (_req, res) => {
-  res.json({ url: 'wss://tu-servidor-mcp/ws', token: 'Bearer xxx' });
-});
+app.use(FrontEndRouter);
 
 app.listen(PORT, () => {
   Log.info("MCP Server listening on port", PORT);

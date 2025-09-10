@@ -27,8 +27,8 @@
               }
             ],
             "styles": [
-              "src/theme.less",
-              "src/tailwind.css"
+              "src/tailwind.css",
+              "src/theme.less"
             ],
             "scripts": []
           },

@@ -1,79 +1,56 @@
-import { Component, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { SettingsService } from '../../core/services/settings.service';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzTypographyModule } from 'ng-zorro-antd/typography';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
-import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { NzGridModule } from 'ng-zorro-antd/grid';
-import { NzSwitchModule } from 'ng-zorro-antd/switch';
-import { NzSpaceModule } from 'ng-zorro-antd/space';
-import { NzMessageService } from 'ng-zorro-antd/message';
-
-interface McpConfig { url: string; token: string; }
+import { Component, ViewEncapsulation, signal, inject } from '@angular/core';
+import { SettingsService, McpConfig } from '../../core/services/settings.service';
+import { take } from 'rxjs/operators';
+import {NgIf} from "@angular/common";
 
 @Component({
   selector: 'app-mcp',
   standalone: true,
-  imports: [
-    CommonModule,
-    NzCardModule,
-    NzTypographyModule,
-    NzButtonModule,
-    NzToolTipModule,
-    NzIconModule,
-    NzSkeletonModule,
-    NzAlertModule,
-    NzGridModule,
-    NzSwitchModule,
-    NzSpaceModule
-  ],
   templateUrl: './mcp.component.html',
-  styleUrls: ['./mcp.component.css']
+  styleUrls: ['./mcp.component.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class McpComponent {
-  private settings = inject(SettingsService);
-  private message = inject(NzMessageService);
+  private readonly settings = inject(SettingsService);
 
-  loading = signal(true);
-  error = signal<string | null>(null);
-  revealToken = signal(false);
-  copied = signal<'url' | 'token' | null>(null);
+  // Valores reactivos que ya usas en el template
+  url   = signal<string>('');
+  token = signal<string>('');
 
-  config = signal<McpConfig>({ url: '', token: '' });
+  // Feedback de copiado
+  copiedMessage = signal<string | null>(null);
+
+  // Estado del servidor para el badge verde
+  serverOk = signal<boolean>(false);
 
   constructor() {
-    this.settings.getMcpConfig().subscribe({
-      next: (cfg: any) => {
-        this.config.set(cfg);
-        this.loading.set(false);
+    // Carga una vez desde el backend (con tus fallbacks del SettingsService)
+    this.settings.getMcpConfig().pipe(take(1)).subscribe({
+      next: (cfg: McpConfig) => {
+        const url = (cfg?.url ?? '').trim();
+        const token = (cfg?.token ?? '').trim();
+        this.url.set(url);
+        this.token.set(token);
+        // si llega respuesta válida, consideramos OK
+        this.serverOk.set(Boolean(url || token));
       },
-      error: (e: any) => {
-        console.error(e);
-        this.error.set('No se pudo cargar la configuración del MCP.');
-        this.loading.set(false);
-      }
+      error: () => {
+        this.serverOk.set(false);
+      },
     });
   }
 
-  async copy(value: string, which: 'url' | 'token') {
-    try {
-      await navigator.clipboard.writeText(value);
-      this.copied.set(which);
-      this.message.success(which === 'url' ? 'URL copiada' : 'Token copiado');
-      setTimeout(() => this.copied.set(null), 1200);
-    } catch (_) {
-      this.message.error('No se pudo copiar al portapapeles');
-    }
-  }
-
-  openUrl(): void {
-    const url = this.config().url;
-    if (url) {
-      window.open(url, '_blank');
-    }
+  copyToClipboard(value: string, label: string) {
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(
+      () => {
+        this.copiedMessage.set(`${label} copiado`);
+        setTimeout(() => this.copiedMessage.set(null), 2000);
+      },
+      () => {
+        this.copiedMessage.set(`Error al copiar ${label}`);
+        setTimeout(() => this.copiedMessage.set(null), 2000);
+      }
+    );
   }
 }
