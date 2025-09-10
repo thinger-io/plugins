@@ -6,8 +6,8 @@ import { z } from 'zod';
 import { DevicesApi, ApiException } from '@thinger-io/thinger-node'
 
 import { Log } from "./lib/log.js";
-import {thingerApiConfig} from "./lib/api";
-import {FrontEndRouter} from "./frontend/routes";
+import {thingerApiConfig} from "./lib/api.js";
+import {FrontEndRouter} from "./frontend/routes.js";
 
 // Initialize thinger API
 const devicesApi = new DevicesApi(thingerApiConfig);
@@ -97,44 +97,40 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 
 // SERVER CAPABILITIES
 server.registerTool(
-'Get Devices',
+  'Get Devices',
   {
     title: 'Get All thinger.io Devices from Account',
     description: 'Retrieve a list of all devices available for the specified thinger.io account.',
-    inputSchema: { user: z.string().describe("Thinger.io username account") },
+    inputSchema: {
+      user: z.string().describe("Thinger.io username account"),
+    },
   },
   async ({ user }) => {
-  try {
-    const devices = await devicesApi.list(user);
-    return {
-      content: [
-        {
-          type: "json",
-          data: devices
-        }
-      ]
-    };
-  } catch (error: any) {
-    // Handle Thinger.io API errors
-    if (error instanceof ApiException) {
-      Log.error(`Thinger.io API Exception: ${error.status} - ${error.body}`);
+    try {
+      const devices = await devicesApi.list(user);
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(devices, null, 2) }
+        ],
+      };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
       return {
         isError: true,
         content: [
-          {
-            type: 'text',
-            text: `Thinger API error (HTTP ${err.code ?? 'n/a'}): ${err.message ?? 'unknown error'}`,
-          },
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
         ],
       };
     }
-    // Handle other errors
-    Log.error(`Unexpected error: ${error.message}`);
-    return {
-      isError: true,
-      content: [{ type: 'text', text: `Failed to list devices: ${err?.message ?? String(err)}` }],
-    };
-  }
   }
 );
 
@@ -147,6 +143,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(FrontEndRouter);
 
 // Auth Bearer (development, this is useless)
 const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
@@ -235,8 +232,6 @@ app.get("/env", (req: Request, res: Response) => {
 app.get('/api/mcp/config', (_req, res) => {
   res.json({ url: 'wss://tu-servidor-mcp/ws', token: 'Bearer xxx' });
 });
-
-app.use(FrontEndRouter);
 
 app.listen(PORT, () => {
   Log.info("MCP Server listening on port", PORT);
