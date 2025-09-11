@@ -299,14 +299,14 @@ server.registerTool(
     try {
       // Whitelist básica (ajústala a tu despliegue)
       const allowed = (process.env.FETCH_ALLOWED_HOSTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-      if (allowed.length && !allowed.some(host => url.includes(host))) {
+      if (allowed.length && !allowed.some(host => id.includes(host))) {
         return {
           isError: true,
-          content: [{ type: 'text', text: `fetch blocked: host not allowed (${url})` }],
+          content: [{ type: 'text', text: `fetch blocked: host not allowed (${id})` }],
         };
       }
 
-      const resp = await fetch(url, {
+      const resp = await fetch(id, {
         headers: { 'User-Agent': 'thinger-mcp-server/1.0 (+mcp)' },
       });
       const text = await resp.text();
