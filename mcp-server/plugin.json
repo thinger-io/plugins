@@ -19,6 +19,16 @@
     "mcp_plugin": {
       "name": "Access from Thinger MCP Server plugin to Thinger.io account",
       "allow": {
+        "Product": {
+          "*": "*"
+        },
+        "Device": {
+          "*": [
+            "AccessDeviceResources",
+            "CreateDeviceProperty",
+            "ReadDeviceProperty"
+          ]
+        },
         "Plugin": {
           "mcp-server": "*"
         }

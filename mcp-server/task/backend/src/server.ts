@@ -3,7 +3,8 @@ import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { DevicesApi, ApiException } from '@thinger-io/thinger-node'
+import fetch from 'node-fetch';
+import {DevicesApi, ProductsApi, ApiException, ProductCreateRequest} from '@thinger-io/thinger-node'
 
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
@@ -11,9 +12,9 @@ import {FrontEndRouter} from "./frontend/routes.js";
 
 // Initialize thinger API
 const devicesApi = new DevicesApi(thingerApiConfig);
+const productsApi = new ProductsApi(thingerApiConfig);
 
 const PORT = Number(process.env.PORT ?? 3000);
-const REQUIRED_TOKEN = process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? '';
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? '*')
   .split(',')
   .map(s => s.trim())
@@ -102,12 +103,11 @@ server.registerTool(
     title: 'Get All thinger.io Devices from Account',
     description: 'Retrieve a list of all devices available for the specified thinger.io account.',
     inputSchema: {
-      user: z.string().describe("Thinger.io username account"),
     },
   },
-  async ({ user }) => {
+  async () => {
     try {
-      const devices = await devicesApi.list(user);
+      const devices = await devicesApi.list(process.env.THINGER_USER ?? '');
       return {
         content: [
           { type: 'text', text: JSON.stringify(devices, null, 2) }
@@ -134,6 +134,208 @@ server.registerTool(
   }
 );
 
+server.registerTool(
+  'Create Product ',
+  {
+    title: 'Create Thinger.io Product',
+    description: 'Create a new product in thinger.io',
+    inputSchema: {
+      name: z.string().describe("Name of the new product"),
+      description: z.string().optional().describe("Description of the new product")
+    },
+  },
+  async ({name, description}) => {
+    try {
+      // For creating a new product, we need to provide a "productCreateRequest" object.
+      const request: ProductCreateRequest = {
+        name: name,
+        product: name.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 8),
+        description: description,
+        enabled: true,
+      }
+      const response = await productsApi.create(process.env.THINGER_USER ?? '', request);
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(response, null, 2) }
+        ],
+      };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      return {
+        isError: true,
+        content: [
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
+        ],
+      };
+    }
+  }
+);
+
+server.registerTool(
+  'Get Bucket info',
+  {
+    title: 'Get Bucket info',
+    description: 'Retrieve data from a specific thinger.io device bucket.',
+    inputSchema: {
+      device: z.string().describe("Thinger.io Device ID"),
+      bucket: z.string().describe("Thinger.io DataBucket name"),
+    },
+  },
+  async ({ device, bucket }) => {
+    try {
+      const data = await devicesApi.readBucketData('v3', process.env.THINGER_USER ?? '', device, bucket);
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(data, null, 2) }
+        ],
+      };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      return {
+        isError: true,
+        content: [
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
+        ],
+      };
+    }
+  }
+);
+
+server.registerTool(
+  'Get Data buckets',
+  {
+    title: 'Get Data buckets',
+    description: 'List all data buckets from a specific thinger.io device.',
+    inputSchema: {
+      device: z.string().describe("Thinger.io Device ID"),
+    },
+  },
+  async ({device}) => {
+    try {
+      const data = await devicesApi.listBuckets(process.env.THINGER_USER ?? '', device);
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(data, null, 2) }
+        ],
+      };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      return {
+        isError: true,
+        content: [
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
+        ],
+      };
+    }
+  }
+);
+
+server.registerTool(
+  'search',
+  {
+    title: 'Search',
+    description: 'Given a query string, returns a list of relevant documents with metadata (id, title, snippet, published_at).',
+    inputSchema: { query: z.string() },
+  },
+  async ({ query }) => {
+    const results: Array<{ id: string; title?: string; snippet?: string; published_at?: string }> = [];
+
+    const devices = await devicesApi.list(process.env.THINGER_USER ?? '');
+    for (const d of devices ?? []) {
+      const hit = JSON.stringify(d).toLowerCase().includes(query.toLowerCase());
+      if (hit) {
+        const url = `${process.env.PUBLIC_BASE_URL ?? 'https://console.thinger.io'}/#/${process.env.THINGER_USER ?? ''}/devices/${d.device}`;
+        results.push({
+          id: url,
+          title: `Device: ${d.device}`,
+          snippet: d.description ?? 'Thinger device'
+        });
+      }
+    }
+
+    return { content: [{ type: 'text', text: JSON.stringify({ query, results }, null, 2) }] };
+  }
+);
+
+server.registerTool(
+  'fetch',
+  {
+    title: 'Fetch',
+    description: 'Fetch a URL and return its content. Use the "id" returned by the "search" tool. Optional parameters to limit the length of the content and to paginate through it.',
+    inputSchema: {
+      id: z.string().describe("URL to fetch, usually obtained from the 'search' tool"),
+      max_length: z.number().int().min(1000).max(200000).optional(),
+      start_index: z.number().int().min(0).optional(),
+    },
+  },
+  async ({ id, max_length = 40000, start_index = 0 }) => {
+    try {
+      // Whitelist básica (ajústala a tu despliegue)
+      const allowed = (process.env.FETCH_ALLOWED_HOSTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+      if (allowed.length && !allowed.some(host => url.includes(host))) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: `fetch blocked: host not allowed (${url})` }],
+        };
+      }
+
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'thinger-mcp-server/1.0 (+mcp)' },
+      });
+      const text = await resp.text();
+
+      const sliced = text.slice(start_index, start_index + max_length);
+
+      const payload = {
+        id,
+        status: resp.status,
+        contentType: resp.headers.get('content-type') ?? 'text/plain',
+        length: text.length,
+        start_index,
+        returned_length: sliced.length,
+        content: sliced,
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+      };
+    } catch (error: any) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `fetch failed: ${error?.message ?? String(error)}` }],
+      };
+    }
+  }
+);
+
+
 const app = express();
 
 app.use(
@@ -147,16 +349,7 @@ app.use(express.json());
 
 // Auth Bearer (development, this is useless)
 const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
-  if (!REQUIRED_TOKEN) {
-    next();
-    return;
-  }
-  const header = req.header('Authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : header;
-  if (token !== REQUIRED_TOKEN) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+
   next();
 }
 

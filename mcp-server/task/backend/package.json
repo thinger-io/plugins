@@ -41,6 +41,7 @@
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@thinger-io/thinger-node": "0.1.0-alpha.4",
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "node-fetch": "^3.3.2"
   }
 }
