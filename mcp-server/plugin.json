@@ -16,11 +16,21 @@
     "icon": "https://avatars.githubusercontent.com/u/182288589?s=200&v=4"
   },
   "tokens": {
-    "ttn_plugin": {
+    "mcp_plugin": {
       "name": "Access from Thinger MCP Server plugin to Thinger.io account",
       "allow": {
         "Plugin": {
           "mcp-server": "*"
+        }
+      }
+    },
+    "mcp_plugin_callback": {
+      "name": "Access from MCP to Uplink callback",
+      "allow": {
+        "Plugin": {
+          "mcp-server": [
+            "CallPluginEndpoint"
+          ]
         }
       }
     }
