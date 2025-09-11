@@ -135,10 +135,11 @@ server.registerTool(
 );
 
 server.registerTool(
-  'Create Product ',
+  'Create Product Config',
   {
-    title: 'Create Thinger.io Product',
-    description: 'Create a new product in thinger.io',
+    title: 'Create Thinger.io Product Configuration schema',
+    description: 'Create a a Thinger.io Product Configuration schema in order to provide API resources, data buckets, ' +
+      'autoprovisioning, custom scripts and properties to Product template ',
     inputSchema: {
       name: z.string().describe("Name of the new product"),
       description: z.string().optional().describe("Description of the new product")
@@ -153,6 +154,55 @@ server.registerTool(
         description: description,
         enabled: true,
       }
+      const response = await productsApi.create(process.env.THINGER_USER ?? '', request);
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(response, null, 2) }
+        ],
+      };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      return {
+        isError: true,
+        content: [
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
+        ],
+      };
+    }
+  }
+);
+
+server.registerTool(
+  'Create Product ',
+  {
+    title: 'Create Thinger.io Product',
+    description: 'Create a new product in thinger.io',
+    inputSchema: {
+      name: z.string().describe("Name of the new product"),
+      description: z.string().optional().describe("Description of the new product"),
+      profile: z.object({}).passthrough().optional(),
+    },
+  },
+  async ({name, description, profile}) => {
+    try {
+      // For creating a new product, we need to provide a "productCreateRequest" object.
+      const request: ProductCreateRequest = {
+        name: name,
+        product: name.toLowerCase().replace(/\s+/g, '-'),
+        description: description,
+        enabled: true,
+        profile: profile,
+      }
+      Log.info("Creating product with request:", JSON.stringify(request, null, 2));
       const response = await productsApi.create(process.env.THINGER_USER ?? '', request);
       return {
         content: [
