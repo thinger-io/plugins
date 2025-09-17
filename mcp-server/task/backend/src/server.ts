@@ -9,6 +9,7 @@ import {DevicesApi, ProductsApi, ApiException, ProductCreateRequest} from '@thin
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
 import {FrontEndRouter} from "./frontend/routes.js";
+import { ProductConfigBuilder } from './parser/builder.js';
 
 // Initialize thinger API
 const devicesApi = new DevicesApi(thingerApiConfig);
@@ -135,31 +136,133 @@ server.registerTool(
 );
 
 server.registerTool(
-  'Create Product Config',
+  'Create Product Properties Configuration',
   {
-    title: 'Create Thinger.io Product Configuration schema',
-    description: 'Create a a Thinger.io Product Configuration schema in order to provide API resources, data buckets, ' +
-      'autoprovisioning, custom scripts and properties to Product template ',
+    title: 'Create Product Properties Configuration',
+    description: 'Create Product Properties JSON Configuration schema',
     inputSchema: {
-      name: z.string().describe("Name of the new product"),
-      description: z.string().optional().describe("Description of the new product")
+      name: z.string().describe("Name of the new property"),
+      description: z.string().optional().describe("Description of the new property"),
+      source: z.string().optional().describe("Source of the property, can be 'resource', 'resource_stream', 'topic' or 'event'").default('device'),
+      source_name: z.string().optional().describe("Source name, e.g. resource name, topic name or event name"),
+      payload_function: z.string().optional().describe("Payload function name to extract the property value, e.g. 'extractDigitalRead' This function" +
+        " must be defined in the product code section."),
     },
   },
-  async ({name, description}) => {
+  async ({name, description, profile}) => {
     try {
       // For creating a new product, we need to provide a "productCreateRequest" object.
       const request: ProductCreateRequest = {
         name: name,
-        product: name.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 8),
+        product: name.toLowerCase().replace(/\s+/g, '-'),
         description: description,
         enabled: true,
+        profile: profile,
       }
+      Log.info("Creating product with request:", JSON.stringify(request, null, 2));
       const response = await productsApi.create(process.env.THINGER_USER ?? '', request);
       return {
         content: [
           { type: 'text', text: JSON.stringify(response, null, 2) }
         ],
       };
+    } catch (error: any) {
+      if (error instanceof ApiException) {
+        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
+        return {
+          isError: true,
+          content: [
+            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
+          ],
+        };
+      }
+      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      return {
+        isError: true,
+        content: [
+          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
+        ],
+      };
+    }
+  }
+);
+
+server.registerTool(
+  'Create Product Config',
+  {
+    title: 'Create Thinger.io Product Configuration schema',
+    description: 'Create a a Thinger.io Product Configuration schema in order to provide API resources, data buckets, ' +
+      'autoprovisioning, custom scripts and properties to Product template ',
+    inputSchema: {
+      properties: z.object({}).passthrough().optional().describe("JSON Schema properties object"),
+      buckets: z.object({}).passthrough().optional().describe("JSON Schema buckets object"),
+      flows: z.object({}).passthrough().optional().describe("JSON Schema flows object"),
+      api: z.object({}).passthrough().optional().describe("JSON Schema api object"),
+      autoprovisions: z.object({}).passthrough().optional().describe("JSON Schema autoprovisions object"),
+    },
+  },
+  async ({properties, buckets, flows, api, autoprovisions}) => {
+    try {
+      // For creating a new product, we need to provide a "productCreateRequest" object. To create such object,
+      // we need to parse the input parameters into a valid "profile" object. This can be done using the
+      // ProductConfigBuilder class.
+      const builder = new ProductConfigBuilder();
+      const diagnostics: any[] = [];
+      const normalized: any = {};
+
+      // Add product properties
+      const r = builder.addProperties(properties ?? {});
+      if (!r.ok) {
+        diagnostics.push({ section: 'properties', errors: r.errors });
+      } else {
+        normalized.properties = r.value;
+      }
+
+      // Add product buckets
+      const r2 = builder.addBuckets(buckets ?? {});
+      if (!r2.ok) {
+        diagnostics.push({ section: 'buckets', errors: r2.errors });
+      } else {
+        normalized.buckets = r2.value;
+      }
+
+      // Add product flows
+      const r3 = builder.addFlows(flows ?? {});
+      if (!r3.ok) {
+        diagnostics.push({ section: 'flows', errors: r3.errors });
+      } else {
+        normalized.flows = r3.value;
+      }
+
+      // Add product api resources
+      const r4 = builder.addApi(api ?? {});
+      if (!r4.ok) {
+        diagnostics.push({ section: 'api', errors: r4.errors });
+      } else {
+        normalized.api = r4.value;
+      }
+
+      // Add product autoprovisions
+      const r5 = builder.addAutoprovisions(autoprovisions ?? {});
+      if (!r5.ok) {
+        diagnostics.push({ section: 'autoprovisions', errors: r5.errors });
+      } else {
+        normalized.autoprovisions = r5.value;
+      }
+
+      const finalCheck = builder.finalize();
+      const ok = finalCheck.ok && diagnostics.length === 0;
+
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify({
+            ok,
+            diagnostics,
+            normalized
+          }, null, 2) }
+        ],
+      };
+
     } catch (error: any) {
       if (error instanceof ApiException) {
         Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
@@ -189,7 +292,8 @@ server.registerTool(
     inputSchema: {
       name: z.string().describe("Name of the new product"),
       description: z.string().optional().describe("Description of the new product"),
-      profile: z.object({}).passthrough().optional(),
+      profile: z.object({}).passthrough().describe("Product configuration schema. All the behaviour of the product is defined here, such" +
+        " as API resources, data buckets, autoprovisioning, custom scripts and properties.").optional(),
     },
   },
   async ({name, description, profile}) => {
