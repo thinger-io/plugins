@@ -43,6 +43,7 @@ export const PropertySchema = z.object({
   data: PropertyDataSchema,
   default: z.record(z.unknown()).optional().default({}),
   enabled: z.boolean().optional().default(true),
+  description: z.string().optional().default(''),
 }).strict();
 
 export const PropertiesSchema = z.record(PropertySchema).default({});
@@ -71,6 +72,7 @@ export const BucketSchema = z.object({
   enabled: z.boolean().optional().default(true),
   retention: BucketRetentionSchema.optional(),
   tags: z.array(z.string()).optional().default([]),
+  description: z.string().optional().default(''),
 }).strict();
 
 export const BucketsSchema = z.record(BucketSchema).default({});
@@ -115,6 +117,7 @@ export const FlowSchema = z.object({
   enabled: z.boolean().default(true),
   sink: FlowSinkSchema,
   split_data: z.boolean().default(false),
+  description: z.string().optional().default(''),
 }).strict();
 
 export const FlowsSchema = z.record(FlowSchema).default({});
@@ -156,6 +159,7 @@ const ApiBaseSchema = z.object({
   handle_connectivity: z.boolean().default(false),
   request: ApiRequestSchema,
   response: ApiResponseSchema,
+  description: z.string().optional().default(''),
 }).strict();
 
 const ApiUplinkSchema = ApiBaseSchema.extend({
@@ -191,6 +195,7 @@ const AutoprovisionConfigSchema = z.discriminatedUnion('mode', [
 export const AutoprovisionItemSchema = z.object({
   config: AutoprovisionConfigSchema,
   enabled: z.boolean().default(true),
+  description: z.string().optional().default(''),
 }).strict();
 
 export const AutoprovisionsSchema = z.record(AutoprovisionItemSchema).default({});

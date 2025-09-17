@@ -1,6 +1,6 @@
-import { ProductConfig } from './schema';
-import { deepMerge } from './merge';
-import { validateProperties, validateBuckets, validateApi, validateAutoprovisions, validateFlows, validateFinalConfig} from './validator';
+import { ProductConfig } from './schema.js';
+import { deepMerge } from './merge.js';
+import { validateProperties, validateBuckets, validateApi, validateAutoprovisions, validateFlows, validateFinalConfig} from './validator.js';
 
 export class ProductConfigBuilder {
   private state: ProductConfig = {

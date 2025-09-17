@@ -1,7 +1,7 @@
 import { z, ZodError } from 'zod';
 import {
   PropertiesSchema, BucketsSchema, FlowsSchema, ApiSchema, AutoprovisionsSchema, ProductConfigSchema,
-} from './schema';
+} from './schema.js';
 
 type Issue = { path: string; message: string };
 export type ValidationResult<T> =
