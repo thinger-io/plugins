@@ -97,42 +97,6 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 }
 
 // SERVER CAPABILITIES
-server.registerTool(
-  'Get Devices',
-  {
-    title: 'Get All thinger.io Devices from Account',
-    description: 'Retrieve a list of all devices available for the specified thinger.io account.',
-    inputSchema: {
-    },
-  },
-  async () => {
-    try {
-      const devices = await devicesApi.list(process.env.THINGER_USER ?? '');
-      return {
-        content: [
-          { type: 'text', text: JSON.stringify(devices, null, 2) }
-        ],
-      };
-    } catch (error: any) {
-      if (error instanceof ApiException) {
-        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
-        return {
-          isError: true,
-          content: [
-            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
-          ],
-        };
-      }
-      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
-      return {
-        isError: true,
-        content: [
-          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
-        ],
-      };
-    }
-  }
-);
 
 const autoProvisionSchema = z.record(
   z.string().describe("Autoprovisioning ID"), // Autoprisioning ID (key)
@@ -145,218 +109,192 @@ const autoProvisionSchema = z.record(
   }).strict()
 );
 
+export const profileSchema = z.object({
+  properties: z.object({}).passthrough().optional()
+    .describe("Optional: product properties object"),
+  buckets: z.object({}).passthrough().optional()
+    .describe("Optional: data buckets object"),
+  flows: z.object({}).passthrough().optional()
+    .describe("Optional: flows object"),
+  endpoints: z.object({}).passthrough().optional()
+    .describe("Optional: endpoints object"),
+  api: z.object({}).passthrough().optional()
+    .describe("Optional: custom API object"),
+  autoprovisions: autoProvisionSchema.optional()
+    .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
+}).strict();
+
 server.registerTool(
-  'Create Product ',
+  "Build Product Autoprovisions",
   {
-    title: 'Create Thinger.io Product',
-    description: 'Create a new product in thinger.io',
+    title: "Build Product Autoprovisions (for Thinger.io profile.autoprovisions)",
+    description: [
+      "Tool for LLMs to construct the 'profile.autoprovisions' object required by Thinger.io.",
+      "It returns ONLY the JSON fragment for 'profile.autoprovisions', not the whole product.",
+      "",
+      "Usage guidance for the LLM:",
+      "1) If you want a product with autoprovisioning, FIRST call this tool to generate the JSON.",
+      "2) Copy the resulting JSON and paste it under 'profile.autoprovisions' when calling 'Create Product'.",
+      "3) Each entry needs an 'id' (the autoprovisioning key), a 'pattern' (match rule), and an 'enabled' flag.",
+      "4) Only 'mode: pattern' is supported here.",
+      "",
+      "Example input (to this tool):",
+      "{",
+      "  \"rules\": [",
+      "    { \"id\": \"Sensor Madrid 01\", \"pattern\": \"mad-*\", \"enabled\": true },",
+      "    { \"id\": \"Test Devices\", \"pattern\": \"test-*\", \"enabled\": false }",
+      "  ]",
+      "}",
+      "",
+      "Example output (to paste into profile.autoprovisions):",
+      "{",
+      "  \"sensor_madrid_01\": {",
+      "    \"config\": { \"mode\": \"pattern\", \"pattern\": \"mad-*\" },",
+      "    \"enabled\": true",
+      "  },",
+      "  \"test_devices\": {",
+      "    \"config\": { \"mode\": \"pattern\", \"pattern\": \"test-*\" },",
+      "    \"enabled\": false",
+      "  }",
+      "}"
+    ].join("\n"),
+    inputSchema: {
+      rules: z.array(
+        z.object({
+          id: z.string().describe("Unique autoprovisioning ID (object key)"),
+          pattern: z.string().describe("Matching expression for devices (pattern mode)"),
+          enabled: z.boolean().default(true).describe("Whether this autoprovision rule is enabled"),
+        })
+      )
+        .min(1, "Provide at least one rule")
+        .describe("List of autoprovisioning rules to build the profile.autoprovisions JSON object"),
+    },
+  },
+  async ({ rules }) => {
+    try {
+      // Construye el objeto record usando el schema compacto
+      const built: Record<string, any> = {};
+      for (const r of rules) {
+        const cleanId = r.id // ID sanitization
+          .toLowerCase()
+          .replace(/\s+/g, "_");
+
+        if (!cleanId) {
+          throw new Error(`Invalid autoprovisioning id: "${r.id}" became empty after sanitization`);
+        }
+
+        built[cleanId] = {
+          config: { mode: "pattern", pattern: r.pattern },
+          enabled: r.enabled ?? true,
+        };
+      }
+
+      // Validation
+      const parsed = autoProvisionSchema.parse(built);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(parsed, null, 2),
+          },
+        ],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Invalid autoprovisions payload: ${err?.message ?? String(err)}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+
+server.registerTool(
+  "Create Product ",
+  {
+    title: "Create Thinger.io Product",
+    description: [
+      "Create a new Thinger.io product with an optional 'profile' configuration.",
+      "",
+      "How to compose the 'profile' (general process for the LLM):",
+      "- When a profile section is complex (e.g., autoprovisions), FIRST use its dedicated builder tool to generate a JSON fragment.",
+      "- COPY the returned fragment as-is.",
+      "- PASTE each fragment under its corresponding key inside 'profile' (e.g., paste autoprovisions JSON under 'profile.autoprovisions').",
+      "- Ensure the final 'profile' is valid JSON (no trailing commas, correct braces).",
+      "",
+      "Example (final call to this tool):",
+      "{",
+      "  \"name\": \"City Sensors\",",
+      "  \"description\": \"Product for field sensors.\",",
+      "  \"profile\": {",
+      "    \"properties\": { \"fw\": \"1.0.0\", \"owner\": \"ops\" },",
+      "    \"autoprovisions\": {",
+      "      \"sensor_madrid_01\": {",
+      "        \"config\": { \"mode\": \"pattern\", \"pattern\": \"mad-*\" },",
+      "        \"enabled\": true",
+      "      },",
+      "      \"test_devices\": {",
+      "        \"config\": { \"mode\": \"pattern\", \"pattern\": \"test-*\" },",
+      "        \"enabled\": false",
+      "      }",
+      "    }",
+      "  }",
+      "}",
+      "",
+      "Notes:",
+      "- You can repeat the same approach for any other profile section (properties, buckets, flows, endpoints, api) using their own builder tools if available.",
+      "- This tool validates 'profile.autoprovisions' locally before calling Thinger.io."
+    ].join("\n"),
     inputSchema: {
       name: z.string().describe("Name of the new product"),
       description: z.string().optional().describe("Description of the new product"),
-      profile: z.object({
-        properties: z.object({}),
-        buckets: z.object({}),
-        flows: z.object({}),
-        endpoints: z.object({}),
-        api: z.object({}),
-        autoprovisions: autoProvisionSchema
-      }).strict().describe("Product configuration schema. All the behaviour of the product is defined here, such" +
-        " as API resources, data buckets, autoprovisioning, custom scripts and properties.").optional(),
+      profile: profileSchema.optional()
+        .describe("Final 'profile' object. Compose it by pasting JSON fragments from builder tools under their keys."),
     },
   },
-  async ({name, description, profile}) => {
+  async ({ name, description, profile }) => {
     try {
-      // For creating a new product, we need to provide a "productCreateRequest" object.
+      // Validación defensiva adicional
+      if (profile?.autoprovisions) {
+        autoProvisionSchema.parse(profile.autoprovisions);
+      }
+
       const request: ProductCreateRequest = {
-        name: name,
-        product: name.toLowerCase().replace(/\s+/g, '-'),
-        description: description,
+        name,
+        product: name.toLowerCase().replace(/\s+/g, "_"), // product ID sanitization
+        description,
         enabled: true,
-        profile: profile,
-      }
+        profile,
+      };
+
       Log.info("Creating product with request:", JSON.stringify(request, null, 2));
-      const response = await productsApi.create(process.env.THINGER_USER ?? '', request);
+      const response = await productsApi.create(process.env.THINGER_USER ?? "", request);
+
       return {
-        content: [
-          { type: 'text', text: JSON.stringify(response, null, 2) }
-        ],
+        content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
       };
     } catch (error: any) {
       if (error instanceof ApiException) {
         Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
         return {
           isError: true,
-          content: [
-            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
-          ],
+          content: [{ type: "text", text: `Thinger API error (HTTP): ${error.message ?? "unknown error"}` }],
         };
       }
       Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
       return {
         isError: true,
-        content: [
-          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
-        ],
+        content: [{ type: "text", text: `Failed to create product: ${error?.message ?? String(error)}` }],
       };
     }
   }
 );
-
-server.registerTool(
-  'Get Bucket info',
-  {
-    title: 'Get Bucket info',
-    description: 'Retrieve data from a specific thinger.io device bucket.',
-    inputSchema: {
-      device: z.string().describe("Thinger.io Device ID"),
-      bucket: z.string().describe("Thinger.io DataBucket name"),
-    },
-  },
-  async ({ device, bucket }) => {
-    try {
-      const data = await devicesApi.readBucketData('v3', process.env.THINGER_USER ?? '', device, bucket);
-      return {
-        content: [
-          { type: 'text', text: JSON.stringify(data, null, 2) }
-        ],
-      };
-    } catch (error: any) {
-      if (error instanceof ApiException) {
-        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
-        return {
-          isError: true,
-          content: [
-            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
-          ],
-        };
-      }
-      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
-      return {
-        isError: true,
-        content: [
-          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
-        ],
-      };
-    }
-  }
-);
-
-server.registerTool(
-  'Get Data buckets',
-  {
-    title: 'Get Data buckets',
-    description: 'List all data buckets from a specific thinger.io device.',
-    inputSchema: {
-      device: z.string().describe("Thinger.io Device ID"),
-    },
-  },
-  async ({device}) => {
-    try {
-      const data = await devicesApi.listBuckets(process.env.THINGER_USER ?? '', device);
-      return {
-        content: [
-          { type: 'text', text: JSON.stringify(data, null, 2) }
-        ],
-      };
-    } catch (error: any) {
-      if (error instanceof ApiException) {
-        Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
-        return {
-          isError: true,
-          content: [
-            { type: 'text', text: `Thinger API error (HTTP): ${error.message ?? 'unknown error'}` }
-          ],
-        };
-      }
-      Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
-      return {
-        isError: true,
-        content: [
-          { type: 'text', text: `Failed to list devices: ${error?.message ?? String(error)}` }
-        ],
-      };
-    }
-  }
-);
-
-server.registerTool(
-  'search',
-  {
-    title: 'Search',
-    description: 'Given a query string, returns a list of relevant documents with metadata (id, title, snippet, published_at).',
-    inputSchema: { query: z.string() },
-  },
-  async ({ query }) => {
-    const results: Array<{ id: string; title?: string; snippet?: string; published_at?: string }> = [];
-
-    const devices = await devicesApi.list(process.env.THINGER_USER ?? '');
-    for (const d of devices ?? []) {
-      const hit = JSON.stringify(d).toLowerCase().includes(query.toLowerCase());
-      if (hit) {
-        const url = `${process.env.PUBLIC_BASE_URL ?? 'https://console.thinger.io'}/#/${process.env.THINGER_USER ?? ''}/devices/${d.device}`;
-        results.push({
-          id: url,
-          title: `Device: ${d.device}`,
-          snippet: d.description ?? 'Thinger device'
-        });
-      }
-    }
-
-    return { content: [{ type: 'text', text: JSON.stringify({ query, results }, null, 2) }] };
-  }
-);
-
-server.registerTool(
-  'fetch',
-  {
-    title: 'Fetch',
-    description: 'Fetch a URL and return its content. Use the "id" returned by the "search" tool. Optional parameters to limit the length of the content and to paginate through it.',
-    inputSchema: {
-      id: z.string().describe("URL to fetch, usually obtained from the 'search' tool"),
-      max_length: z.number().int().min(1000).max(200000).optional(),
-      start_index: z.number().int().min(0).optional(),
-    },
-  },
-  async ({ id, max_length = 40000, start_index = 0 }) => {
-    try {
-      // Whitelist básica (ajústala a tu despliegue)
-      const allowed = (process.env.FETCH_ALLOWED_HOSTS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-      if (allowed.length && !allowed.some(host => id.includes(host))) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `fetch blocked: host not allowed (${id})` }],
-        };
-      }
-
-      const resp = await fetch(id, {
-        headers: { 'User-Agent': 'thinger-mcp-server/1.0 (+mcp)' },
-      });
-      const text = await resp.text();
-
-      const sliced = text.slice(start_index, start_index + max_length);
-
-      const payload = {
-        id,
-        status: resp.status,
-        contentType: resp.headers.get('content-type') ?? 'text/plain',
-        length: text.length,
-        start_index,
-        returned_length: sliced.length,
-        content: sliced,
-      };
-
-      return {
-        content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
-      };
-    } catch (error: any) {
-      return {
-        isError: true,
-        content: [{ type: 'text', text: `fetch failed: ${error?.message ?? String(error)}` }],
-      };
-    }
-  }
-);
-
 
 const app = express();
 
