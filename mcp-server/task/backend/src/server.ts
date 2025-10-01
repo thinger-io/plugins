@@ -109,6 +109,48 @@ const autoProvisionSchema = z.record(
   }).strict()
 );
 
+export const apiResourceSchema = z.record(
+  z.string().describe("API resource ID"),
+  z.object({
+    enabled: z.boolean().default(true),
+    handle_connectivity: z.boolean().optional(),
+    device_id_resolver: z.string().optional(),
+
+    request: z.object({
+      data: z.union([
+        z.object({
+          target: z.literal("endpoint_call"),
+          endpoint: z.string(),
+          payload: z.string().optional(),
+          payload_function: z.string().optional(),
+          payload_type: z.string().optional(),
+        }).strict(),
+
+        z.object({
+          target: z.literal("resource_stream"),
+          resource_stream: z.string(),
+          payload: z.string().optional(),
+          payload_function: z.string().optional(),
+          payload_type: z.string().optional(),
+        }).strict(),
+
+        z.object({
+          target: z.string(),
+        }).catchall(z.any()).strict(),
+      ]),
+    }).strict(),
+
+    response: z.object({
+      data: z.object({}).passthrough().optional(),
+    }).strict().optional(),
+  }).strict()
+);
+
+const apiRecordSchema = z.record(
+  z.string(),  // id normalizado
+  apiResourceSchema
+);
+
 export const profileSchema = z.object({
   properties: z.object({}).passthrough().optional()
     .describe("Optional: product properties object"),
@@ -123,6 +165,129 @@ export const profileSchema = z.object({
   autoprovisions: autoProvisionSchema.optional()
     .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
 }).strict();
+
+server.registerTool(
+  "Build Product API Resources",
+  {
+    title: "Build Product API Resources (for Thinger.io profile.api)",
+    description: [
+      "Tool for LLMs to construct the 'profile.api' JSON fragment required by Thinger.io.",
+      "It returns ONLY the JSON fragment for 'profile.api', not the whole product.",
+      "",
+      "Usage guidance for the LLM:",
+      "- When you need API resources, FIRST call this tool to generate the JSON fragment.",
+      "- COPY the resulting JSON and PASTE it under 'profile.api' when calling 'Create Product'.",
+      "- Each resource needs an 'id' and a 'request.data.target'. For 'endpoint_call', provide 'endpoint'. For 'resource_stream', provide 'resource_stream'.",
+      "",
+      "Example input (to this tool):",
+      "{",
+      "  \"resources\": [",
+      "    {",
+      "      \"id\": \"downlink\",",
+      "      \"enabled\": true,",
+      "      \"handle_connectivity\": false,",
+      "      \"request\": {",
+      "        \"data\": {",
+      "          \"target\": \"endpoint_call\",",
+      "          \"endpoint\": \"downlink\",",
+      "          \"payload\": \"{\\n  \\\"payload\\\": {{payload}},\\n  \\\"uplink\\\": {{property.uplink}}\\n}\",",
+      "          \"payload_function\": \"prepareDownlink\",",
+      "          \"payload_type\": \"\"",
+      "        }",
+      "      },",
+      "      \"response\": { \"data\": {} }",
+      "    },",
+      "    {",
+      "      \"id\": \"uplink\",",
+      "      \"enabled\": true,",
+      "      \"handle_connectivity\": true,",
+      "      \"device_id_resolver\": \"get_id\",",
+      "      \"request\": {",
+      "        \"data\": {",
+      "          \"target\": \"resource_stream\",",
+      "          \"resource_stream\": \"uplink\",",
+      "          \"payload\": \"{{payload}}\",",
+      "          \"payload_function\": \"decodeUplink\",",
+      "          \"payload_type\": \"source_payload\"",
+      "        }",
+      "      },",
+      "      \"response\": { \"data\": {} }",
+      "    }",
+      "  ]",
+      "}",
+      "",
+      "Example output (to paste into profile.api):",
+      "{",
+      "  \"downlink\": {",
+      "    \"enabled\": true,",
+      "    \"handle_connectivity\": false,",
+      "    \"request\": {",
+      "      \"data\": {",
+      "        \"target\": \"endpoint_call\",",
+      "        \"endpoint\": \"downlink\",",
+      "        \"payload\": \"{\\n  \\\"payload\\\": {{payload}},\\n  \\\"uplink\\\": {{property.uplink}}\\n}\",",
+      "        \"payload_function\": \"prepareDownlink\",",
+      "        \"payload_type\": \"\"",
+      "      }",
+      "    },",
+      "    \"response\": { \"data\": {} }",
+      "  },",
+      "  \"uplink\": {",
+      "    \"device_id_resolver\": \"get_id\",",
+      "    \"enabled\": true,",
+      "    \"handle_connectivity\": true,",
+      "    \"request\": {",
+      "      \"data\": {",
+      "        \"target\": \"resource_stream\",",
+      "        \"resource_stream\": \"uplink\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"decodeUplink\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    },",
+      "    \"response\": { \"data\": {} }",
+      "  }",
+      "}"
+    ].join("\n"),
+    inputSchema: {
+      resources: z
+        .array(apiResourceSchema)
+        .min(1, "Provide at least one API resource")
+        .describe("Array of API resources; each item has { id, ...apiResource }."),
+    },
+  },
+  async ({ resources }) => {
+    try {
+      // Validate each resource
+      resources.forEach((r, i) => apiResourceSchema.parse(r, { path: [i] }));
+
+      // Construct the object
+      const built: Record<string, any> = {};
+      for (const r of resources) {
+        const cleanId = r.id.toLowerCase().replace(/\s+/g, "_");
+        if (!cleanId) throw new Error(`Invalid API resource id: "${r.id}" became empty after sanitization`);
+        if (built[cleanId]) throw new Error(`Duplicate API resource id after sanitization: "${cleanId}"`);
+        const { id, ...rest } = r;
+        built[cleanId] = rest;
+      }
+
+      const parsed = apiRecordSchema.parse(built);
+
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(parsed, null, 2) }
+        ],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [
+          { type: "text", text: `Invalid API resources payload: ${err?.message ?? String(err)}` }
+        ],
+      };
+    }
+  }
+);
 
 server.registerTool(
   "Build Product Autoprovisions",
