@@ -109,47 +109,41 @@ const autoProvisionSchema = z.record(
   }).strict()
 );
 
-export const apiResourceSchema = z.record(
-  z.string().describe("API resource ID"),
-  z.object({
-    enabled: z.boolean().default(true),
-    handle_connectivity: z.boolean().optional(),
-    device_id_resolver: z.string().optional(),
+export const apiResourceItemSchema = z.object({
+  id: z.string().min(1).describe("Unique API resource ID (object key in profile.api)"),
+  enabled: z.boolean().default(true),
+  handle_connectivity: z.boolean().optional(),
+  device_id_resolver: z.string().optional(),
 
-    request: z.object({
-      data: z.union([
-        z.object({
-          target: z.literal("endpoint_call"),
-          endpoint: z.string(),
-          payload: z.string().optional(),
-          payload_function: z.string().optional(),
-          payload_type: z.string().optional(),
-        }).strict(),
+  request: z.object({
+    data: z.union([
+      z.object({
+        target: z.literal("endpoint_call"),
+        endpoint: z.string(),
+        payload: z.string().optional(),
+        payload_function: z.string().optional(),
+        payload_type: z.string().optional(),
+      }).strict(),
 
-        z.object({
-          target: z.literal("resource_stream"),
-          resource_stream: z.string(),
-          payload: z.string().optional(),
-          payload_function: z.string().optional(),
-          payload_type: z.string().optional(),
-        }).strict(),
+      z.object({
+        target: z.literal("resource_stream"),
+        resource_stream: z.string(),
+        payload: z.string().optional(),
+        payload_function: z.string().optional(),
+        payload_type: z.string().optional(),
+      }).strict(),
 
-        z.object({
-          target: z.string(),
-        }).catchall(z.any()).strict(),
-      ]),
-    }).strict(),
+      z.object({
+        target: z.string(),
+      }).catchall(z.any()).strict(),
+    ]),
+  }).strict(),
 
-    response: z.object({
-      data: z.object({}).passthrough().optional(),
-    }).strict().optional(),
-  }).strict()
-);
-
-const apiRecordSchema = z.record(
-  z.string(),  // id normalizado
-  apiResourceSchema
-);
+  response: z.object({
+    // Permitimos payload/source/… sin limitar estructura
+    data: z.object({}).passthrough().optional(),
+  }).strict().optional(),
+}).strict();
 
 export const profileSchema = z.object({
   properties: z.object({}).passthrough().optional()
@@ -160,8 +154,8 @@ export const profileSchema = z.object({
     .describe("Optional: flows object"),
   endpoints: z.object({}).passthrough().optional()
     .describe("Optional: endpoints object"),
-  api: z.object({}).passthrough().optional()
-    .describe("Optional: custom API object"),
+  api: z.record(z.string(), apiResourceItemSchema.omit({ id: true })).optional()
+    .describe("Optional: API resources object. Build it with 'Build Product API Resources' and paste here."),
   autoprovisions: autoProvisionSchema.optional()
     .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
 }).strict();
@@ -171,15 +165,33 @@ server.registerTool(
   {
     title: "Build Product API Resources (for Thinger.io profile.api)",
     description: [
-      "Tool for LLMs to construct the 'profile.api' JSON fragment required by Thinger.io.",
-      "It returns ONLY the JSON fragment for 'profile.api', not the whole product.",
+      "This tool builds ONLY the JSON fragment for 'profile.api' in a Thinger.io Product resource.",
+      "A resource is an endpoint definition that maps incoming requests to actions (endpoint calls, resource streams, plugin endpoints, etc).",
+      "This API endpoint is opened in each device that matches the product template.",
+      "WHAT TO SEND (INPUT ARGUMENT):",
+      "- Provide `resources` as an ARRAY of items. Each item MUST include:",
+      "  {",
+      "    \"id\": string,                       // unique resource id (becomes the object key)",
+      "    \"enabled\"?: boolean,",
+      "    \"handle_connectivity\"?: boolean,",
+      "    \"device_id_resolver\"?: string,",
+      "    \"request\": {",
+      "      \"data\": one of:",
+      "        - { \"target\": \"endpoint_call\", \"endpoint\": string, \"payload\"?: string, \"payload_function\"?: string, \"payload_type\"?: string }",
+      "        - { \"target\": \"resource_stream\", \"resource_stream\": string, \"payload\"?: string, \"payload_function\"?: string, \"payload_type\"?: string }",
+      "        - { \"target\": \"plugin_endpoint\", \"plugin\": string, \"path\": string, \"payload\"?: string, \"payload_function\"?: string, \"payload_type\"?: string }",
+      "        - { \"target\": string, ... } // generic fallback",
+      "    },",
+      "    \"response\"?: { \"data\"?: { ... } } // free-form passthrough",
+      "  }",
       "",
-      "Usage guidance for the LLM:",
-      "- When you need API resources, FIRST call this tool to generate the JSON fragment.",
-      "- COPY the resulting JSON and PASTE it under 'profile.api' when calling 'Create Product'.",
-      "- Each resource needs an 'id' and a 'request.data.target'. For 'endpoint_call', provide 'endpoint'. For 'resource_stream', provide 'resource_stream'.",
+      "STRICT RULES:",
+      "- Input MUST be an array: { \"resources\": [ {id, ...}, ... ] }.",
+      "- Each 'id' MUST be unique in the array.",
+      "- The tool OUTPUT is a SINGLE OBJECT indexed by each 'id'.",
+      "- Escape JSON strings properly (e.g., newlines as \\n, quotes as \\\" ).",
       "",
-      "Example input (to this tool):",
+      "EXAMPLE INPUT (send to this tool):",
       "{",
       "  \"resources\": [",
       "    {",
@@ -188,14 +200,22 @@ server.registerTool(
       "      \"handle_connectivity\": false,",
       "      \"request\": {",
       "        \"data\": {",
-      "          \"target\": \"endpoint_call\",",
-      "          \"endpoint\": \"downlink\",",
-      "          \"payload\": \"{\\n  \\\"payload\\\": {{payload}},\\n  \\\"uplink\\\": {{property.uplink}}\\n}\",",
-      "          \"payload_function\": \"prepareDownlink\",",
+      "          \"target\": \"plugin_endpoint\",",
+      "          \"plugin\": \"{{property.source}}\",",
+      "          \"path\": \"/downlink\",",
+      "          \"payload\": \"{\\n    \\\"data\\\"    : \\\"{{payload.data=\\\"\\\"}}\\\",\\n    \\\"port\\\"    :  {{payload.port=85}},\\n    \\\"priority\\\" :  {{payload.priority=3}},\\n    \\\"confirmed\\\" :  {{payload.confirmed=false}},\\n    \\\"uplink\\\"  :  {{property.uplink}} \\n}\",",
+      "          \"payload_function\": \"\",",
       "          \"payload_type\": \"\"",
       "        }",
       "      },",
-      "      \"response\": { \"data\": {} }",
+      "      \"response\": {",
+      "        \"data\": {",
+      "          \"payload\": \"{{payload}}\",",
+      "          \"payload_function\": \"\",",
+      "          \"payload_type\": \"source_payload\",",
+      "          \"source\": \"request_response\"",
+      "        }",
+      "      }",
       "    },",
       "    {",
       "      \"id\": \"uplink\",",
@@ -207,7 +227,7 @@ server.registerTool(
       "          \"target\": \"resource_stream\",",
       "          \"resource_stream\": \"uplink\",",
       "          \"payload\": \"{{payload}}\",",
-      "          \"payload_function\": \"decodeUplink\",",
+      "          \"payload_function\": \"\",",
       "          \"payload_type\": \"source_payload\"",
       "        }",
       "      },",
@@ -216,21 +236,29 @@ server.registerTool(
       "  ]",
       "}",
       "",
-      "Example output (to paste into profile.api):",
+      "EXAMPLE OUTPUT (paste under profile.api):",
       "{",
       "  \"downlink\": {",
       "    \"enabled\": true,",
       "    \"handle_connectivity\": false,",
       "    \"request\": {",
       "      \"data\": {",
-      "        \"target\": \"endpoint_call\",",
-      "        \"endpoint\": \"downlink\",",
-      "        \"payload\": \"{\\n  \\\"payload\\\": {{payload}},\\n  \\\"uplink\\\": {{property.uplink}}\\n}\",",
-      "        \"payload_function\": \"prepareDownlink\",",
-      "        \"payload_type\": \"\"",
+      "        \"path\": \"/downlink\",",
+      "        \"payload\": \"{\\n    \\\"data\\\"    : \\\"{{payload.data=\\\"\\\"}}\\\",\\n    \\\"port\\\"    :  {{payload.port=85}},\\n    \\\"priority\\\" :  {{payload.priority=3}},\\n    \\\"confirmed\\\" :  {{payload.confirmed=false}},\\n    \\\"uplink\\\"  :  {{property.uplink}} \\n}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"\",",
+      "        \"plugin\": \"{{property.source}}\",",
+      "        \"target\": \"plugin_endpoint\"",
       "      }",
       "    },",
-      "    \"response\": { \"data\": {} }",
+      "    \"response\": {",
+      "      \"data\": {",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\",",
+      "        \"source\": \"request_response\"",
+      "      }",
+      "    }",
       "  },",
       "  \"uplink\": {",
       "    \"device_id_resolver\": \"get_id\",",
@@ -238,56 +266,58 @@ server.registerTool(
       "    \"handle_connectivity\": true,",
       "    \"request\": {",
       "      \"data\": {",
-      "        \"target\": \"resource_stream\",",
-      "        \"resource_stream\": \"uplink\",",
       "        \"payload\": \"{{payload}}\",",
-      "        \"payload_function\": \"decodeUplink\",",
-      "        \"payload_type\": \"source_payload\"",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\",",
+      "        \"target\": \"resource_stream\"",
       "      }",
       "    },",
       "    \"response\": { \"data\": {} }",
       "  }",
-      "}"
-    ].join("\n"),
+      "}",
+      "",
+      "HOW TO USE:",
+      "- First call this tool to build the 'profile.api' JSON fragment.",
+      "- Then paste the returned object under 'profile.api' in your 'Create Product' call."
+    ].join("\\n"),
     inputSchema: {
       resources: z
-        .array(apiResourceSchema)
+        .array(apiResourceItemSchema)
         .min(1, "Provide at least one API resource")
-        .describe("Array of API resources; each item has { id, ...apiResource }."),
+        .describe("Array of API resource ITEMS. Each item has { id, ...fields }. The tool returns an OBJECT keyed by id."),
     },
   },
   async ({ resources }) => {
     try {
-      // Validate each resource
-      resources.forEach((r, i) => apiResourceSchema.parse(r, { path: [i] }));
-
-      // Construct the object
-      const built: Record<string, any> = {};
+      // Validate each item
       for (const r of resources) {
-        const cleanId = r.id.toLowerCase().replace(/\s+/g, "_");
-        if (!cleanId) throw new Error(`Invalid API resource id: "${r.id}" became empty after sanitization`);
-        if (built[cleanId]) throw new Error(`Duplicate API resource id after sanitization: "${cleanId}"`);
-        const { id, ...rest } = r;
-        built[cleanId] = rest;
+        apiResourceItemSchema.parse(r);
       }
 
-      const parsed = apiRecordSchema.parse(built);
+      // Build the output object keyed by id
+      const out: Record<string, Omit<z.infer<typeof apiResourceItemSchema>, "id">> = {};
+      for (const { id, ...rest } of resources) {
+        if (out[id]) {
+          throw new Error(`Duplicated resource id '${id}'. Each 'id' must be unique.`);
+        }
+        out[id] = rest;
+      }
+
+      // Optional: validate final fragment against your record schema (if desired)
+      // apiResourceSchema.parse(out);
 
       return {
-        content: [
-          { type: "text", text: JSON.stringify(parsed, null, 2) }
-        ],
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
       };
     } catch (err: any) {
       return {
         isError: true,
-        content: [
-          { type: "text", text: `Invalid API resources payload: ${err?.message ?? String(err)}` }
-        ],
+        content: [{ type: "text", text: `Invalid API resources payload: ${err?.message ?? String(err)}` }],
       };
     }
   }
 );
+
 
 server.registerTool(
   "Build Product Autoprovisions",
