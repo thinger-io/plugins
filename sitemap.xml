@@ -81,6 +81,10 @@
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/announcements/wika-integrations-version-100-released/</loc>
+         <lastmod>2025-10-08</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/contributing/</loc>
          <lastmod>2025-10-08</lastmod>
     </url>
@@ -509,7 +513,7 @@
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
-         <loc>https://marketplace.thinger.io/announcements/category/chirpstack/</loc>
+         <loc>https://marketplace.thinger.io/announcements/category/sensors/</loc>
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
@@ -517,11 +521,23 @@
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
-         <loc>https://marketplace.thinger.io/announcements/category/lns/</loc>
+         <loc>https://marketplace.thinger.io/announcements/category/wika/</loc>
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/integrations/</loc>
+         <lastmod>2025-10-08</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/announcements/category/data/</loc>
+         <lastmod>2025-10-08</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/announcements/category/chirpstack/</loc>
+         <lastmod>2025-10-08</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/announcements/category/lns/</loc>
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
@@ -626,10 +642,6 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/sftpgo/</loc>
-         <lastmod>2025-10-08</lastmod>
-    </url>
-    <url>
-         <loc>https://marketplace.thinger.io/announcements/category/data/</loc>
          <lastmod>2025-10-08</lastmod>
     </url>
     <url>
