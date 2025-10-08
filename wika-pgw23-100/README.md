@@ -1,18 +1,18 @@
-# WIKA PEW‑1000
+# WIKA PGW-23-100
 
 <p align="center">
   <img src="/plugins/wika-pgw23-100/assets/wika-pgw23-100.jpg" alt="Dragino LT-22222-L logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/dragino-lt22222l/assets/LT-22222-L.png';this.onerror='';">
 </p>
 
-The WIKA PEW‑1000 is a compact, wireless pressure sensor designed for remote monitoring of gases and liquids. It features LoRaWAN® wireless connectivity and Bluetooth® for local configuration. Built for industrial use, it offers long battery life, robust environmental protection, and high-accuracy pressure readings.
+The WIKA PGW23-100 is a hybrid IIoT pressure gauge: it combines a mechanical on-site Bourdon tube display with wireless LoRaWAN® communication for remote monitoring. It is designed for process-industry applications where you want both local indication and centralized data collection.
 
 ## Thinger.io Integration
 
-To integrate the WIKA PEW‑1000 with Thinger.io, you will need a LoRaWAN Network Server (LNS) with it's corresponding Thinger.io plugin.
+This plugin allows you to integrate PGW23-100 devices into Thinger.io via a LoRaWAN Network Server (LNS) and the corresponding Thinger.io LoRaWAN plugin.
 
 ## Requirements
 
-A LoRaWAN server is required to communicate the WIKA PEW‑1000 with Thinger.io. Supported options include:
+A LoRaWAN server is required to communicate the WIKA PGW-23-100 with Thinger.io. Supported options include:
 
 - [The Things Stack](https://www.thethingsindustries.com/stack/)
 - [LORIOT](https://loriot.io/)
@@ -34,18 +34,19 @@ If using Bluetooth® for local setup, ensure the device is configured to use LoR
 
 ## Usage
 
-Begin sending uplink frames from the PEW‑1000. Devices and data buckets will be auto-provisioned in your Thinger.io account.
+Begin sending uplink frames from the PGW-23-100. Devices and data buckets will be auto-provisioned in your Thinger.io account.
 
 This plugin also includes:
 
 - A prebuilt dashboard for data visualization.
+- Preconfigured data buckets for storing sensor readings.
 - Support for downlink commands to remotely configure the sensor.
 
 ## Features Overview
 
 -  **Wireless Protocols**:
     - LoRaWAN® for long-range communication.
-    - Bluetooth® for local configuration.
+    - NFC for easy device commissioning and configuration.
 
 -  **Sensor Capabilities**:
     - High-accuracy pressure and temperature measurement.
@@ -61,13 +62,9 @@ This plugin also includes:
 - **Power**:
     - Replaceable battery with up to 10 years of lifetime (depending on transmission interval and environment).
 
-- **Rugged Design**:
-    - IP65-rated enclosure for outdoor and industrial use.
-
 ## Additional Resources
 
 WIKA official resources and documentation:
 
-- [PEW‑1000 Product Page](https://www.wika.com/en-us/pew_1000.WIKA)
-- [PEW‑1000 Operating Manual (PDF)](https://www.wika.com/media/Operating-instructions/Operating-instructions/Pressure/Pressure-sensors/sd_pew_1000_en_co.pdf)
-- [PEW‑1000 + PEW‑1200 Bluetooth® Configuration Guide](https://www.wika.nl/upload/SD_PEW_1000_PEW_1200_en_113765.pdf)
+- [WIKA PGW-23-100 Product Page](https://www.wika.com/es-es/pgw23_100_pgw26_100.WIKA)
+- [WIKA PGW-23-100 Configuration Guide](https://www.wika.com/media/Operating-instructions/Additional-operating-instructions/Non-Ex/ai_lora_mioty_en_de_fr_es.pdf)
