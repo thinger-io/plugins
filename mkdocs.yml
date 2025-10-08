@@ -190,6 +190,7 @@ nav:
       - TTN: '!include ./ttn/mkdocs.yml'
       - Siemens LOGO!: '!include ./siemens-logo/mkdocs.yml'
       - VS Code: '!include ./vscode/mkdocs.yml'
+      - Wika PGW23-100: '!include ./wika-pgw23-100/mkdocs.yml'
       - Wika PEW1000: '!include ./wika-pew1000/mkdocs.yml'
   - Contributing:
     - 'contributing/index.md'
