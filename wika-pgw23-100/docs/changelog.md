@@ -1,2 +1,2 @@
 
---8<-- "wika-pew1000/CHANGELOG.md"
+--8<-- "wika-pgw23-100/CHANGELOG.md"
