@@ -155,4 +155,6 @@ export const profileSchema = z.object({
     .describe("Optional: API resources object. Build it with 'Build Product API Resources' and paste here."),
   autoprovisions: autoProvisionSchema.optional()
     .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
+  code: z.object({}).passthrough().optional()
+    .describe("Optional: custom code object"),
 }).strict();
