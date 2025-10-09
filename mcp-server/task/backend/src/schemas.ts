@@ -11,6 +11,51 @@ export const autoProvisionSchema = z.record(
   }).strict()
 );
 
+// The following schema is used in multiple places, so we define it separately
+const dataSourceSchema = z.union([
+  z.object({
+    source: z.literal("event"),
+    payload_type: z.literal("source_payload"),
+    payload_function: z.string().optional(),
+    event: z.enum(["device_callback_call", "device_property_create", "device_property_update",
+      "device_resource_request_failed", "device_state_change", "device_stats_data",
+      "device_topic_subscribe", "device_topic_unsubscribe"]),
+    payload: z.string().default("{{payload}}").optional(),
+  }).strict(),
+
+  z.object({
+    source: z.literal("topic"),
+    payload_type: z.literal("source_payload"),
+    payload_function: z.string().optional(),
+    topic: z.string(),
+    payload: z.string().default("{{payload}}").optional(),
+  }).strict(),
+
+  z.object({
+    target: z.literal("resource_stream"),
+    resource_stream: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+
+  z.object({
+    source: z.literal("resource"),
+    resource: z.string(),
+    update: z.enum(['events']).default('events'),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+]);
+
+export const propertyItemSchema = z.object({
+  id: z.string().describe("Unique Property ID (object key in profile.properties)"),
+  enabled: z.boolean().default(true),
+  default: z.object({}).passthrough().optional(),
+  data: dataSourceSchema,
+});
+
 export const bucketItemSchema = z.object({
   id: z.string().min(1).describe("Unique Bucket ID (object key in profile.buckets)"),
   enabled: z.boolean().default(true),
@@ -20,25 +65,7 @@ export const bucketItemSchema = z.object({
     unit: z.enum(['hours', 'days', 'weeks', 'months', 'years'])
   }),
   tags: z.array(z.string()).optional(),
-  data: z.union([
-    z.object({
-      source: z.literal("event"),
-      payload_type: z.literal("source_payload"),
-      payload_function: z.string().optional(),
-      event: z.enum(["device_callback_call", "device_property_create", "device_property_update",
-        "device_resource_request_failed", "device_state_change", "device_stats_data",
-        "device_topic_subscribe", "device_topic_unsubscribe"]),
-      payload: z.string().default("{{payload}}").optional(),
-    }).strict(),
-
-    z.object({
-      source: z.literal("topic"),
-      payload_type: z.literal("source_payload"),
-      payload_function: z.string().optional(),
-      topic: z.string(),
-      payload: z.string().default("{{payload}}").optional(),
-    }).strict(),
-  ]),
+  data: dataSourceSchema,
 }).strict();
 
 export const flowsItemSchema = z.object({
@@ -46,25 +73,7 @@ export const flowsItemSchema = z.object({
   enabled: z.boolean().default(true),
   split_data: z.boolean().default(false),
 
-  data: z.union([
-    z.object({
-      source: z.literal("event"),
-      payload_type: z.literal("source_payload"),
-      payload_function: z.string().optional(),
-      event: z.enum(["device_callback_call", "device_property_create", "device_property_update",
-        "device_resource_request_failed", "device_state_change", "device_stats_data",
-        "device_topic_subscribe", "device_topic_unsubscribe"]),
-      payload: z.string().default("{{payload}}").optional(),
-    }).strict(),
-
-    z.object({
-      source: z.literal("topic"),
-      payload_type: z.literal("source_payload"),
-      payload_function: z.string().optional(),
-      topic: z.string(),
-      payload: z.string().default("{{payload}}").optional(),
-    }).strict(),
-  ]),
+  data: dataSourceSchema,
 
   sink: z.union([
     z.object({
@@ -100,31 +109,7 @@ export const apiResourceItemSchema = z.object({
   device_id_resolver: z.string().optional(),
 
   request: z.object({
-    data: z.union([
-      z.object({
-        target: z.literal("endpoint_call"),
-        endpoint: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-
-      z.object({
-        target: z.literal("resource_stream"),
-        resource_stream: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-
-      z.object({
-        target: z.literal("topic"),
-        topic: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-    ]),
+    data: dataSourceSchema,
   }).strict(),
 
   response: z.object({

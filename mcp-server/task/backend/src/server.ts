@@ -8,7 +8,7 @@ import { ProductsApi, ApiException, ProductCreateRequest} from '@thinger-io/thin
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
 import {FrontEndRouter} from "./frontend/routes.js";
-import { autoProvisionSchema, apiResourceItemSchema, flowsItemSchema, bucketItemSchema, profileSchema } from "./schemas.js";
+import { autoProvisionSchema, apiResourceItemSchema, flowsItemSchema, bucketItemSchema, propertyItemSchema, profileSchema } from "./schemas.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
@@ -96,6 +96,172 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 }
 
 // SERVER CAPABILITIES
+
+server.registerTool(
+  "Build Product Properties Tool",
+  {
+    title: "Build Product Properties (for Thinger.io profile.properties)",
+    description: [
+      "This tool builds ONLY the JSON fragment for 'profile.properties' in a Thinger.io Product resource.",
+      "Product properties are key-value resources that can be pre-populated (default) and/or fed from a data source.",
+      "Each property will be created/inherited for every device that matches the product template.",
+      "The result MUST be pasted under 'profile.properties'.",
+      "",
+      "WHAT TO SEND (INPUT ARGUMENT):",
+      "- Provide `properties` as an ARRAY of items. Each item MUST include:",
+      "  {",
+      "    \"id\": string,                       // unique property id (becomes the object key)",
+      "    \"enabled\"?: boolean,                // default true",
+      "    \"default\"?: object,                 // optional initial value (free-form JSON)",
+      "    \"data\": one of:",
+      "      - { \"source\": \"event\",  \"event\": <enum>,  \"payload_type\": \"source_payload\", \"payload\"?: string, \"payload_function\"?: string }",
+      "      - { \"source\": \"topic\",  \"topic\": string,  \"payload_type\": \"source_payload\", \"payload\"?: string, \"payload_function\"?: string }",
+      "      - { \"target\": \"resource_stream\", \"resource_stream\": string, \"payload\"?: string, \"payload_function\"?: string, \"payload_type\"?: string }",
+      "      - { \"source\": \"resource\", \"resource\": string, \"update\"?: \"events\", \"payload\"?: string, \"payload_function\"?: string, \"payload_type\"?: string }",
+      "  }",
+      "",
+      "STRICT RULES:",
+      "- Input MUST be an array: { \"properties\": [ {id, ...}, ... ] }.",
+      "- Each 'id' MUST be unique in the array.",
+      "- The tool OUTPUT is a SINGLE OBJECT indexed by each 'id'.",
+      "- Escape JSON strings properly (e.g., newlines as \\n, quotes as \\\" ).",
+      "",
+      "EXAMPLE INPUT (send to this tool):",
+      "{",
+      "  \"properties\": [",
+      "    {",
+      "      \"id\": \"model\",",
+      "      \"default\": { \"value\": \"dragino-lgt92\" },",
+      "      \"enabled\": true,",
+      "      \"data\": {",
+      "        \"source\": \"topic\",",
+      "        \"topic\": \"devices/{{device}}/props/model\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    },",
+      "    {",
+      "      \"id\": \"last_uplink\",",
+      "      \"enabled\": true,",
+      "      \"data\": {",
+      "        \"source\": \"event\",",
+      "        \"event\": \"device_property_update\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    },",
+      "    {",
+      "      \"id\": \"streamed_value\",",
+      "      \"enabled\": true,",
+      "      \"data\": {",
+      "        \"target\": \"resource_stream\",",
+      "        \"resource_stream\": \"telemetry\",",
+      "        \"payload\": \"{{payload}}\"",
+      "      }",
+      "    },",
+      "    {",
+      "      \"id\": \"resource_events\",",
+      "      \"enabled\": true,",
+      "      \"data\": {",
+      "        \"source\": \"resource\",",
+      "        \"resource\": \"downlink\",",
+      "        \"update\": \"events\",",
+      "        \"payload\": \"{{payload}}\"",
+      "      }",
+      "    }",
+      "  ]",
+      "}",
+      "",
+      "EXAMPLE OUTPUT (paste under profile.properties):",
+      "{",
+      "  \"model\": {",
+      "    \"enabled\": true,",
+      "    \"default\": { \"value\": \"dragino-lgt92\" },",
+      "    \"data\": {",
+      "      \"source\": \"topic\",",
+      "      \"topic\": \"devices/{{device}}/props/model\",",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    }",
+      "  },",
+      "  \"last_uplink\": {",
+      "    \"enabled\": true,",
+      "    \"data\": {",
+      "      \"source\": \"event\",",
+      "      \"event\": \"device_property_update\",",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    }",
+      "  },",
+      "  \"streamed_value\": {",
+      "    \"enabled\": true,",
+      "    \"data\": {",
+      "      \"target\": \"resource_stream\",",
+      "      \"resource_stream\": \"telemetry\",",
+      "      \"payload\": \"{{payload}}\"",
+      "    }",
+      "  },",
+      "  \"resource_events\": {",
+      "    \"enabled\": true,",
+      "    \"data\": {",
+      "      \"source\": \"resource\",",
+      "      \"resource\": \"downlink\",",
+      "      \"update\": \"events\",",
+      "      \"payload\": \"{{payload}}\"",
+      "    }",
+      "  }",
+      "}",
+      "",
+      "HOW TO USE:",
+      "- First call this tool to build the 'profile.properties' JSON fragment.",
+      "- Then paste the returned object under 'profile.properties' in your 'Create Product' call.",
+    ].join("\\n"),
+    inputSchema: {
+      properties: z
+        .array(propertyItemSchema)
+        .min(1, "Provide at least one property item")
+        .describe(
+          "Array of PROPERTY ITEMS. Each item has { id, ...fields }. The tool returns an OBJECT keyed by id."
+        ),
+    },
+  },
+  async ({ properties }) => {
+    try {
+      // Validate each item
+      for (const p of properties) {
+        propertyItemSchema.parse(p);
+      }
+
+      // Build the output object keyed by id
+      const out: Record<string, Omit<z.infer<typeof propertyItemSchema>, "id">> = {};
+      for (const { id, ...rest } of properties) {
+        if (out[id]) {
+          throw new Error(`Duplicated property id '${id}'. Each 'id' must be unique.`);
+        }
+        out[id] = rest;
+      }
+
+      // Return the fragment to paste under profile.properties
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Invalid PROPERTIES payload: ${err?.message ?? String(err)}`,
+          },
+        ],
+      };
+    }
+  }
+);
 
 server.registerTool(
   "Build Product Buckets Tool",
