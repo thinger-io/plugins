@@ -3,15 +3,14 @@ import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import fetch from 'node-fetch';
-import {DevicesApi, ProductsApi, ApiException, ProductCreateRequest} from '@thinger-io/thinger-node'
+import { ProductsApi, ApiException, ProductCreateRequest} from '@thinger-io/thinger-node'
 
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
 import {FrontEndRouter} from "./frontend/routes.js";
+import { autoProvisionSchema, apiResourceItemSchema, flowsItemSchema, bucketItemSchema, profileSchema } from "./schemas.js";
 
 // Initialize thinger API
-const devicesApi = new DevicesApi(thingerApiConfig);
 const productsApi = new ProductsApi(thingerApiConfig);
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -25,8 +24,8 @@ const server = new McpServer({
   version: '1.0.0',
 });
 
-const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18'];                               // MCP Protocol spec
-const REQUIRED_CLIENT_CAPABILITIES: string[] = [];                                // Client capabilities
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18'];                  // MCP Protocol spec
+const REQUIRED_CLIENT_CAPABILITIES: string[] = [];                                        // Client capabilities
 const REQUEST_TIMEOUT_MS = Number(process.env.MCP_REQUEST_TIMEOUT_MS ?? 10000);   // Response timeout (default: 10s)
 
 // HELPERS
@@ -98,70 +97,275 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 
 // SERVER CAPABILITIES
 
-const autoProvisionSchema = z.record(
-  z.string().describe("Autoprovisioning ID"), // Autoprisioning ID (key)
-  z.object({
-    "config": z.object({
-      "mode": z.enum(['pattern']),
-      "pattern": z.string()
-    }),
-    "enabled": z.boolean(),
-  }).strict()
+server.registerTool(
+  "Build Product Buckets Tool",
+  {
+    title: "Build Product Buckets (for Thinger.io profile.buckets)",
+    description: [
+      "This tool builds ONLY the JSON fragment for 'profile.buckets' in a Thinger.io Product resource.",
+      "A bucket defines where and how device data is persisted (backend, retention policy, tags) and what source feeds it.",
+      "Each bucket will be created/inherited for every device that matches the product template.",
+      "The result MUST be pasted under 'profile.buckets'.",
+      "",
+      "WHAT TO SEND (INPUT ARGUMENT):",
+      "- Provide `buckets` as an ARRAY of items. Each item MUST include:",
+      "  {",
+      "    \"id\": string,                 // unique bucket id (becomes the object key)",
+      "    \"enabled\"?: boolean,         // default true",
+      "    \"backend\"?: \"mongodb\" | \"influxdb\" // default \"mongodb\"",
+      "    \"retention\": { \"period\": number, \"unit\": \"hours\"|\"days\"|\"weeks\"|\"months\"|\"years\" },",
+      "    \"tags\"?: string[],",
+      "    \"data\": one of:",
+      "      - { \"source\": \"event\", \"event\": <enum>, \"payload_type\": \"source_payload\", \"payload\"?: string, \"payload_function\"?: string }",
+      "      - { \"source\": \"topic\", \"topic\": string, \"payload_type\": \"source_payload\", \"payload\"?: string, \"payload_function\"?: string }",
+      "  }",
+      "",
+      "STRICT RULES:",
+      "- Input MUST be an array: { \"buckets\": [ {id, ...}, ... ] }.",
+      "- Each 'id' MUST be unique in the array.",
+      "- The tool OUTPUT is a SINGLE OBJECT indexed by each 'id'.",
+      "- Escape JSON strings properly (e.g., newlines as \\n, quotes as \\\" ).",
+      "",
+      "EXAMPLE INPUT (send to this tool):",
+      "{",
+      "  \"buckets\": [",
+      "    {",
+      "      \"id\": \"uplink_events\",",
+      "      \"enabled\": true,",
+      "      \"backend\": \"mongodb\",",
+      "      \"retention\": { \"period\": 30, \"unit\": \"days\" },",
+      "      \"tags\": [\"uplink\", \"debug\"],",
+      "      \"data\": {",
+      "        \"source\": \"event\",",
+      "        \"event\": \"device_property_update\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    },",
+      "    {",
+      "      \"id\": \"lora_topic\",",
+      "      \"enabled\": true,",
+      "      \"backend\": \"influxdb\",",
+      "      \"retention\": { \"period\": 12, \"unit\": \"months\" },",
+      "      \"data\": {",
+      "        \"source\": \"topic\",",
+      "        \"topic\": \"devices/{{device}}/uplink\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    }",
+      "  ]",
+      "}",
+      "",
+      "EXAMPLE OUTPUT (paste under profile.buckets):",
+      "{",
+      "  \"uplink_events\": {",
+      "    \"enabled\": true,",
+      "    \"backend\": \"mongodb\",",
+      "    \"retention\": { \"period\": 30, \"unit\": \"days\" },",
+      "    \"tags\": [\"uplink\", \"debug\"],",
+      "    \"data\": {",
+      "      \"source\": \"event\",",
+      "      \"event\": \"device_property_update\",",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    }",
+      "  },",
+      "  \"lora_topic\": {",
+      "    \"enabled\": true,",
+      "    \"backend\": \"influxdb\",",
+      "    \"retention\": { \"period\": 12, \"unit\": \"months\" },",
+      "    \"data\": {",
+      "      \"source\": \"topic\",",
+      "      \"topic\": \"devices/{{device}}/uplink\",",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    }",
+      "  }",
+      "}",
+      "",
+      "HOW TO USE:",
+      "- First call this tool to build the 'profile.buckets' JSON fragment.",
+      "- Then paste the returned object under 'profile.buckets' in your 'Create Product' call."
+    ].join("\\n"),
+    inputSchema: {
+      buckets: z
+        .array(bucketItemSchema)
+        .min(1, "Provide at least one bucket")
+        .describe("Array of BUCKET ITEMS. Each item has { id, ...fields }. The tool returns an OBJECT keyed by id."),
+    },
+  },
+  async ({ buckets }) => {
+    try {
+      // Validate each item
+      for (const b of buckets) {
+        bucketItemSchema.parse(b);
+      }
+
+      // Build the output object keyed by id
+      const out: Record<string, Omit<z.infer<typeof bucketItemSchema>, "id">> = {};
+      for (const { id, ...rest } of buckets) {
+        if (out[id]) {
+          throw new Error(`Duplicated bucket id '${id}'. Each 'id' must be unique.`);
+        }
+        out[id] = rest;
+      }
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Invalid BUCKETS payload: ${err?.message ?? String(err)}`,
+          },
+        ],
+      };
+    }
+  }
 );
 
-export const apiResourceItemSchema = z.object({
-  id: z.string().min(1).describe("Unique API resource ID (object key in profile.api)"),
-  enabled: z.boolean().default(true),
-  handle_connectivity: z.boolean().optional(),
-  device_id_resolver: z.string().optional(),
+server.registerTool(
+  "Build Product Flows Tool",
+  {
+    title: "Build Product Flows (for Thinger.io profile.flows)",
+    description: [
+      "This tool builds ONLY the JSON fragment for 'profile.flows' in a Thinger.io Product resource.",
+      "Each flow is a pipeline with a data source (trigger) and a sink (destination) embeded in a product profile.",
+      "Each pipeline will be inherited for every device that matches the product template.",
+      "The result MUST be pasted under 'profile.flows'.",
+      "",
+      "WHAT TO SEND (INPUT ARGUMENT):",
+      "- Provide `flows` as an ARRAY of items. Each item MUST include:",
+      "  {",
+      "    \"id\": string,                 // unique flow id (becomes the object key)",
+      "    \"enabled\"?: boolean,         // default true",
+      "    \"split_data\"?: boolean,      // default false",
+      "    \"data\": {                    // source / trigger, discriminated by 'source'",
+      "      \"source\": \"event\",",
+      "      \"event\": one of: \"device_callback_call\" | \"device_property_create\" | \"device_property_update\" | \"device_resource_request_failed\" | \"device_state_change\" | \"device_stats_data\" | \"device_topic_subscribe\" | \"device_topic_unsubscribe\",",
+      "      \"filter\"?: { \"property\": string },",
+      "      \"payload\"?: string,",
+      "      \"payload_function\"?: string,",
+      "      \"payload_type\"?: string     // e.g. \"source_payload\"",
+      "    },",
+      "    \"sink\": {                     // destination, discriminated by 'target'",
+      "      \"target\": \"resource\",",
+      "      \"resource\": string,",
+      "      \"payload\"?: string,",
+      "      \"payload_function\"?: string,",
+      "      \"payload_type\"?: string",
+      "    }",
+      "  }",
+      "",
+      "STRICT RULES:",
+      "- Input MUST be an array: { \"flows\": [ {id, ...}, ... ] }.",
+      "- Each 'id' MUST be unique in the array.",
+      "- The tool OUTPUT is a SINGLE OBJECT indexed by each 'id'.",
+      "- Escape JSON strings properly (e.g., newlines as \\n, quotes as \\\" ).",
+      "",
+      "EXAMPLE INPUT (send to this tool):",
+      "{",
+      "  \"flows\": [",
+      "    {",
+      "      \"id\": \"downlink_flow\",",
+      "      \"enabled\": true,",
+      "      \"split_data\": false,",
+      "      \"data\": {",
+      "        \"source\": \"event\",",
+      "        \"event\": \"device_property_update\",",
+      "        \"filter\": { \"property\": \"dragino_downlink_sender\" },",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      },",
+      "      \"sink\": {",
+      "        \"target\": \"resource\",",
+      "        \"resource\": \"downlink\",",
+      "        \"payload\": \"{{payload}}\",",
+      "        \"payload_function\": \"\",",
+      "        \"payload_type\": \"source_payload\"",
+      "      }",
+      "    }",
+      "  ]",
+      "}",
+      "",
+      "EXAMPLE OUTPUT (paste under profile.flows):",
+      "{",
+      "  \"downlink_flow\": {",
+      "    \"data\": {",
+      "      \"source\": \"event\",",
+      "      \"event\": \"device_property_update\",",
+      "      \"filter\": { \"property\": \"dragino_downlink_sender\" },",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    },",
+      "    \"enabled\": true,",
+      "    \"sink\": {",
+      "      \"target\": \"resource\",",
+      "      \"resource\": \"downlink\",",
+      "      \"payload\": \"{{payload}}\",",
+      "      \"payload_function\": \"\",",
+      "      \"payload_type\": \"source_payload\"",
+      "    },",
+      "    \"split_data\": false",
+      "  }",
+      "}",
+      "",
+      "HOW TO USE:",
+      "- First call this tool to build the 'profile.flows' JSON fragment.",
+      "- Then paste the returned object under 'profile.flows' in your 'Create Product' call."
+    ].join("\\n"),
+    inputSchema: {
+      flows: z.array(flowsItemSchema)
+        .min(1, "Provide at least one flow")
+        .describe("Array of FLOW ITEMS. Each item has { id, ...fields }. The tool returns an OBJECT keyed by id."),
+    },
+  },
+  async ({ flows }) => {
+    try {
+      // Validate each item
+      for (const f of flows) {
+        flowsItemSchema.parse(f);
+      }
 
-  request: z.object({
-    data: z.union([
-      z.object({
-        target: z.literal("endpoint_call"),
-        endpoint: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
+      // Build the output object keyed by id
+      const out: Record<string, Omit<z.infer<typeof flowsItemSchema>, "id">> = {};
+      for (const { id, ...rest } of flows) {
+        if (out[id]) {
+          throw new Error(`Duplicated flow id '${id}'. Each 'id' must be unique.`);
+        }
+        out[id] = rest;
+      }
 
-      z.object({
-        target: z.literal("resource_stream"),
-        resource_stream: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
+      return {
+        content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Invalid FLOWS payload: ${err?.message ?? String(err)}`,
+          },
+        ],
+      };
+    }
+  }
+);
 
-      z.object({
-        target: z.string(),
-      }).catchall(z.any()).strict(),
-    ]),
-  }).strict(),
-
-  response: z.object({
-    // Permitimos payload/source/… sin limitar estructura
-    data: z.object({}).passthrough().optional(),
-  }).strict().optional(),
-}).strict();
-
-export const profileSchema = z.object({
-  properties: z.object({}).passthrough().optional()
-    .describe("Optional: product properties object"),
-  buckets: z.object({}).passthrough().optional()
-    .describe("Optional: data buckets object"),
-  flows: z.object({}).passthrough().optional()
-    .describe("Optional: flows object"),
-  endpoints: z.object({}).passthrough().optional()
-    .describe("Optional: endpoints object"),
-  api: z.record(z.string(), apiResourceItemSchema.omit({ id: true })).optional()
-    .describe("Optional: API resources object. Build it with 'Build Product API Resources' and paste here."),
-  autoprovisions: autoProvisionSchema.optional()
-    .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
-}).strict();
 
 server.registerTool(
-  "Build Product API Resources",
+  "Build Product API Resources Tool",
   {
     title: "Build Product API Resources (for Thinger.io profile.api)",
     description: [
@@ -303,9 +507,6 @@ server.registerTool(
         out[id] = rest;
       }
 
-      // Optional: validate final fragment against your record schema (if desired)
-      // apiResourceSchema.parse(out);
-
       return {
         content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
       };
@@ -320,7 +521,7 @@ server.registerTool(
 
 
 server.registerTool(
-  "Build Product Autoprovisions",
+  "Build Product Autoprovisions Tool",
   {
     title: "Build Product Autoprovisions (for Thinger.io profile.autoprovisions)",
     description: [
@@ -411,7 +612,7 @@ server.registerTool(
 
 
 server.registerTool(
-  "Create Product ",
+  "Create Product Tool",
   {
     title: "Create Thinger.io Product",
     description: [
@@ -502,7 +703,7 @@ app.use(
 app.use(express.json());
 
 
-// Auth Bearer (development, this is useless)
+// Auth Bearer (development, this is useless) TODO
 const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
 
   next();
