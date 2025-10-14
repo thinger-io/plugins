@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { ProductsApi, ProductCreateRequest, ApiException } from '@thinger-io/thinger-node';
+import { ProductsApi, ProductCreateRequest, ApiException } from '@thinger-io/thinger-node';
 import { Log } from '../lib/log.js';
 import {
   autoProvisionSchema,

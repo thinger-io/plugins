@@ -11,7 +11,7 @@ import {FrontEndRouter} from "./frontend/routes.js";
 // In order to improve scalability of the code, all server capabilities are implemented in mcp_capabilities directory.
 // Each capability is a tool registered in the MCP server instance.
 import { registerProductTools } from "./mcp_capabilities/product_tools.js";
-import { registerProductResources } from "./mcp_capabilities/product_resources";
+import { registerProductResources } from "./mcp_capabilities/product_resources.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
