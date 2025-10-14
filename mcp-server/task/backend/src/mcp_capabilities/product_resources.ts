@@ -1,4 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {McpServer, ResourceTemplate} from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ProductsApi } from "@thinger-io/thinger-node";
 
 // Resources allow servers to share data that provides context to language models,
@@ -15,7 +15,7 @@ export function registerProductResources(opts: {
     "List Thinger Products",
     `thinger://products?owner=${thingerUser}`,
     {
-      description: "Lista de productos en Thinger.io para el owner por defecto.",
+      description: "List of products in Thinger.io for a specific owner.",
       mimeType: "application/json",
     },
     async () => {
@@ -40,4 +40,36 @@ export function registerProductResources(opts: {
       };
     }
   );
+
+  server.registerResource(
+    "Get Thinger Product Details",
+    new ResourceTemplate("thinger://products/{productId}", {list: undefined}),
+    {
+      description: "Get details of a specific product in Thinger.io by its ID.",
+      usage: "Replace {productId} in the URI with the actual product ID you want to fetch.",
+      mimeType: "application/json"
+    },
+    async (uri: URL) => {
+      // Extract productId from the URI path
+      const pathParts = uri.pathname.split('/');
+      const productId = pathParts[pathParts.length - 1];
+
+      try {
+        const product = await productsApi.exportData(thingerUser, productId);
+
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: "application/json",
+              text: JSON.stringify(product, null, 2),
+            },
+          ],
+          _meta: {lastModified: new Date().toISOString()},
+        };
+      } catch (error) {
+        throw new Error(`Failed to fetch product ${productId} for owner ${thingerUser}: ${error}`);
+      }
+    }
+  )
 }
