@@ -10,6 +10,6 @@ export interface McpConfig {
 export class McpConfigService {
   constructor(private http: HttpClient) {}
   getConfig() {
-    return this.http.get<McpConfig>('/api/mcp/config');
+    return this.http.get<McpConfig>('./api/mcp/config');
   }
 }

@@ -16,7 +16,7 @@
     "icon": "https://avatars.githubusercontent.com/u/182288589?s=200&v=4"
   },
   "tokens": {
-    "mcp_plugin": {
+    "mcp_server_plugin": {
       "name": "Access from Thinger MCP Server plugin to Thinger.io account",
       "allow": {
         "Product": {
@@ -34,7 +34,7 @@
         }
       }
     },
-    "mcp_plugin_callback": {
+    "mcp_server_plugin_callback": {
       "name": "Access from LLM to MCP Server plugin",
       "allow": {
         "Plugin": {

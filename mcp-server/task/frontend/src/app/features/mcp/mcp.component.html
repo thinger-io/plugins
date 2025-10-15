@@ -3,7 +3,7 @@
 
   <div class="w-full max-w-2xl backdrop-blur-2xl bg-white/35 border border-white/50 shadow-2xl rounded-2xl p-6 md:p-8">
     <div class="flex items-center justify-between mb-6">
-      <h2 nz-typography class="m-0 text-2xl font-semibold tracking-tight">MCP – Credenciales</h2>
+      <h2 nz-typography class="m-0 text-2xl font-semibold tracking-tight">MCP – Credentials</h2>
       <button nz-button nzType="default" (click)="load()" [disabled]="loading()">
         <span nz-icon nzType="reload"></span>
         Reload
@@ -41,7 +41,7 @@
               <span class="text-xs uppercase tracking-wide text-slate-600">Token (Bearer)</span>
               <div class="flex gap-2">
                 <button nz-button nzType="default" nzSize="small" (click)="reveal.set(!reveal())"
-                        [nzTooltipTitle]="reveal() ? 'Ocultar' : 'Mostrar'" nz-tooltip>
+                        [nzTooltipTitle]="reveal() ? 'Hide' : 'Show'" nz-tooltip>
                   <span nz-icon [nzType]="reveal() ? 'eye-invisible' : 'eye'"></span>
                 </button>
                 <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Copy token"
