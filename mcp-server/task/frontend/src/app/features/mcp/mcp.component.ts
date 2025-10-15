@@ -65,6 +65,7 @@ export class McpComponent {
     if (this.reveal()) return full;
     if (!full) return '';
     const tail = full.slice(-4);
-    return 'Bearer **** ' + tail;
+    const head = full.slice(0, 4);
+    return head  + '****' + tail;
   }
 }

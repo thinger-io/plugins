@@ -186,7 +186,7 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 
 app.get('/api/mcp/config', (req, res) => {
   res.json({
-    token: `Bearer ${process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? ''}`,
+    token: `${process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? ''}`,
   });
 });
 
