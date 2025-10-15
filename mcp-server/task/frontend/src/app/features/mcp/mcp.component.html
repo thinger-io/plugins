@@ -1,35 +1,64 @@
-<div class="mcp-wrapper">
-  <div class="mcp-status">
-    <span class="mcp-status-text">Servidor MCP en funcionamiento</span>
-  </div>
+<div class="min-h-screen flex items-center justify-center p-4">
+  <div class="fixed inset-0 -z-10 bg-[radial-gradient(1000px_600px_at_50%_20%,rgba(120,120,255,0.15),transparent)]"></div>
 
-  <div class="mcp-card">
-    <h1 class="mcp-title">MCP Connection</h1>
-    <p class="mcp-sub">Comparte la URL del endpoint y el token.</p>
-
-    <div class="mcp-fields">
-      <!-- URL -->
-      <div class="mcp-group">
-        <label class="mcp-label">MCP Server URL</label>
-        <div class="mcp-row">
-          <input type="text" class="mcp-input" [value]="url()" readonly />
-          <button class="mcp-btn" (click)="copyToClipboard(url(), 'URL')">Copiar</button>
-        </div>
-      </div>
-
-      <!-- Token -->
-      <div class="mcp-group">
-        <label class="mcp-label">Bearer Token</label>
-        <div class="mcp-row">
-          <input type="text" class="mcp-input" [value]="token()" readonly />
-          <button class="mcp-btn" (click)="copyToClipboard(token(), 'Token')">Copiar</button>
-        </div>
-      </div>
+  <div class="w-full max-w-2xl backdrop-blur-2xl bg-white/35 border border-white/50 shadow-2xl rounded-2xl p-6 md:p-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 nz-typography class="m-0 text-2xl font-semibold tracking-tight">MCP – Credenciales</h2>
+      <button nz-button nzType="default" (click)="load()" [disabled]="loading()">
+        <span nz-icon nzType="reload"></span>
+        Reload
+      </button>
     </div>
 
-    <!-- Mensaje de copiado -->
-    <div *ngIf="copiedMessage()" class="mcp-copied">
-      {{ copiedMessage() }}
-    </div>
+    <nz-spin [nzSpinning]="loading()">
+      <ng-container *ngIf="!loading()">
+
+        <nz-alert
+          *ngIf="error()"
+          nzType="error"
+          [nzMessage]="error()"
+          class="mb-4"
+          nzShowIcon>
+        </nz-alert>
+
+        <ng-container *ngIf="cfg() as c">
+          <!-- URL -->
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs uppercase tracking-wide text-slate-600">URL</span>
+              <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Copy URL"
+                      (click)="copy(c.url)">
+                <span nz-icon nzType="copy"></span>
+              </button>
+            </div>
+            <pre class="rounded-xl border border-white/50 bg-white/40 p-3 text-sm font-mono overflow-x-auto">
+{{ c.url }}</pre>
+          </div>
+
+          <!-- Token -->
+          <div class="mb-2">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs uppercase tracking-wide text-slate-600">Token (Bearer)</span>
+              <div class="flex gap-2">
+                <button nz-button nzType="default" nzSize="small" (click)="reveal.set(!reveal())"
+                        [nzTooltipTitle]="reveal() ? 'Ocultar' : 'Mostrar'" nz-tooltip>
+                  <span nz-icon [nzType]="reveal() ? 'eye-invisible' : 'eye'"></span>
+                </button>
+                <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Copy token"
+                        (click)="copy(c.token)">
+                  <span nz-icon nzType="copy"></span>
+                </button>
+              </div>
+            </div>
+            <pre class="rounded-xl border border-white/50 bg-white/40 p-3 text-sm font-mono overflow-x-auto">
+{{ maskedToken(c.token) }}</pre>
+          </div>
+
+          <p nz-typography class="text-xs text-slate-600 mt-4">
+            Select "Auth Bearer" in your LLM client and paste the token above.
+          </p>
+        </ng-container>
+      </ng-container>
+    </nz-spin>
   </div>
 </div>

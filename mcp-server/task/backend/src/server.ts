@@ -185,10 +185,7 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 });
 
 app.get('/api/mcp/config', (req, res) => {
-  const baseUrl = `$https://${process.env.THINGER_HOST ?? 'UNDEFINED'}/`;
-
   res.json({
-    url: `${baseUrl}/mcp`,
     token: `Bearer ${process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? ''}`,
   });
 });

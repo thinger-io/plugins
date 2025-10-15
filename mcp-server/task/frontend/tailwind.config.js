@@ -7,7 +7,6 @@ module.exports = {
     hoverOnlyWhenSupported: true,
   },
   mode: 'jit',
-  prefix: 'tw-',
   content: [
     "./src/**/*.{html,ts}"
   ],

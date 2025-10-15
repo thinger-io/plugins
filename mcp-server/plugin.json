@@ -35,7 +35,7 @@
       }
     },
     "mcp_plugin_callback": {
-      "name": "Access from MCP to Uplink callback",
+      "name": "Access from LLM to MCP Server plugin",
       "allow": {
         "Plugin": {
           "mcp-server": [

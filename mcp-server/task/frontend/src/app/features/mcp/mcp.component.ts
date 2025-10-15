@@ -1,56 +1,70 @@
-import { Component, ViewEncapsulation, signal, inject } from '@angular/core';
-import { SettingsService, McpConfig } from '../../core/services/settings.service';
-import { take } from 'rxjs/operators';
-import {NgIf} from "@angular/common";
+import { Component, inject, signal, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { McpConfigService, McpConfig } from '../../core/services/mcp-config.service';
+
+import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzTypographyModule } from 'ng-zorro-antd/typography';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 @Component({
   selector: 'app-mcp',
   standalone: true,
+  imports: [
+    CommonModule,
+    NzTypographyModule,
+    NzButtonModule,
+    NzIconModule,
+    NzAlertModule,
+    NzSpinModule,
+    NzToolTipModule,
+  ],
   templateUrl: './mcp.component.html',
   styleUrls: ['./mcp.component.css'],
-  encapsulation: ViewEncapsulation.None,
 })
 export class McpComponent {
-  private readonly settings = inject(SettingsService);
+  private api = inject(McpConfigService);
 
-  // Valores reactivos que ya usas en el template
-  url   = signal<string>('');
-  token = signal<string>('');
-
-  // Feedback de copiado
-  copiedMessage = signal<string | null>(null);
-
-  // Estado del servidor para el badge verde
-  serverOk = signal<boolean>(false);
+  loading = signal(true);
+  error = signal<string | null>(null);
+  cfg = signal<McpConfig | null>(null);
+  reveal = signal(false);
 
   constructor() {
-    // Carga una vez desde el backend (con tus fallbacks del SettingsService)
-    this.settings.getMcpConfig().pipe(take(1)).subscribe({
-      next: (cfg: McpConfig) => {
-        const url = (cfg?.url ?? '').trim();
-        const token = (cfg?.token ?? '').trim();
-        this.url.set(url);
-        this.token.set(token);
-        // si llega respuesta válida, consideramos OK
-        this.serverOk.set(Boolean(url || token));
+    this.load();
+    effect(() => {
+      void this.cfg();
+      this.reveal.set(false);
+    });
+  }
+
+  load() {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.getConfig().subscribe({
+      next: (cfg) => {
+        cfg.url = window.location.origin + window.location.pathname;
+        this.cfg.set(cfg);
+        this.loading.set(false);
       },
-      error: () => {
-        this.serverOk.set(false);
+      error: (e) => {
+        this.error.set(e?.message ?? 'Unknown error');
+        this.loading.set(false);
       },
     });
   }
 
-  copyToClipboard(value: string, label: string) {
-    if (!value) return;
-    navigator.clipboard.writeText(value).then(
-      () => {
-        this.copiedMessage.set(`${label} copiado`);
-        setTimeout(() => this.copiedMessage.set(null), 2000);
-      },
-      () => {
-        this.copiedMessage.set(`Error al copiar ${label}`);
-        setTimeout(() => this.copiedMessage.set(null), 2000);
-      }
-    );
+  copy(text: string) {
+    navigator.clipboard.writeText(text);
+  }
+
+  maskedToken(full: string) {
+    if (this.reveal()) return full;
+    if (!full) return '';
+    const tail = full.slice(-4);
+    return 'Bearer **** ' + tail;
   }
 }
