@@ -1,5 +1,5 @@
 {
-  "name": "lorawan-device-template",
+  "name": "lorawan-product-template",
   "version": "1.0.0",
   "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
   "author": "Thinger.io",
@@ -7,12 +7,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "lorawan-device-template"
+    "directory": "lorawan-product-template"
   },
   "metadata": {
     "name": "LoRaWAN Device Template",
     "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
-    "image": "https://marketplace.thinger.io/plugins/dragino-lt22222l/assets/LT-22222-L.png"
+    "image": "https://www.weble.ch/wp-content/uploads/2019/12/lw.png"
   },
   "resources": {
     "products": [
