@@ -35,6 +35,7 @@ export function registerProductTools(opts: {
       async ({ productId }) => {
         try {
           const product = await productsApi.exportData(process.env.THINGER_USER ?? "unknown", productId);
+          Log.log(`Successfully fetched product profile for productId='${productId}'`);
           return {
             content: [
               {
@@ -212,6 +213,7 @@ export function registerProductTools(opts: {
         }
 
         // Return the fragment to paste under profile.properties
+        Log.log('Successfully built profile.properties fragment');
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
@@ -351,6 +353,7 @@ export function registerProductTools(opts: {
           out[id] = rest;
         }
 
+        Log.log('Successfully built profile.buckets fragment');
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
@@ -486,6 +489,7 @@ export function registerProductTools(opts: {
           out[id] = rest;
         }
 
+        Log.log('Successfully built flows fragment:');
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
@@ -651,6 +655,7 @@ export function registerProductTools(opts: {
           out[id] = rest;
         }
 
+        Log.log('Successfully built profile.api fragment');
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
@@ -741,6 +746,7 @@ export function registerProductTools(opts: {
         // Validation
         const parsed = autoProvisionSchema.parse(built);
 
+        Log.info('Successfully built profile.autoprovisions fragment');
         return {
           content: [
             {
@@ -932,9 +938,9 @@ export function registerProductTools(opts: {
           profile,
         };
 
-        Log.info("Creating product with request:", JSON.stringify(request, null, 2));
         const response = await productsApi.create(process.env.THINGER_USER ?? "", request);
 
+        Log.info(`Successfully Created Thinger.io product '${name}'`);
         return {
           content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
         };
