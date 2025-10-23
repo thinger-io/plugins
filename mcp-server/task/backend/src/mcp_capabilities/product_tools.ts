@@ -20,6 +20,50 @@ export function registerProductTools(opts: {
 
 
   server.registerTool(
+    "Get-Thinger-Product-Profile-Tool",
+    {
+      title: "Get Thinger.io Existent Product Profile",
+      description: [
+        "This tool fetches the FULL profile JSON of an EXISTENT Thinger.io Product.",
+        "You MUST provide the 'productId' (ID of the product to fetch).",
+        "The tool OUTPUT is the FULL product profile JSON that can be used as a template for new products.",
+      ].join("\\n"),
+      inputSchema: {
+        productId: z.string().min(1).describe("ID of the Thinger.io Product to fetch"),
+      }
+    },
+      async ({ productId }) => {
+        try {
+          const product = await productsApi.exportData(process.env.THINGER_USER ?? "unknown", productId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(product, null, 2),
+              },
+            ],
+            _meta: {lastModified: new Date().toISOString()},
+          };
+        } catch (err: unknown) {
+          const errorMessage = err instanceof ApiException
+            ? `Thinger.io API Error: ${err.body ?? err.message}`
+            : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: errorMessage,
+              },
+            ],
+          };
+        }
+    }
+  );
+
+
+  server.registerTool(
     "Build-Product-Properties-Tool",
     {
       title: "Build Product Properties (for Thinger.io profile.properties)",
@@ -171,7 +215,7 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           isError: true,
           content: [
@@ -306,7 +350,7 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           isError: true,
           content: [
@@ -437,7 +481,7 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           isError: true,
           content: [
@@ -598,7 +642,7 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           isError: true,
           content: [{ type: "text", text: `Invalid API resources payload: ${err?.message ?? String(err)}` }],
@@ -684,7 +728,7 @@ export function registerProductTools(opts: {
             },
           ],
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return {
           isError: true,
           content: [
@@ -831,8 +875,8 @@ export function registerProductTools(opts: {
         "- This tool validates 'profile.autoprovisions' locally before calling Thinger.io."
       ].join("\n"),
       inputSchema: {
-        name: z.string().describe("Name of the new product"),
-        description: z.string().optional().describe("Description of the new product"),
+        name: z.string().describe("Name of the new product, with less than 32 characters"),
+        description: z.string().optional().describe("Description of the new product, with less than 255 characters"),
         profile: profileSchema.optional()
           .describe("Final 'profile' object. Compose it by pasting JSON fragments from builder tools under their keys."),
         code_snippet: z.string().optional().describe("Optional code snippet for Thinger.io Product script"),
@@ -853,7 +897,11 @@ export function registerProductTools(opts: {
 
         const request: ProductCreateRequest = {
           name,
-          product: name.toLowerCase().replace(/\s+/g, "_"), // product ID sanitization
+          product: name
+            .toLowerCase()
+            .replace(/\s+/g, "_")
+            .replace(/-/g, "_")
+            .substring(0, 32),
           description,
           enabled: true,
           profile,
@@ -865,7 +913,7 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof ApiException) {
           Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
           return {
