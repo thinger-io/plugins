@@ -49,6 +49,32 @@ const dataSourceSchema = z.union([
   }).strict(),
 ]);
 
+const dataTargetSchema = z.union([
+  z.object({
+    target: z.literal("endpoint_call"),
+    endpoint: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+
+  z.object({
+    target: z.literal("resource_stream"),
+    resource_stream: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+
+  z.object({
+    target: z.literal("topic"),
+    topic: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+]);
+
 export const propertyItemSchema = z.object({
   id: z.string().describe("Unique Property ID (object key in profile.properties)"),
   enabled: z.boolean().default(true),
@@ -74,32 +100,7 @@ export const flowsItemSchema = z.object({
   split_data: z.boolean().default(false),
 
   data: dataSourceSchema,
-
-  sink: z.union([
-    z.object({
-      target: z.literal("endpoint_call"),
-      endpoint: z.string(),
-      payload: z.string().optional(),
-      payload_function: z.string().optional(),
-      payload_type: z.string().optional(),
-    }).strict(),
-
-    z.object({
-      target: z.literal("resource_stream"),
-      resource_stream: z.string(),
-      payload: z.string().optional(),
-      payload_function: z.string().optional(),
-      payload_type: z.string().optional(),
-    }).strict(),
-
-    z.object({
-      target: z.literal("topic"),
-      topic: z.string(),
-      payload: z.string().optional(),
-      payload_function: z.string().optional(),
-      payload_type: z.string().optional(),
-    }).strict(),
-  ]),
+  sink: dataTargetSchema,
 }).strict();
 
 export const apiResourceItemSchema = z.object({
@@ -113,32 +114,7 @@ export const apiResourceItemSchema = z.object({
   }).strict(),
 
   response: z.object({
-    data: z.union([
-      z.object({
-        target: z.literal("endpoint_call"),
-        endpoint: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-
-      z.object({
-        target: z.literal("resource_stream"),
-        resource_stream: z.string(),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-
-      z.object({
-        source: z.literal("topic"),
-        topic: z.string(),
-        publish_source: z.enum(['any', '']).default('any'),
-        payload: z.string().optional(),
-        payload_function: z.string().optional(),
-        payload_type: z.string().optional(),
-      }).strict(),
-    ]),
+    data: dataTargetSchema,
   }).strict().optional(),
 }).strict();
 
