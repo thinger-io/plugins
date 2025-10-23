@@ -20,7 +20,7 @@ export function registerProductTools(opts: {
 
 
   server.registerTool(
-    "Build Product Properties Tool",
+    "Build-Product-Properties-Tool",
     {
       title: "Build Product Properties (for Thinger.io profile.properties)",
       description: [
@@ -186,7 +186,7 @@ export function registerProductTools(opts: {
   );
 
   server.registerTool(
-    "Build Product Buckets Tool",
+    "Build-Product-Buckets-Tool",
     {
       title: "Build Product Buckets (for Thinger.io profile.buckets)",
       description: [
@@ -321,7 +321,7 @@ export function registerProductTools(opts: {
   );
 
   server.registerTool(
-    "Build Product Flows Tool",
+    "Build-Product-Flows-Tool",
     {
       title: "Build Product Flows (for Thinger.io profile.flows)",
       description: [
@@ -453,7 +453,7 @@ export function registerProductTools(opts: {
 
 
   server.registerTool(
-    "Build Product API Resources Tool",
+    "Build-Product-API-Resources-Tool",
     {
       title: "Build Product API Resources (for Thinger.io profile.api)",
       description: [
@@ -609,7 +609,7 @@ export function registerProductTools(opts: {
 
 
   server.registerTool(
-    "Build Product Autoprovisions Tool",
+    "Build-Product-Autoprovisions-Tool",
     {
       title: "Build Product Autoprovisions (for Thinger.io profile.autoprovisions)",
       description: [
@@ -700,7 +700,7 @@ export function registerProductTools(opts: {
 
 
   server.registerTool(
-    "Create Product Tool",
+    "Create-Product-Tool",
     {
       title: "Create Thinger.io Product",
       description: [

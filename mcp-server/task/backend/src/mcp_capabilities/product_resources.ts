@@ -12,7 +12,7 @@ export function registerProductResources(opts: {
   const { server, productsApi, thingerUser } = opts;
 
   server.registerResource(
-    "List Thinger Products",
+    "List-Thinger-Products",
     `thinger://products?owner=${thingerUser}`,
     {
       description: "List of products in Thinger.io for a specific owner.",
@@ -42,7 +42,7 @@ export function registerProductResources(opts: {
   );
 
   server.registerResource(
-    "Get Thinger Product Details",
+    "Get-Thinger-Product-Details",
     new ResourceTemplate("thinger://products/{productId}", {list: undefined}),
     {
       description: "Get details of a specific product in Thinger.io by its ID.",
