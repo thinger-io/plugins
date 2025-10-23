@@ -132,7 +132,7 @@ jobs:
 
       - name: Update README in DockerHub
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
