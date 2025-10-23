@@ -1,5 +1,6 @@
 # WIKA PGW-23-100
 
+
 <p align="center">
   <img src="https://www.wika.com/media/Images/Product_700x700/Pressure/pgw23.100_en_co_rs_w410_h410_image.jpg" alt="wika logo" style="max-width: 200px; height: auto;" onerror="this.src='https://www.wika.com/media/Images/Product_700x700/Pressure/pgw23.100_en_co_rs_w410_h410_image.jpg';this.onerror='';">
 </p>
