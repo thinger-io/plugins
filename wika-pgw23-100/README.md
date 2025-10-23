@@ -2,7 +2,7 @@
 
 
 <p align="center">
-  <img src="https://www.wika.com/media/Images/Product_700x700/Pressure/pgw23.100_en_co_rs_w410_h410_image.jpg" alt="wika logo" style="max-width: 200px; height: auto;" onerror="this.src='https://www.wika.com/media/Images/Product_700x700/Pressure/pgw23.100_en_co_rs_w410_h410_image.jpg';this.onerror='';">
+  <img src="/plugins/wika-pgw23-100/assets/wika-pgw23-100.jpg" alt="wika logo" style="max-width: 200px; height: auto;">
 </p>
 
 The WIKA PGW23-100 is a hybrid IIoT pressure gauge: it combines a mechanical on-site Bourdon tube display with wireless LoRaWAN® communication for remote monitoring. It is designed for process-industry applications where you want both local indication and centralized data collection.

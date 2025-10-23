@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Wika PGW23-100 Pressure Sensor",
     "description": "Bourdon tube pressure gauge with wireless transmission",
-    "image": "https://www.wika.com/media/Images/Product_700x700/Pressure/pgw23.100_en_co_rs_w410_h410_image.jpg"
+    "image": "docs/assets/wika-pgw23-100.jpg"
   },
   "resources": {
     "products": [
