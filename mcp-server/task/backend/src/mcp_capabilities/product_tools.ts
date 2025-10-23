@@ -48,7 +48,7 @@ export function registerProductTools(opts: {
           const errorMessage = err instanceof ApiException
             ? `Thinger.io API Error: ${err.body ?? err.message}`
             : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
-
+          Log.error(errorMessage);
           return {
             isError: true,
             content: [
@@ -216,12 +216,16 @@ export function registerProductTools(opts: {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
       } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Invalid PROPERTIES payload: ${err?.message ?? String(err)}`,
+              text: errorMessage,
             },
           ],
         };
@@ -351,12 +355,16 @@ export function registerProductTools(opts: {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
       } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Invalid BUCKETS payload: ${err?.message ?? String(err)}`,
+              text: errorMessage,
             },
           ],
         };
@@ -482,12 +490,16 @@ export function registerProductTools(opts: {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
       } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Invalid FLOWS payload: ${err?.message ?? String(err)}`,
+              text: errorMessage,
             },
           ],
         };
@@ -643,9 +655,18 @@ export function registerProductTools(opts: {
           content: [{ type: "text", text: JSON.stringify(out, null, 2) }],
         };
       } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
-          content: [{ type: "text", text: `Invalid API resources payload: ${err?.message ?? String(err)}` }],
+          content: [
+            {
+              type: "text",
+              text: errorMessage,
+            },
+          ],
         };
       }
     }
@@ -701,7 +722,7 @@ export function registerProductTools(opts: {
     async ({ rules }) => {
       try {
         // Construye el objeto record usando el schema compacto
-        const built: Record<string, any> = {};
+        const built: Record<string, unknown> = {};
         for (const r of rules) {
           const cleanId = r.id // ID sanitization
             .toLowerCase()
@@ -729,12 +750,16 @@ export function registerProductTools(opts: {
           ],
         };
       } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Invalid autoprovisions payload: ${err?.message ?? String(err)}`,
+              text: errorMessage,
             },
           ],
         };
@@ -913,18 +938,19 @@ export function registerProductTools(opts: {
         return {
           content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
         };
-      } catch (error: unknown) {
-        if (error instanceof ApiException) {
-          Log.error(`Thinger.io API Exception: - ${JSON.stringify(error.body)}`);
-          return {
-            isError: true,
-            content: [{ type: "text", text: `Thinger API error (HTTP): ${error.message ?? "unknown error"}` }],
-          };
-        }
-        Log.error(`Unexpected error: ${error?.message ?? String(error)}`);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
         return {
           isError: true,
-          content: [{ type: "text", text: `Failed to create product: ${error?.message ?? String(error)}` }],
+          content: [
+            {
+              type: "text",
+              text: errorMessage,
+            },
+          ],
         };
       }
     }

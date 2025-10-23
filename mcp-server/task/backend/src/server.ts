@@ -126,7 +126,7 @@ const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) =
 }
 
 app.post('/mcp', auth, async (req: Request, res: Response) => {
-  Log.info("Received MCP request:\n", JSON.stringify(req.body, null, 2));
+  Log.info("Received MCP request: ", req.body["method"]);
   try {
     // Check 'initialize' requests before creating the transport
     if (!preflightInitializeGuard(req.body, res)) return;
@@ -185,6 +185,7 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 });
 
 app.get('/api/mcp/config', (req, res) => {
+  Log.info("MCP config requested");
   res.json({
     token: `${process.env.THINGER_TOKEN_MCP_SERVER_PLUGIN_CALLBACK ?? ''}`,
   });
