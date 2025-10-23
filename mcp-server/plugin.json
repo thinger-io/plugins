@@ -1,7 +1,7 @@
 {
   "name": "mcp-server",
-  "version": "2.0.0",
-  "description": "Plugin for integrating Thinger.io with TTN",
+  "version": "1.0.0",
+  "description": "Thinger.io custom MCP Server Integration",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
