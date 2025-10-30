@@ -75,6 +75,28 @@ const dataTargetSchema = z.union([
   }).strict(),
 ]);
 
+const apiResourceRequestDataSchema = z.union([
+  ...dataSourceSchema.options,
+  z.object({
+    target: z.literal("plugin_endpoint"),
+    plugin: z.string(),
+    path: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+]);
+
+const apiResourceResponseDataSchema = z.union([
+  ...dataTargetSchema.options, // Incluye todos los tipos genéricos
+  z.object({
+    source: z.literal("request_response"),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+]);
+
 export const propertyItemSchema = z.object({
   enabled: z.boolean().default(true),
   default: z.object({}).passthrough().optional(),
@@ -106,11 +128,11 @@ export const apiResourceItemSchema = z.object({
   device_id_resolver: z.string().optional(),
 
   request: z.object({
-    data: dataSourceSchema,
+    data: apiResourceRequestDataSchema,
   }).strict(),
 
   response: z.object({
-    data: dataTargetSchema,
+    data: apiResourceResponseDataSchema,
   }).strict().optional(),
 }).strict();
 
@@ -122,19 +144,3 @@ export const autoprovisionItemSchema = z.object({
   enabled: z.boolean(),
 }).strict();
 
-export const profileSchema = z.object({
-  properties: z.object({}).passthrough().optional()
-    .describe("Optional: product properties object"),
-  buckets: z.object({}).passthrough().optional()
-    .describe("Optional: data buckets object"),
-  flows: z.object({}).passthrough().optional()
-    .describe("Optional: flows object"),
-  endpoints: z.object({}).passthrough().optional()
-    .describe("Optional: endpoints object"),
-  api: z.object({}).passthrough().optional()
-    .describe("Optional: API resources object. Build it with 'Build Product API Resources' and paste here."),
-  autoprovisions: autoProvisionSchema.optional()
-    .describe("Optional: autoprovisioning JSON. Build it with 'Build Product Autoprovisions' and paste here."),
-  code: z.object({}).passthrough().optional()
-    .describe("Optional: custom code object"),
-}).strict();
