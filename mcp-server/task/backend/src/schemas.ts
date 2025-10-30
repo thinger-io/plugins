@@ -76,14 +76,12 @@ const dataTargetSchema = z.union([
 ]);
 
 export const propertyItemSchema = z.object({
-  id: z.string().describe("Unique Property ID (object key in profile.properties)"),
   enabled: z.boolean().default(true),
   default: z.object({}).passthrough().optional(),
   data: dataSourceSchema,
 });
 
 export const bucketItemSchema = z.object({
-  id: z.string().min(1).describe("Unique Bucket ID (object key in profile.buckets)"),
   enabled: z.boolean().default(true),
   backend: z.enum(['mongodb', 'influxdb']).default('mongodb'),
   retention: z.object({
@@ -95,7 +93,6 @@ export const bucketItemSchema = z.object({
 }).strict();
 
 export const flowsItemSchema = z.object({
-  id: z.string().min(1).describe("Unique Flow ID (object key in profile.api)"),
   enabled: z.boolean().default(true),
   split_data: z.boolean().default(false),
 
@@ -104,7 +101,6 @@ export const flowsItemSchema = z.object({
 }).strict();
 
 export const apiResourceItemSchema = z.object({
-  id: z.string().min(1).describe("Unique API resource ID (object key in profile.api)"),
   enabled: z.boolean().default(true),
   handle_connectivity: z.boolean().optional(),
   device_id_resolver: z.string().optional(),
@@ -116,6 +112,14 @@ export const apiResourceItemSchema = z.object({
   response: z.object({
     data: dataTargetSchema,
   }).strict().optional(),
+}).strict();
+
+export const autoprovisionItemSchema = z.object({
+  config: z.object({
+    mode: z.enum(['pattern']),
+    pattern: z.string().describe("Regular expression pattern to match device IDs")
+  }),
+  enabled: z.boolean(),
 }).strict();
 
 export const profileSchema = z.object({
