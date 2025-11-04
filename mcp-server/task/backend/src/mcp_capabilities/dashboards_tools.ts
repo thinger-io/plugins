@@ -11,6 +11,54 @@ export function registerDashboardsTools(opts: {
   const { server, productsApi } = opts;
   const thingerUser = process.env.THINGER_USER ?? 'unknown';
 
+  function isDashBoardProperyCreated(product: string): boolean {
+    productsApi.readProperty(thingerUser, product, "dashboard")
+      .then(() => {
+        Log.log(`Dashboard property exists for user='${thingerUser}' and product='${product}'`);
+        return true;
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiException) {
+          Log.log(`Dashboard property does not exist for user='${thingerUser}' and product='${product}'`);
+          return false;
+        } else {
+          const errorMessage = err instanceof ApiException
+            ? `Thinger.io API Error: ${err.body ?? err.message}`
+            : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+          Log.error(errorMessage);
+          return false;
+        }
+      });
+    return false;
+  }
+
+  function createDashBoardProperty(): void {
+    const dashboardBase = {
+      "tabs": [
+        {
+          "icon": "fas fa-tachometer-alt",
+          "widgets": []
+        }
+      ]
+    }
+    Log.log(`Creating base dashboard property for user='${thingerUser}'`);
+    const property = new PropertyCreate();
+    property.property = "dashboard";
+    property.name = "dashboard";
+    property.value = dashboardBase;
+    productsApi.createProperty(thingerUser, "default", property)
+      .then(() => {
+        Log.log(`Successfully created base dashboard property for user='${thingerUser}'`);
+      })
+      .catch((err: unknown) => {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
+        Log.error(errorMessage);
+      });
+  }
+
+
   server.registerTool(
     "Add-Thinger-Product-Dashboard-ApexChart-Widget",
     {
@@ -24,16 +72,13 @@ export function registerDashboardsTools(opts: {
     },
     async ({ product, widget } ) => {
       try {
-        const dashboard = {
-          "tabs": [
-            {
-              "icon": "fas fa-tachometer-alt",
-              "widgets": [
-                widget
-              ]
-            }
-          ]
+        if (!isDashBoardProperyCreated(product)) {
+          createDashBoardProperty();
         }
+        Log.log(`Adding ApexChart widget to dashboard of product='${product}'`);
+        const dashboardProperty = await productsApi.readProperty(thingerUser, product, "dashboard");
+        const dashboard = dashboardProperty.value;
+        dashboard.tabs[0].widgets.push(widget);
 
         const property = new PropertyCreate();
         property.property = "dashboard";
