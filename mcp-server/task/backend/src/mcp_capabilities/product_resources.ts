@@ -7,7 +7,6 @@ import type { ProductsApi } from "@thinger-io/thinger-node";
 export function registerProductResources(opts: {
   server: McpServer;
   productsApi: ProductsApi;
-  thingerUser: string;
 }) {
   const { server, productsApi } = opts;
   const thingerUser = process.env.THINGER_USER ?? 'unknown';
