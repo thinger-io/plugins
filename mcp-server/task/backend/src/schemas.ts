@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+///////////////////////////////////// PRODUCTS SCHEMAS /////////////////////////////////////////
+
 export const autoProvisionSchema = z.record(
   z.string().describe("Autoprovisioning ID"), // Autoprisioning ID (key)
   z.object({
@@ -144,3 +146,95 @@ export const autoprovisionItemSchema = z.object({
   enabled: z.boolean(),
 }).strict();
 
+///////////////////////////////////// DASHBOARDS AND WIDGETS SCHEMAS /////////////////////////////////////////
+
+const widgetLayoutSchema = z.object({
+  col: z.number(),
+  row: z.number(),
+  sizeX: z.number(),
+  sizeY: z.number()
+});
+
+const widgetPanelSchema = z.object({
+  color: z.string(),
+  currentColor: z.string(),
+  showOffline: z.object({ type: z.string() }),
+  title: z.string()
+});
+
+export const apexChartWidgetSchema = z.object({
+  layout: widgetLayoutSchema,
+  panel: widgetPanelSchema,
+  properties: z.object({
+    alignTimeSeries: z.boolean(),
+    dataAppend: z.boolean(),
+    options: z.string(),
+    realTimeUpdate: z.boolean()
+  }),
+  sources: z.array(
+    z.union([
+      z.object({
+        aggregation: z.object({ period: z.string(), type: z.string() }),
+        bucket: z.object({
+          backend: z.string(),
+          id: z.string(),
+          mapping: z.string(),
+          tags: z.object({
+            device: z.array(z.unknown()),
+            group: z.array(z.unknown())
+          })
+        }),
+        color: z.string(),
+        device_property: z.object({
+          device: z.string(),
+          mapping: z.string(),
+          property: z.string()
+        }),
+        name: z.string(),
+        source: z.string(),
+        timespan: z.object({
+          magnitude: z.string(),
+          mode: z.string(),
+          value: z.number()
+        }),
+        transform: z.string()
+      }),
+      z.object({
+        aggregation: z.object({}),
+        color: z.string(),
+        device_bucket: z.object({
+          backend: z.string(),
+          device: z.string(),
+          id: z.string(),
+          mapping: z.string(),
+          tags: z.object({
+            device: z.array(z.unknown()),
+            group: z.array(z.unknown())
+          })
+        }),
+        name: z.string(),
+        source: z.string(),
+        timespan: z.object({ mode: z.string() })
+      }),
+      z.object({
+        color: z.string(),
+        device: z.object({
+          id: z.string(),
+          mapping: z.string(),
+          resource: z.string()
+        }),
+        name: z.string(),
+        source: z.string(),
+        timespan: z.object({ magnitude: z.string(), value: z.number() })
+      }),
+      z.object({
+        color: z.string(),
+        device_property: z.object({ device: z.string(), property: z.string() }),
+        name: z.string(),
+        source: z.string(),
+        timespan: z.object({ magnitude: z.string(), value: z.number() })
+      })
+    ])
+  ),
+  type: z.literal("apex_charts"),
+})

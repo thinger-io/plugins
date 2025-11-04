@@ -13,6 +13,7 @@ import {FrontEndRouter} from "./frontend/routes.js";
 import { registerProductTools } from "./mcp_capabilities/product_tools.js";
 import { registerProductResources } from "./mcp_capabilities/product_resources.js";
 import { registerDevicesTools } from "./mcp_capabilities/devices_tools.js";
+import { registerDashboardsTools } from "./mcp_capabilities/dashboards_tools.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
@@ -109,6 +110,7 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 registerProductTools({ server, productsApi });
 registerProductResources({ server, productsApi });
 registerDevicesTools({ server, devicesApi});
+registerDashboardsTools({ server, productsApi });
 
 const app = express();
 
