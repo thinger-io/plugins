@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ProductsApi , ApiException } from '@thinger-io/thinger-node';
+import { ProductsApi , ApiException, PropertyCreate } from '@thinger-io/thinger-node';
 import { Log } from '../lib/log.js';
 import {apexChartWidgetSchema} from '../schemas.js';
 
@@ -25,18 +25,21 @@ export function registerDashboardsTools(opts: {
     async ({ product, widget } ) => {
       try {
         const dashboard = {
-          "value": {
-            "tabs": [
-              {
-                "icon": "fas fa-tachometer-alt",
-                "widgets": [
-                  widget
-                ]
-              }
-            ]
-          }
+          "tabs": [
+            {
+              "icon": "fas fa-tachometer-alt",
+              "widgets": [
+                widget
+              ]
+            }
+          ]
         }
-        const response = await productsApi.updateProductProfileResource(thingerUser, product, 'properties', "dashboard", dashboard);
+
+        const property = new PropertyCreate();
+        property.property = "dashboard";
+        property.name = "dashboard";
+        property.value = dashboard;
+        const response = await productsApi.createProperty(thingerUser, product, property);
         Log.log(`Successfully created dashboard widget in product='${product}'`);
         return {
           content: [
