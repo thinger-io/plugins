@@ -2,7 +2,7 @@ import express, {Request, Response, NextFunction, RequestHandler} from 'express'
 import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { ProductsApi} from '@thinger-io/thinger-node'
+import { ProductsApi, DevicesApi } from '@thinger-io/thinger-node'
 
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
@@ -12,9 +12,11 @@ import {FrontEndRouter} from "./frontend/routes.js";
 // Each capability is a tool registered in the MCP server instance.
 import { registerProductTools } from "./mcp_capabilities/product_tools.js";
 import { registerProductResources } from "./mcp_capabilities/product_resources.js";
+import { registerDevicesTools } from "./mcp_capabilities/devices_tools.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
+const devicesApi = new DevicesApi(thingerApiConfig);
 
 const PORT = Number(process.env.PORT ?? 3000);
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS ?? '*')
@@ -105,7 +107,8 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 }
 
 registerProductTools({ server, productsApi });
-registerProductResources({ server, productsApi, thingerUser: process.env.THINGER_USER ?? 'UNDEFINED'});
+registerProductResources({ server, productsApi });
+registerDevicesTools({ server, devicesApi});
 
 const app = express();
 

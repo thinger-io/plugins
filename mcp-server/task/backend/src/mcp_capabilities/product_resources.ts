@@ -9,7 +9,8 @@ export function registerProductResources(opts: {
   productsApi: ProductsApi;
   thingerUser: string;
 }) {
-  const { server, productsApi, thingerUser } = opts;
+  const { server, productsApi } = opts;
+  const thingerUser = process.env.THINGER_USER ?? 'unknown';
 
   server.registerResource(
     "List-Thinger-Products",
