@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ProductsApi , ApiException, PropertyCreate } from '@thinger-io/thinger-node';
+import { ProductsApi , ApiException, PropertyCreate, PropertyUpdate } from '@thinger-io/thinger-node';
 import { Log } from '../lib/log.js';
 import {apexChartWidgetSchema} from '../schemas.js';
 
@@ -22,7 +22,7 @@ export function registerDashboardsTools(opts: {
     }
   }
 
-  async function createDashBoardProperty(product: string = "default"): Promise<void> {
+  async function createDashBoardProperty(product: string): Promise<void> {
     const dashboardBase = {
       tabs: [
         {
@@ -64,8 +64,7 @@ export function registerDashboardsTools(opts: {
     async ({ product, widget } ) => {
       try {
         if (! await isDashBoardPropertyCreated(product)) {
-          await createDashBoardProperty();
-          Log.info("tralari tralera");
+          await createDashBoardProperty(product);
         }
         Log.log(`Adding ApexChart widget to dashboard of product='${product}'`);
         const dashboardProperty = await productsApi.readProperty(thingerUser, product, "dashboard");
