@@ -188,6 +188,7 @@ nav:
       - Shelly Plug S: '!include ./shelly-plug-s/mkdocs.yml'
       - Shelly Plus 1PM: '!include ./shelly-plus-1pm/mkdocs.yml'
       - Sigfox: '!include ./sigfox/mkdocs.yml'
+      - Teltonika Eye: '!include ./teltonika-eye/mkdocs.yml'
       - Teltonika Telematics: '!include ./teltonika-telematics/mkdocs.yml'
       - TTN: '!include ./ttn/mkdocs.yml'
       - Siemens LOGO!: '!include ./siemens-logo/mkdocs.yml'
