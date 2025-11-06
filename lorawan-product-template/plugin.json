@@ -1,6 +1,6 @@
 {
   "name": "lorawan-product-template",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
   "author": "Thinger.io",
   "license": "MIT",
@@ -63,7 +63,7 @@
             "device_autoprovisioning": {
               "config": {
                 "mode": "pattern",
-                "pattern": "my_device_[0-9A-F]{8}"
+                "pattern": "my_device_[0-9A-F]{16}"
               },
               "description": "Device Pattern ID. Make sure to change this in LNS Thinger Plugin Configuration",
               "enabled": true,
