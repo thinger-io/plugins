@@ -55,7 +55,7 @@ function ttnToThinger(msg: any, appId: string, deviceId: string): any {
     decodedPayload: msg.uplink_message.decoded_payload || null,
     metadata: {
       ack: msg.ack ?? null,
-      battery: msg.uplink_message.last_battery_percentage.value ?? null,
+      battery: msg.uplink_message?.last_battery_percentage?.value ?? null,
       offline: msg.offline ?? null,
       seqNo: msg.seqno ?? null
     }
