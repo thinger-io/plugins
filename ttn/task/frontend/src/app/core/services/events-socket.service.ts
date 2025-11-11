@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable } from 'rxjs';
+import {HttpClient} from "@angular/common/http";
+import {AppConfigService} from "./app-config.service";
 
 /**
  * User event interface matching backend structure
@@ -30,11 +32,12 @@ export class EventsSocketService {
   private connected$ = new BehaviorSubject<boolean>(false);
   private config$ = new BehaviorSubject<any>(null);
 
-  constructor() {}
+  constructor(private http: HttpClient, private appConfigService: AppConfigService) {}
 
   async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
-    const socketUrl = window.location.origin;
+    const config = this.appConfigService.getConfig();
+    const socketUrl = config?.api_url || window.location.origin;
 
     // Wait for backend to be ready
     await this.waitForBackend(maxRetries);
