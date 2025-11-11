@@ -38,24 +38,30 @@ export class AppComponent implements OnInit, OnDestroy {
     console.log('App Component initialized');
   }
 
-  ngOnInit() {
-    console.log('App Component ngOnInit - Setting up WebSocket subscriptions');
+  async ngOnInit() {
 
-    // Subscribe to events stream
-    this.subscription.add(
-      this.eventsSocketService.getEvents$().subscribe(events => {
-        console.log(`📋 Events updated in component: ${events.length} events`);
-        this.events = events;
-      })
-    );
+    try {
+      // Initialize WebSocket with health check and retries
+      await this.eventsSocketService.initialize('/socket.io', 5);
 
-    // Subscribe to connection status
-    this.subscription.add(
-      this.eventsSocketService.isConnected$().subscribe(connected => {
-        console.log(`🔌 Connection status changed: ${connected ? 'CONNECTED' : 'DISCONNECTED'}`);
-        this.isConnected = connected;
-      })
-    );
+
+      // Subscribe to events stream
+      this.subscription.add(
+        this.eventsSocketService.getEvents$().subscribe(events => {
+          this.events = events;
+        })
+      );
+
+      // Subscribe to connection status
+      this.subscription.add(
+        this.eventsSocketService.isConnected$().subscribe(connected => {
+          this.isConnected = connected;
+        })
+      );
+
+    } catch (error) {
+      console.error('Failed to initialize EventsSocketService:', error);
+    }
   }
 
   /**

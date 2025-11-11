@@ -560,7 +560,7 @@ function saveSettings(value: object = {}) {
   return pluginsApi.createProperty(_user, _plugin, prop);
 }
 
-function readSettings() {
+async function readSettings() {
 
   pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: ttnApplication[] } }) => {
 
@@ -588,7 +588,7 @@ function readSettings() {
 }
 
 // Read settings on startup
-readSettings();
+await readSettings();
 
 httpServer.listen(3000, () => {
   Log.log("Server running on port 3000 with WebSocket support");

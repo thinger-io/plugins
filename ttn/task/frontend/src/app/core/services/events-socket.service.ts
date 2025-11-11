@@ -24,27 +24,58 @@ export interface UserEvent {
   providedIn: 'root'
 })
 export class EventsSocketService {
+  // @ts-ignore
   private socket: Socket;
   private events$ = new BehaviorSubject<UserEvent[]>([]);
   private connected$ = new BehaviorSubject<boolean>(false);
   private config$ = new BehaviorSubject<any>(null);
 
-  constructor() {
-    // Get the current origin (handles localhost, production, etc.)
+  constructor() {}
+
+  async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
+
     const socketUrl = window.location.origin;
 
-    console.log('Initializing WebSocket connection to:', socketUrl);
+    // Wait for backend to be ready
+    await this.waitForBackend(maxRetries);
 
     // Initialize Socket.IO client
     this.socket = io(socketUrl, {
-      path: '/socket.io',
+      path: socketPath,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      timeout: 20000,
+      autoConnect: true
     });
 
     this.setupListeners();
+  }
+
+  private async waitForBackend(maxRetries: number): Promise<void> {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch('/health', {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+          const health = await response.json();
+          console.log('Backend is ready:', health);
+          return;
+        }
+      } catch (error) {
+        console.log(`Waiting for backend... (attempt ${i + 1}/${maxRetries})`);
+      }
+
+      // Wait 500ms before next retry
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    console.warn('Backend health check failed, proceeding anyway...');
   }
 
   /**
