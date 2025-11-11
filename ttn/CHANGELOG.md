@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.2] - 2025-11-11
+
+### Add
+
+- Added better error handling for malformed uplinks in Thinger.io standard parser
+
 ## [2.0.1] - 2025-11-10
 
 ### Fix
