@@ -37,10 +37,8 @@ export class EventsSocketService {
   async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
     const config = this.appConfigService.getConfig();
-    const socketUrl = config?.api_url || window.location.origin;
-
-    // Wait for backend to be ready
-    await this.waitForBackend(maxRetries);
+    const socketUrl = config?.api_url || 'http://localhost:3000';
+    console.log(`Received ${socketUrl}`);
 
     // Initialize Socket.IO client
     this.socket = io(socketUrl, {
@@ -55,30 +53,6 @@ export class EventsSocketService {
     });
 
     this.setupListeners();
-  }
-
-  private async waitForBackend(maxRetries: number): Promise<void> {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const response = await fetch('/health', {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (response.ok) {
-          const health = await response.json();
-          console.log('Backend is ready:', health);
-          return;
-        }
-      } catch (error) {
-        console.log(`Waiting for backend... (attempt ${i + 1}/${maxRetries})`);
-      }
-
-      // Wait 500ms before next retry
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    console.warn('Backend health check failed, proceeding anyway...');
   }
 
   /**
