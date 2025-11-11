@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1] - 2025-11-10
+
+### Fix
+
+- Fixed Bug in Thinger.io standard uplink parser
+
 ## [2.0.0] - 2025-08-11
 
 ### Fix

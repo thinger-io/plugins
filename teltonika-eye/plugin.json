@@ -1,0 +1,308 @@
+{
+    "name": "teltonika-eye",
+    "version": "1.0.0",
+    "description": "Decoder and preconfiguration for Teltonika Eye devices",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "teltonika-eye"
+    },
+    "metadata": {
+        "name": "Teltonika Eye",
+        "description": "Decoder and preconfiguration for Teltonika Eye devices",
+        "image": "assets/teltonika-eye.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "fields": [
+                        {
+                            "icon": {
+                                "source": "far fa-text",
+                                "type": "fa"
+                            },
+                            "name": "Name",
+                            "primary": true,
+                            "type": "string",
+                            "value": "{{name}}"
+                        }
+                    ],
+                    "icons": [
+                        {
+                            "conditions": [],
+                            "icon": {
+                                "background": "#001a77",
+                                "color": "#ffffff",
+                                "source": "far fa-tag",
+                                "type": "fa"
+                            }
+                        }
+                    ]
+                },
+                "description": "Decoder and preconfiguration for Teltonika Eye devices",
+                "enabled": true,
+                "name": "Teltonika Eye",
+                "product": "teltonika_eye",
+                "profile": {
+                    "api": {
+                        "data": {
+                            "enabled": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "data",
+                                    "target": "resource_stream"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "All": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": ".*"
+                            },
+                            "enabled": false
+                        }
+                    },
+                    "buckets": {
+                        "teltonika_eye_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "data",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "description": "Data events received by teltonika devices for Eye Beacon and Sensor",
+                            "enabled": true,
+                            "name": "Teltonika Eye Data",
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": [
+                                "source "
+                            ]
+                        }
+                    },
+                    "code": {
+                        "code": "function getLocation(payload) {\n    return { \n        \"latitude\": payload.latitude,\n        \"longitude\": payload.longitude,\n        \"altitude\": payload.altitude,\n        \"angle\": payload.angle\n    }\n}",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "location": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getLocation",
+                                "payload_type": "source_payload",
+                                "resource": "data",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "properties": {
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "refresh_interval": 0
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "image_url": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/teltonika-eye-beacon/img/eye_beacon_front.png",
+                                                        "name": "Source 1",
+                                                        "source": "image_url"
+                                                    }
+                                                ],
+                                                "type": "image"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 13
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "value": 5
+                                                        },
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true
+                                                },
+                                                "properties": {
+                                                    "mapType": "roadmap",
+                                                    "showClustering": true,
+                                                    "showConnected": true,
+                                                    "showDisconnected": true,
+                                                    "showOptions": false,
+                                                    "showSearch": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "id": "teltonika_eye_beacon",
+                                                        "name": "Source 1",
+                                                        "type": "product"
+                                                    }
+                                                ],
+                                                "type": "assets_map"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 8,
+                                                    "sizeX": 1,
+                                                    "sizeY": 2
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "timespan": {
+                                                            "magnitude": "minute",
+                                                            "value": 5
+                                                        },
+                                                        "type": "timespan"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Signal Strength"
+                                                },
+                                                "properties": {
+                                                    "icon": "",
+                                                    "iconSize": "",
+                                                    "max": -80,
+                                                    "min": 0,
+                                                    "unit": "dBm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "teltonika_eye_beacon_data",
+                                                            "mapping": "rssi",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "1ea81f49f8e055aac952caf3a38b0055"
+                                                                ],
+                                                                "group": [],
+                                                                "source ": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "device": {},
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "progressbar"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 1,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "showTs": true,
+                                                    "title": "Last seen by"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "fal fa-car",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "teltonika_eye_beacon_data",
+                                                            "mapping": "source",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "1ea81f49f8e055aac952caf3a38b0055"
+                                                                ],
+                                                                "group": [],
+                                                                "source ": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
