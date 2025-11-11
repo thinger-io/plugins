@@ -37,22 +37,41 @@ app.use(express.json({ strict: false, limit: '8mb' }))
  * @returns {Object} - Thinger.io uplink message.
  */
 function ttnToThinger(msg: any, appId: string, deviceId: string): any {
-  if (!msg) throw new Error('Invalid message: msg is undefined or null');
+  if (!msg) {
+    throw new Error('Invalid message: msg is undefined or null');
+  }
+
+  if (!msg.end_device_ids?.dev_eui) {
+    throw new Error('Invalid message: missing device EUI');
+  }
+
+  if (!msg.uplink_message) {
+    throw new Error('Invalid message: missing uplink_message');
+  }
 
   // If no device template was selected in TTN workspace, encoded data
   // will be sent as raw payload 
 
-  const rawPayload = msg.uplink_message.frm_payload || null;
+  const rawPayload = msg.uplink_message?.frm_payload || null;
+  let hexPayload = null;
+  if (rawPayload) {
+    try {
+      hexPayload = Buffer.from(rawPayload, 'base64').toString('hex');
+    } catch (error) {
+      console.error('Error converting payload to hex:', error);
+      hexPayload = null;
+    }
+  }
 
   return {
     deviceEui: msg.end_device_ids.dev_eui,
-    deviceId: deviceId,
+    deviceId: deviceId || '',
     source: 'ttn',
     appId: appId || '',
-    fPort: msg.uplink_message.f_port ?? null,
-    fCnt: msg.uplink_message.f_cnt ?? null,
-    payload: rawPayload ? Buffer.from(rawPayload, 'base64').toString('hex') : null,
-    decodedPayload: msg.uplink_message.decoded_payload || null,
+    fPort: msg.uplink_message?.f_port ?? null,
+    fCnt: msg.uplink_message?.f_cnt ?? null,
+    payload: hexPayload,
+    decodedPayload: msg.uplink_message?.decoded_payload || null,
     metadata: {
       ack: msg.ack ?? null,
       battery: msg.uplink_message?.last_battery_percentage?.value ?? null,
