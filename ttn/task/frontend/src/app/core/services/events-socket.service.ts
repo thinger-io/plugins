@@ -34,13 +34,13 @@ export class EventsSocketService {
 
   constructor() {}
 
-  async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
+  async initialize(socketEndpoint: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
-    const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
-    console.log(`Socket.IO base URL: ${baseUrl}`);
+    const socketPath = window.location.pathname.replace(/\/$/, '') + socketEndpoint;
+    console.log(`Socket.IO path: ${socketPath}`);
 
     // Initialize Socket.IO client
-    this.socket = io(baseUrl, {
+    this.socket = io({
       path: socketPath,
       transports: ['websocket', 'polling'],
       reconnection: true,
