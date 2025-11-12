@@ -1,0 +1,123 @@
+{
+  "name": "lorawan-product-template",
+  "version": "1.0.1",
+  "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "lorawan-product-template"
+  },
+  "metadata": {
+    "name": "LoRaWAN Device Template",
+    "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
+    "image": "https://www.weble.ch/wp-content/uploads/2019/12/lw.png"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
+        "enabled": true,
+        "name": "LoRaWAN Device Template",
+        "product": "lorawan_device_template",
+        "profile": {
+          "api": {
+            "downlink": {
+              "description": "Downlink data exit point to LNS Thinger Plugin",
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            },
+            "uplink": {
+              "description": "Uplink data entry point from LNS Thinger Plugin",
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "my_device_[0-9A-F]{16}"
+              },
+              "description": "Device Pattern ID. Make sure to change this in LNS Thinger Plugin Configuration",
+              "enabled": true,
+              "name": "Device Pattern ID"
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "description": "LoRaWAN device template data bucket",
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId;\n}\n\n// Custom payload processing function configured in \"device_data\" bucket.\nfunction parseOrDecodeIncomingData(payload) {\n    // Custom decoder here\n    return payload;\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "description": "Last uplink recieved",
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
