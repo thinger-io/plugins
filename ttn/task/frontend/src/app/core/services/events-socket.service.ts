@@ -36,8 +36,11 @@ export class EventsSocketService {
 
   async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
+    const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+    console.log(`Socket.IO base URL: ${baseUrl}`);
+
     // Initialize Socket.IO client
-    this.socket = io({
+    this.socket = io(baseUrl, {
       path: socketPath,
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -45,7 +48,8 @@ export class EventsSocketService {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 10,
       timeout: 20000,
-      autoConnect: true
+      autoConnect: true,
+      withCredentials: true
     });
 
     this.setupListeners();
