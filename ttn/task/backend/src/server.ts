@@ -39,10 +39,10 @@ const httpServer = createServer(app);
 
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: "*", // Adjust in production
+    origin: "*",
     methods: ["GET", "POST"]
   },
-  path: '/socket.io' // Default path, can be customized
+  path: '/socket.io'
 });
 
 /**

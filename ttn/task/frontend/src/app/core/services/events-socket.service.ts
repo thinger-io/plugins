@@ -32,16 +32,12 @@ export class EventsSocketService {
   private connected$ = new BehaviorSubject<boolean>(false);
   private config$ = new BehaviorSubject<any>(null);
 
-  constructor(private http: HttpClient, private appConfigService: AppConfigService) {}
+  constructor() {}
 
   async initialize(socketPath: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
-    const config = this.appConfigService.getConfig();
-    const socketUrl = config?.api_url;
-    console.log(`Received ${socketUrl}`);
-
     // Initialize Socket.IO client
-    this.socket = io(socketUrl, {
+    this.socket = io({
       path: socketPath,
       transports: ['websocket', 'polling'],
       reconnection: true,
