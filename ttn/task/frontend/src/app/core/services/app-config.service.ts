@@ -18,6 +18,7 @@ export class AppConfigService {
     });
   }
 
+
   // Expose the configuration
   getConfig(): any {
     return this.config;

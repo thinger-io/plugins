@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.0] - 2025-11-12
+
+### Add
+
+- Real Live Data Inspector for Thinger.io TTN Plugin
+- Improved Uplink Parser with support for custom payload formats
+
+### Fix
+
+- Fixed visual bug for small height screens in the plugin page.
+
 ## [2.0.2] - 2025-11-11
 
 ### Add
