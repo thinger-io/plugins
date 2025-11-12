@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { EventsSocketService, UserEvent } from './core/services/events-socket.service';
 import { Subscription } from 'rxjs';
 import { ApplicationsComponent } from './features/applications/applications.component';
@@ -34,7 +35,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private subscription = new Subscription();
 
-  constructor(private eventsSocketService: EventsSocketService) {
+  constructor(private eventsSocketService: EventsSocketService,
+              private modal: NzModalService) {
     console.log('App Component initialized');
   }
 
@@ -86,10 +88,18 @@ export class AppComponent implements OnInit, OnDestroy {
    * Clear all events
    */
   clearEvents(): void {
-    if (confirm('Are you sure you want to clear all events?')) {
-      this.eventsSocketService.clearEvents();
-      this.expandedEventIds.clear();
-    }
+    this.modal.confirm({
+      nzTitle: 'Clear All Events',
+      nzContent: 'Are you sure you want to clear all events? This action cannot be undone.',
+      nzOkText: 'Clear',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzCancelText: 'Cancel',
+      nzOnOk: () => {
+        this.eventsSocketService.clearEvents();
+        this.expandedEventIds.clear();
+      }
+    });
   }
 
   /**
