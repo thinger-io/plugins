@@ -5,6 +5,7 @@
 ### Added
 
 - Added User events Queue in Chirpstack Backend
+- Significantly improved error handling and reporting
 
 ### Fix
 

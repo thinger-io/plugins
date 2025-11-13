@@ -3,10 +3,13 @@ import { CommonModule } from '@angular/common';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
+import { NzSpaceModule } from "ng-zorro-antd/space";
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+
+// Components
 import { SettingsComponent } from "./features/settings/settings.component";
 import { ApplicationsComponent } from "./features/applications/applications.component";
 import { InspectorComponent } from "./features/inspector/inspector.component";
-import { NzSpaceModule } from "ng-zorro-antd/space";
 
 @Component({
     selector: 'app-root',
@@ -18,7 +21,8 @@ import { NzSpaceModule } from "ng-zorro-antd/space";
         SettingsComponent,
         ApplicationsComponent,
         InspectorComponent,
-        NzSpaceModule
+        NzSpaceModule,
+        NzTabsModule
     ],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css']

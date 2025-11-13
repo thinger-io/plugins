@@ -83,6 +83,16 @@ app.post("/downlink", async (req: Request, res: Response) => {
   const { data, port, priority, confirmed, uplink } = req.body;
 
   if (!data || !uplink) {
+    Log.error("Invalid downlink message: missing required fields");
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: `Uplink rejected: invalid message format`,
+      details: {
+        error: 'Missing required fields in Downlink Body: data or uplink',
+        downlinkRecieved: req.body
+      }
+    });
     res.status(400).send({ message: "Missing required fields: data or uplink" });
     return;
   }
@@ -91,7 +101,20 @@ app.post("/downlink", async (req: Request, res: Response) => {
   const deviceId = uplink.deviceEui;
 
   if (data === '' || data === null || data === 'null') {
-    res.status(200).send({
+    Log.error("Invalid downlink message: data is empty");
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: `Downlink rejected: empty data`,
+      device: deviceId,
+      application: uplink.appId,
+      details: {
+        error: 'Downlink data is empty',
+        deviceId: uplink.deviceId,
+        downlinkRecieved: req.body
+      }
+    });
+    res.status(400).send({
       error: "Enter a valid downlink message"
     });
     return;
@@ -102,6 +125,18 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   if (typeof application === 'undefined') {
     Log.error(`Application not found`);
+    userEvents.push({
+      category: 'downlink',
+      severity: 'warning',
+      title: `Uplink rejected: unknown application ${uplink.appId}`,
+      device: deviceId,
+      application: uplink.appId,
+      details: {
+        error: 'Application not configured in plugin settings',
+        applicationId: uplink.appId,
+        availableApplications: settings.applications.map(a => a.applicationName)
+      }
+    });
     res.status(404).send({ message: "Application not found" });
     return;
   }
@@ -120,7 +155,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     if (!server || !apiKey) {
       Log.error("Downlink URL or API key not found in application settings.");
       userEvents.push({
-        category: 'error',
+        category: 'downlink',
         severity: 'error',
         title: 'Downlink failed: missing configuration',
         device: uplink.deviceEui,
@@ -215,7 +250,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     Log.error("Error while sending downlink:", err.message || err);
 
     userEvents.push({
-      category: 'error',
+      category: 'downlink',
       severity: 'error',
       title: `Downlink exception for ${uplink.deviceEui}`,
       device: uplink.deviceEui,
@@ -268,17 +303,36 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
   //Log.debug("Headers:", req.headers);
 
-  const applicationId = req.body.deviceInfo.applicationName;
+  let application: chirpstackApplication | undefined;
+  let applicationId: string;
+  let deviceEui: string;
 
-  const application: chirpstackApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
-  const deviceEui = req.body.deviceInfo.devEui.toUpperCase();
+  try {
+    applicationId = req.body.deviceInfo.applicationName;
+    application = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+    deviceEui = req.body.deviceInfo.devEui.toUpperCase();
+  } catch (error: any) {
+    Log.error("Error parsing uplink message:", error.message || error);
+    userEvents.push({
+      category: 'uplink',
+      severity: 'error',
+      title: `Uplink rejected: invalid message format`,
+      details: {
+        error: error.message || 'Unknown error parsing uplink message',
+        uplinkRecieved: req.body
+      }
+    });
+    res.status(400).send({ message: "Invalid message format" });
+    return;
+  }
+
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
 
     userEvents.push({
-      category: 'error',
-      severity: 'error',
+      category: 'uplink',
+      severity: 'warning',
       title: `Uplink rejected: unknown application ${applicationId}`,
       device: deviceEui,
       application: applicationId,
@@ -328,9 +382,27 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       application: applicationId,
       details: {
         deviceId: device,
-        error: error.message || 'Unknown error forwarding to Thinger',
+        httpErrorCode: error.code || 'N/A',
+        error: error.message,
+        description: 'This plugin couldn\'t forward the uplink message to Thinger.io platform. Check you product id prefix',
         fPort: chirpstackMessage.fPort,
         fCnt: chirpstackMessage.fCnt
+      }
+    });
+    res.status(500).send();
+  }).catch((error: any) => {
+    Log.log("Unexpected error while handling uplink", error);
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: `Unexpected error forwarding uplink from ${deviceEui}`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: device,
+        httpErrorCode: error.code || 'N/A',
+        error: error.message || 'Unknown unexpected error',
+        uplinkRecieved: req.body
       }
     });
     res.status(500).send();

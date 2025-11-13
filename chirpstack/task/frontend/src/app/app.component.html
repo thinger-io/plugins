@@ -9,11 +9,17 @@
     </nz-header>
     <nz-content>
       <div class="inner-content">
-        <nz-space nzDirection="vertical" [nzSize]="'large'" style="width: 100%">
-          <app-applications *nzSpaceItem></app-applications>
-          <app-settings *nzSpaceItem></app-settings>
-          <app-inspector *nzSpaceItem></app-inspector>
-        </nz-space>
+        <nz-tabset nzType="card" nzSize="default">
+          <nz-tab nzTitle="Applications">
+            <app-applications></app-applications>
+          </nz-tab>
+          <nz-tab nzTitle="Settings">
+            <app-settings></app-settings>
+          </nz-tab>
+          <nz-tab nzTitle="Inspector">
+            <app-inspector></app-inspector>
+          </nz-tab>
+        </nz-tabset>
       </div>
     </nz-content>
   </nz-layout>

@@ -1,145 +1,126 @@
-<div class="tw-mt-8">
-  <div class="tw-border tw-border-gray-200 tw-rounded-lg tw-overflow-hidden tw-flex tw-flex-col"
-       style="min-height: 400px; height: 600px;">
-    <!-- Header -->
-    <div class="tw-px-6 tw-py-4 tw-border-b tw-border-gray-200 tw-flex tw-justify-between tw-items-center tw-flex-shrink-0">
-      <div class="tw-flex tw-items-center tw-gap-3">
-        <h3 class="tw-text-lg tw-font-semibold tw-m-0">Recent Events</h3>
-        <span
-          class="tw-w-2 tw-h-2 tw-rounded-full"
-          [style.background]="isConnected ? '#52c41a' : '#ff4d4f'">
-                  </span>
-        <span class="tw-text-sm tw-text-gray-500">
-                    {{ isConnected ? 'Live' : 'Disconnected' }}
-                  </span>
-      </div>
-      <div class="tw-flex tw-items-center tw-gap-3">
-        <span class="tw-text-sm tw-text-gray-500">{{ events.length }} total</span>
-        <button
-          (click)="clearEvents()"
-          class="tw-px-3 tw-py-1 tw-text-sm tw-border tw-border-gray-300 tw-rounded hover:tw-bg-gray-50 tw-transition-colors"
-          [disabled]="events.length === 0">
-          Clear
-        </button>
-      </div>
+<div class="tw-border tw-border-gray-200 tw-rounded-lg tw-overflow-hidden tw-flex tw-flex-col"
+     style="height: calc(100vh - 280px); min-height: 400px; max-height: 800px;">
+  <!-- Header -->
+  <div class="tw-px-6 tw-py-4 tw-border-b tw-border-gray-200 tw-flex tw-justify-between tw-items-center tw-flex-shrink-0">
+    <div class="tw-flex tw-items-center tw-gap-3">
+      <h3 class="tw-text-lg tw-font-semibold tw-m-0">Recent Events</h3>
+      <span
+        class="tw-w-2 tw-h-2 tw-rounded-full"
+        [style.background]="isConnected ? '#52c41a' : '#ff4d4f'">
+      </span>
+      <span class="tw-text-sm tw-text-gray-500">
+        {{ isConnected ? 'Live' : 'Disconnected' }}
+      </span>
+    </div>
+    <div class="tw-flex tw-items-center tw-gap-3">
+      <span class="tw-text-sm tw-text-gray-500">{{ events.length }} total</span>
+      <button
+        (click)="clearEvents()"
+        class="tw-px-3 tw-py-1 tw-text-sm tw-border tw-border-gray-300 tw-rounded hover:tw-bg-gray-50 tw-transition-colors"
+        [disabled]="events.length === 0">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Scrollable Content Area -->
+  <div class="tw-flex-1 tw-overflow-y-auto tw-min-h-0">
+    <div *ngIf="events.length === 0" class="tw-p-12 tw-text-center tw-text-gray-400">
+      <p class="tw-text-lg tw-font-medium tw-m-0">No events yet</p>
+      <p class="tw-text-sm tw-mt-2 tw-m-0">Events will appear here in real-time</p>
     </div>
 
-    <div class="tw-flex-1 tw-overflow-y-auto tw-min-h-0">
-      <div *ngIf="events.length === 0" class="tw-p-12 tw-text-center tw-text-gray-400">
-        <p class="tw-text-lg tw-font-medium tw-m-0">No events yet</p>
-        <p class="tw-text-sm tw-mt-2 tw-m-0">Events will appear here in real-time</p>
-      </div>
+    <div *ngFor="let event of events; let i = index"
+         class="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50 tw-transition-colors tw-cursor-pointer"
+         (click)="toggleEventDetails(event.id)">
 
-      <div *ngFor="let event of events; let i = index"
-           class="tw-border-b tw-border-gray-100 hover:tw-bg-gray-50 tw-transition-colors tw-cursor-pointer"
-           (click)="toggleEventDetails(event.id)">
+      <!-- Event Row -->
+      <div class="tw-px-6 tw-py-4 tw-flex tw-items-center tw-gap-4">
+        <!-- Severity Indicator Bar -->
+        <div class="tw-w-1 tw-h-12 tw-rounded-full tw-flex-shrink-0"
+             [style.background]="getSeverityColor(event.severity)">
+        </div>
 
-        <!-- Event Row -->
-        <div class="tw-px-6 tw-py-4 tw-flex tw-items-center tw-gap-4">
-          <!-- Severity Indicator Bar -->
-          <div class="tw-w-1 tw-h-12 tw-rounded-full tw-flex-shrink-0"
-               [style.background]="getSeverityColor(event.severity)">
+        <!-- Event Info -->
+        <div class="tw-flex-grow tw-min-w-0">
+          <div class="tw-font-medium tw-text-gray-900 tw-truncate">
+            {{ event.title }}
           </div>
-
-          <!-- Event Info -->
-          <div class="tw-flex-grow tw-min-w-0">
-            <div class="tw-font-medium tw-text-gray-900 tw-truncate">
-              {{ event.title }}
-            </div>
-            <div class="tw-flex tw-items-center tw-gap-3 tw-text-xs tw-text-gray-500 tw-mt-1 tw-flex-wrap">
-                        <span class="tw-px-2 tw-py-0.5 tw-bg-gray-100 tw-rounded tw-font-medium">
-                          {{ event.category }}
-                        </span>
-              <span
-                *ngIf="event.device"
-                class="tw-px-2 tw-py-0.5 tw-bg-blue-50 tw-text-blue-700 tw-rounded">
-                          {{ event.device }}
-                        </span>
-              <span
-                *ngIf="event.application"
-                class="tw-px-2 tw-py-0.5 tw-bg-purple-50 tw-text-purple-700 tw-rounded">
-                          {{ event.application }}
-                        </span>
-            </div>
-          </div>
-
-          <!-- Metadata (if exists) -->
-          <div *ngIf="event.metadata" class="tw-flex tw-items-center tw-gap-3 tw-text-xs tw-text-gray-400 tw-flex-shrink-0">
-                      <span *ngIf="event.metadata['duration']">
-                        {{ event.metadata['duration'] }}ms
-                      </span>
-            <span *ngIf="event.metadata['size']">
-                        {{ event.metadata['size'] }}B
-                      </span>
-          </div>
-
-          <!-- Time -->
-          <div class="tw-text-xs tw-text-gray-400 tw-flex-shrink-0 tw-min-w-[60px] tw-text-right">
-            {{ formatTime(event.timestamp) }}
-          </div>
-
-          <!-- Expand Indicator -->
-          <div class="tw-text-gray-400 tw-flex-shrink-0 tw-text-xs">
-            {{ isEventExpanded(event.id) ? '▲' : '▼' }}
+          <div class="tw-flex tw-items-center tw-gap-3 tw-text-xs tw-text-gray-500 tw-mt-1 tw-flex-wrap">
+            <span class="tw-px-2 tw-py-0.5 tw-bg-gray-100 tw-rounded tw-font-medium">
+              {{ event.category }}
+            </span>
+            <span
+              *ngIf="event.device"
+              class="tw-px-2 tw-py-0.5 tw-bg-blue-50 tw-text-blue-700 tw-rounded">
+              {{ event.device }}
+            </span>
+            <span
+              *ngIf="event.application"
+              class="tw-px-2 tw-py-0.5 tw-bg-purple-50 tw-text-purple-700 tw-rounded">
+              {{ event.application }}
+            </span>
           </div>
         </div>
 
-        <!-- Expanded Details -->
-        <div *ngIf="isEventExpanded(event.id)"
-             class="tw-px-6 tw-pb-4 tw-bg-gray-50 tw-border-t tw-border-gray-100">
+        <!-- Metadata (if exists) -->
+        <div *ngIf="event.metadata" class="tw-flex tw-items-center tw-gap-3 tw-text-xs tw-text-gray-400 tw-flex-shrink-0">
+          <span *ngIf="event.metadata['duration']">
+            {{ event.metadata['duration'] }}ms
+          </span>
+          <span *ngIf="event.metadata['size']">
+            {{ event.metadata['size'] }}B
+          </span>
+        </div>
 
-          <!-- Event ID & Timestamp -->
-          <div class="tw-mt-3 tw-flex tw-gap-6 tw-text-xs tw-text-gray-500 tw-flex-wrap">
-            <div>
-              <span class="tw-font-semibold">ID:</span>
-              <span class="tw-font-mono">{{ event.id }}</span>
-            </div>
-            <div>
-              <span class="tw-font-semibold">Timestamp:</span>
-              {{ event.timestamp }}
-            </div>
-            <div>
-              <span class="tw-font-semibold">Severity:</span>
-              <span
-                class="tw-px-2 tw-py-0.5 tw-rounded tw-font-medium"
-                [style.background]="getSeverityBg(event.severity)"
-                [style.color]="getSeverityColor(event.severity)">
-                          {{ event.severity }}
-                        </span>
-            </div>
-          </div>
+        <!-- Time -->
+        <div class="tw-text-xs tw-text-gray-400 tw-flex-shrink-0 tw-min-w-[60px] tw-text-right">
+          {{ formatTime(event.timestamp) }}
+        </div>
 
-          <!-- Details -->
-          <div class="tw-mt-3">
-            <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Details</div>
-            <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.details }}</pre>
-          </div>
+        <!-- Expand Indicator -->
+        <div class="tw-text-gray-400 tw-flex-shrink-0 tw-text-xs">
+          {{ isEventExpanded(event.id) ? '▲' : '▼' }}
+        </div>
+      </div>
 
-          <!-- Metadata (if exists) -->
-          <div *ngIf="event.metadata && hasMetadata(event.metadata)" class="tw-mt-3">
-            <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Metadata</div>
-            <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.metadata  }}</pre>
+      <!-- Expanded Details -->
+      <div *ngIf="isEventExpanded(event.id)"
+           class="tw-px-6 tw-pb-4 tw-bg-gray-50 tw-border-t tw-border-gray-100">
+
+        <!-- Event ID & Timestamp -->
+        <div class="tw-mt-3 tw-flex tw-gap-6 tw-text-xs tw-text-gray-500 tw-flex-wrap">
+          <div>
+            <span class="tw-font-semibold">ID:</span>
+            <span class="tw-font-mono">{{ event.id }}</span>
           </div>
+          <div>
+            <span class="tw-font-semibold">Timestamp:</span>
+            {{ event.timestamp | date :'medium' }}
+          </div>
+          <div>
+            <span class="tw-font-semibold">Severity:</span>
+            <span
+              class="tw-px-2 tw-py-0.5 tw-rounded tw-font-medium"
+              [style.background]="getSeverityBg(event.severity)"
+              [style.color]="getSeverityColor(event.severity)">
+              {{ event.severity }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="tw-mt-3">
+          <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Details</div>
+          <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.details | json }}</pre>
+        </div>
+
+        <!-- Metadata (if exists) -->
+        <div *ngIf="event.metadata && hasMetadata(event.metadata)" class="tw-mt-3">
+          <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Metadata</div>
+          <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.metadata | json }}</pre>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-
-<div class="tw-h-8"></div>
-
-<div style="position: fixed; top: 10px; right: 10px; z-index: 1000;
-            padding: 8px 16px; border-radius: 4px; font-size: 12px;
-            background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-        <span
-          class="tw-inline-block tw-w-2 tw-h-2 tw-rounded-full tw-mr-2"
-          [style.background]="isConnected ? '#52c41a' : '#ff4d4f'">
-        </span>
-  <span [style.color]="isConnected ? '#52c41a' : '#ff4d4f'">
-          {{ isConnected ? 'Live Events' : 'Disconnected' }}
-        </span>
-  <span style="margin-left: 12px; color: #666;">
-          {{ events.length }}
-        </span>
 </div>

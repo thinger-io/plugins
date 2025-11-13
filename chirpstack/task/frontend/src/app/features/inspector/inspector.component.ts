@@ -1,11 +1,12 @@
 import {Component} from "@angular/core";
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { CommonModule } from '@angular/common';
 import { EventsSocketService, UserEvent } from '../../core/services/events-socket.service';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-inspector',
-  imports: [],
+  imports: [CommonModule],
   templateUrl: './inspector.component.html',
 })
 export class InspectorComponent {
