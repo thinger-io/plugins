@@ -131,8 +131,9 @@ jobs:
             thinger/${{ matrix.plugin }}-plugin:${{ env.docker_version }}
 
       - name: Update README in DockerHub
+        continue-on-error: true
         if: ${{ steps.check_dockerfile.outputs.files_exists == 'true' && env.branch == 'main' }}
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

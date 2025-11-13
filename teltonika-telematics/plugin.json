@@ -1,0 +1,330 @@
+{
+    "name": "teltonika-telematics",
+    "version": "1.0.0",
+    "description": "Decoder and preconfiguration for Teltonika GPS Telematics devices",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "teltonika-telematics"
+    },
+    "metadata": {
+        "name": "Teltonika Telematics",
+        "description": "Decoder and preconfiguration for Teltonika GPS Telematics devices",
+        "image": "assets/teltonika-telematics.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "fields": [
+                        {
+                            "icon": {
+                                "source": "far fa-text",
+                                "type": "fa"
+                            },
+                            "name": "Name",
+                            "type": "string",
+                            "value": "{{name}}"
+                        }
+                    ],
+                    "icons": [
+                        {
+                            "conditions": [],
+                            "icon": {
+                                "background": "#001a77",
+                                "color": "#ffffff",
+                                "source": "fal fa-car",
+                                "type": "fa"
+                            }
+                        }
+                    ]
+                },
+                "description": "Decoder and preconfiguration for Teltonika GPS Telematics devices",
+                "enabled": true,
+                "name": "Teltonika Telematics",
+                "product": "teltonika_telematics",
+                "profile": {
+                    "api": {
+                        "location": {
+                            "enabled": true,
+                            "request": {
+                                "data": {}
+                            },
+                            "response": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "getLocation",
+                                    "payload_type": "source_payload",
+                                    "property": "received",
+                                    "source": "property"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {},
+                    "buckets": {
+                        "teltonika_beacon": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseMsgBeacon",
+                                "payload_type": "source_event",
+                                "source": "topic",
+                                "topic": "{{imei}}/data"
+                            },
+                            "description": "Beacon events received by the teltonika GPS telematics devices",
+                            "enabled": true,
+                            "name": "Teltonika Telematics Beacon",
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        },
+                        "teltonika_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseMsgData",
+                                "payload_type": "source_event",
+                                "source": "topic",
+                                "topic": "{{imei}}/data"
+                            },
+                            "description": "Data events received by the teltonika GPS telematics devices",
+                            "enabled": true,
+                            "name": "Teltonika Telematics Data",
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "",
+                        "environment": "javascript",
+                        "storage": "teltonika_decoder",
+                        "version": "1.0"
+                    },
+                    "endpoints": {
+                        "teltonika_eye_beacon": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseMsgBeacon",
+                                "payload_type": "source_payload",
+                                "source": "topic",
+                                "topic": "{{imei}}/data"
+                            },
+                            "enabled": false,
+                            "split_data": true
+                        }
+                    },
+                    "properties": {
+                        "location": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "location",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "received": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseMsg",
+                                "payload_type": "source_event",
+                                "source": "topic",
+                                "topic": "{{imei}}/data"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "properties": {
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "refresh_interval": 0
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "image_url": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/teltonika-gps/img/teltonika-trackers.webp",
+                                                        "name": "Source 1",
+                                                        "source": "image_url"
+                                                    }
+                                                ],
+                                                "type": "image"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 1,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "IMEI"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 0,
+                                                    "icon": "far fa-fingerprint",
+                                                    "size": "35px",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "teltonika_fmc920_data",
+                                                            "mapping": "imei",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "fmc920"
+                                                                ],
+                                                                "group": [],
+                                                                "imei": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 13
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    }
+                                                },
+                                                "properties": {
+                                                    "mapType": "roadmap",
+                                                    "showClustering": true,
+                                                    "showConnected": true,
+                                                    "showDisconnected": true,
+                                                    "showOptions": false,
+                                                    "showSearch": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "id": "teltonika_fmc920",
+                                                        "name": "Source 1",
+                                                        "type": "product"
+                                                    }
+                                                ],
+                                                "type": "assets_map"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Total traveled"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 0,
+                                                    "icon": "fal fa-road",
+                                                    "size": "35px",
+                                                    "unit": "Km",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "teltonika_fmc920_data",
+                                                            "mapping": "odometer_total",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "fmc920"
+                                                                ],
+                                                                "group": [],
+                                                                "imei": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

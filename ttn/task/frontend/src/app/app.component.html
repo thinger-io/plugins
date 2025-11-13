@@ -6,17 +6,20 @@
           <span>TTN</span>
         </span>
       </div>
-    </nz-header>  
+    </nz-header>
     <nz-content>
-      <div class="inner-content tw-px-2 tw-py-4 tw-max-w-6xl tw-mx-auto">
-        <div class="tw-grid tw-gap-6 tw-grid-cols-1 lg:tw-grid-cols-2">
-          <div>
+      <div class="inner-content">
+        <nz-tabset nzType="card" nzSize="default">
+          <nz-tab nzTitle="Applications">
             <app-applications></app-applications>
-          </div>
-          <div>
+          </nz-tab>
+          <nz-tab nzTitle="Settings">
             <app-settings></app-settings>
-          </div>
-        </div>
+          </nz-tab>
+          <nz-tab nzTitle="Inspector">
+            <app-inspector></app-inspector>
+          </nz-tab>
+        </nz-tabset>
       </div>
     </nz-content>
   </nz-layout>

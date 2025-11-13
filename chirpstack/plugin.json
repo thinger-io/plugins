@@ -1,0 +1,58 @@
+{
+  "name": "chirpstack",
+  "version": "1.1.0",
+  "description": "Plugin for integrating Thinger.io with ChirpStack LNS",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "chirpstack"
+  },
+  "metadata": {
+    "name": "ChirpStack",
+    "description": "Chirpstack Integration",
+    "image": "./docs/assets/Chirpstack_logo_long.png",
+    "icon": "https://avatars.githubusercontent.com/u/56792266?s=200&v=4"
+  },
+  "tokens": {
+    "chirpstack_plugin": {
+      "name": "Access from ChirpStack plugin to Thinger.io account",
+      "allow": {
+        "Device": {
+          "*": [
+            "AccessDeviceResources",
+            "CreateDeviceProperty",
+            "ReadDeviceProperty"
+          ]
+        },
+        "Plugin": {
+          "chirpstack": "*"
+        }
+      }
+    },
+    "chirpstack_plugin_callback": {
+      "name": "Access from ChirpStack to Uplink callback",
+      "allow": {
+        "Plugin": {
+          "ttn": [
+            "CallPluginEndpoint"
+          ]
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "thinger/chirpstack-plugin",
+    "port": 3000
+  },
+  "interface": {
+    "main": {
+      "proxy_to": {
+        "plugin": "chirpstack",
+        "port": 3000
+      }
+    }
+  }
+}
