@@ -5,6 +5,7 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { SettingsComponent } from "./features/settings/settings.component";
 import { ApplicationsComponent } from "./features/applications/applications.component";
+import { InspectorComponent } from "./features/inspector/inspector.component";
 import { NzSpaceModule } from "ng-zorro-antd/space";
 
 @Component({
@@ -16,6 +17,7 @@ import { NzSpaceModule } from "ng-zorro-antd/space";
         NzMenuModule,
         SettingsComponent,
         ApplicationsComponent,
+        InspectorComponent,
         NzSpaceModule
     ],
     templateUrl: './app.component.html',
