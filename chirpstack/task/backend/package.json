@@ -39,6 +39,7 @@
     "@chirpstack/chirpstack-api": "^4.13.0",
     "@grpc/grpc-js": "^1.13.4",
     "@thinger-io/thinger-node": "0.1.0-alpha.4",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1"
   }
 }
