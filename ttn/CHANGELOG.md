@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1] - 2025-11-13
+
+### Add
+
+- Changed visual style of plugin sections in order to improve readability
+- Significantly improved error handling and logging for uplink parsing issues
+
 ## [2.1.0] - 2025-11-12
 
 ### Add
