@@ -2,9 +2,12 @@ import express, { Express, Request, Response } from 'express';
 import { FrontEndRouter } from './frontend/routes.js';
 import process from "node:process";
 import { DevicesApi, PluginsApi, ApiException, PropertyCreate } from "@thinger-io/thinger-node";
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 
 import { thingerApiConfig } from "./lib/api.js";
 import { Log } from "./lib/log.js";
+import { UserEvents } from './lib/user-events.js';
 
 const _user: string = process.env.THINGER_USER || "";
 const _plugin = process.env.THINGER_PLUGIN || "";
@@ -32,9 +35,23 @@ export type chirpstackApplication = {
 
 let settings: { applications: chirpstackApplication[] } = { applications: [] };
 
+// Set up user events logger. This logger is used to give the user feedback about
+// the plugin operations. It souldnt be used for debugging purposes.
+const userEvents = new UserEvents();
+
 const app: Express = express();
 app.enable('trust proxy');
 app.use(express.json({ strict: false, limit: '8mb' }))
+
+const httpServer = createServer(app);
+
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  path: '/socket.io'
+});
 
 /*
 Ensure the server URL has a port, if not, add the default port.
@@ -102,6 +119,18 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
     if (!server || !apiKey) {
       Log.error("Downlink URL or API key not found in application settings.");
+      userEvents.push({
+        category: 'error',
+        severity: 'error',
+        title: 'Downlink failed: missing configuration',
+        device: uplink.deviceEui,
+        details: {
+          error: 'Downlink URL or API key not found',
+          deviceId: uplink.deviceId,
+          serverUrl: !!server,
+          hasApiKey: !!apiKey
+        }
+      });
       res.status(500).send({ message: "Downlink URL or API key not found in application settings" });
       return;
     }
@@ -112,12 +141,30 @@ app.post("/downlink", async (req: Request, res: Response) => {
       grpc.credentials.createInsecure(),
     );
 
-    console.log("Sending downlink message:", {
+    Log.log("Sending downlink message:", {
       deviceId: deviceId,
       data: data,
       port: port,
       priority: priority,
       confirmed: confirmed
+    });
+
+    userEvents.push({
+      category: 'downlink',
+      severity: 'info',
+      title: `Downlink initiated to ${uplink.deviceEui}`,
+      device: uplink.deviceEui,
+      application: application.applicationName,
+      details: {
+        deviceId: uplink.deviceId,
+        port: port,
+        priority: priority,
+        confirmed: confirmed,
+        dataHex: data
+      },
+      metadata: {
+        size: Buffer.from(data, 'hex').length
+      }
     });
 
     // Create the Metadata object.
@@ -130,14 +177,34 @@ app.post("/downlink", async (req: Request, res: Response) => {
     item.setConfirmed(confirmed || false); // Default to false if not provided
     item.setData(Buffer.from(data, 'hex'));
 
+    const startTime = Date.now();
     const enqueueReq = new device_pb.EnqueueDeviceQueueItemRequest();
     enqueueReq.setQueueItem(item);
-
     const resp = await new Promise((resolve, reject) => {
       deviceService.enqueue(enqueueReq, metadata, (err: never, r: never) => {
         if (err) return reject(err);
         resolve(r);
       });
+    });
+    const duration = Date.now() - startTime;
+
+    userEvents.push({
+      category: 'downlink',
+      severity: 'success',
+      title: `Downlink sent to ${uplink.deviceEui}`,
+      device: uplink.deviceEui,
+      application: application.applicationName,
+      details: {
+        deviceId: uplink.deviceId,
+        port: port,
+        priority: priority,
+        confirmed: confirmed,
+        response: resp
+      },
+      metadata: {
+        duration: duration,
+        size: Buffer.from(data, 'hex').length
+      }
     });
 
     Log.log("Downlink message sent successfully for device:", deviceId);
@@ -146,6 +213,19 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   } catch (err: any) {
     Log.error("Error while sending downlink:", err.message || err);
+
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: `Downlink exception for ${uplink.deviceEui}`,
+      device: uplink.deviceEui,
+      details: {
+        deviceId: uplink.deviceId,
+        error: err.message || err,
+        stack: err.stack
+      }
+    });
+
     res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
   }
 
@@ -191,14 +271,29 @@ app.post(`/uplink`, (req: Request, res: Response) => {
   const applicationId = req.body.deviceInfo.applicationName;
 
   const application: chirpstackApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+  const deviceEui = req.body.deviceInfo.devEui.toUpperCase();
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
+
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: `Uplink rejected: unknown application ${applicationId}`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        error: 'Application not configured in plugin settings',
+        applicationId: applicationId,
+        availableApplications: settings.applications.map(a => a.applicationName)
+      }
+    });
+
     res.status(404).send({ message: "Application not found" });
     return;
   }
 
-  const device = `${application.deviceIdPrefix}${req.body.deviceInfo.devEui.toUpperCase()}`;
+  const device = `${application.deviceIdPrefix}${deviceEui}`;
 
   Log.log("HTTP PUSH 'uplink' for user ", _user, "device", device, "application", applicationId);
 
@@ -208,11 +303,93 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   devicesApi.accessInputResources(_user, device, 'uplink', chirpstackMessage).then(() => {
     Log.log("Uplink of callback handled:", device);
+
+    userEvents.push({
+      category: 'uplink',
+      severity: 'success',
+      title: `Uplink forwarded to Thinger (${device})`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: device,
+        action: 'forwarded_to_thinger',
+        fPort: chirpstackMessage.fPort,
+        fCnt: chirpstackMessage.fCnt
+      }
+    });
+    res.status(200).send();
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: `Failed to forward uplink from ${deviceEui}`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: device,
+        error: error.message || 'Unknown error forwarding to Thinger',
+        fPort: chirpstackMessage.fPort,
+        fCnt: chirpstackMessage.fCnt
+      }
+    });
     res.status(500).send();
   });
 });
+
+io.on('connection', (socket) => {
+  Log.info('Client connected to events stream:', socket.id);
+
+  // Send initial data when client connects
+  socket.emit('initial-events', {
+    events: userEvents.getRecent({ limit: 20 }),
+    config: userEvents.getConfig(),
+    stats: userEvents.getStats()
+  });
+
+  // Handle client requests for filtered events
+  socket.on('get-events', (filters) => {
+    try {
+      const events = userEvents.getRecent(filters);
+      socket.emit('events-response', { events, filters });
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching events', error: error.message });
+    }
+  });
+
+  // Handle clear events request
+  socket.on('clear-events', () => {
+    try {
+      userEvents.clear();
+      socket.emit('events-cleared');
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error clearing events', error: error.message });
+    }
+  });
+
+  // Handle get stats request
+  socket.on('get-stats', () => {
+    try {
+      socket.emit('stats-response', userEvents.getStats());
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching stats', error: error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    Log.info('Client disconnected from events stream:', socket.id);
+  });
+});
+
+userEvents.on('new-event', (event) => {
+  io.emit('new-event', event);
+});
+
+// When events are cleared, notify all clients
+userEvents.on('events-cleared', () => {
+  io.emit('events-cleared');
+});
+
 
 // Endpoint to return the os environment variables that start with THINGER
 app.get("/env", (req: Request, res: Response) => {
@@ -255,7 +432,7 @@ function saveSettings(value: object = {}) {
   return pluginsApi.createProperty(_user, _plugin, prop);
 }
 
-function readSettings() {
+async function readSettings() {
 
   pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: chirpstackApplication[] } }) => {
 
@@ -283,8 +460,9 @@ function readSettings() {
 }
 
 // Read settings on startup
-readSettings();
+await readSettings();
 
-app.listen(3000, () => {
-  Log.log("Server running on port 3000");
+httpServer.listen(3000, () => {
+  Log.log("Server running on port 3000 with WebSocket support");
 });
+
