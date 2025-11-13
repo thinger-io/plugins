@@ -1,11 +1,12 @@
 # Changelog
 
-## [1.0.0] - 2025-11-15
+## [1.1.0] - 2025-11-15
 
 ### Added
 
 - Added User events Queue in Chirpstack Backend
 - Significantly improved error handling and reporting
+- Cleaner visualization with tabs for different plugin configuration sections
 
 ### Fix
 
