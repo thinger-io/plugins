@@ -3,10 +3,14 @@ import { FrontEndRouter } from './frontend/routes.js';
 import process from "node:process";
 import { DevicesApi, PluginsApi, ApiException, PropertyCreate } from "@thinger-io/thinger-node";
 import { request } from 'undici'
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+
 
 import { thingerApiConfig } from "./lib/api.js";
 import { DownlinkMessage, parseEncodedToken } from "./lib/loriot.js";
 import { Log } from "./lib/log.js";
+import { UserEvents } from './lib/user-events.js';
 
 const _user: string = process.env.THINGER_USER || "";
 const _plugin = process.env.THINGER_PLUGIN || "";
@@ -24,9 +28,23 @@ export type Application = {
 
 let settings: {applications: Application[]} = { applications: [] };
 
+// Set up user events logger. This logger is used to give the user feedback about
+// the plugin operations. It souldnt be used for debugging purposes.
+const userEvents = new UserEvents();
+
 const app: Express = express();
 app.enable('trust proxy');
-app.use(express.json({strict: false, limit: '8mb'}))
+app.use(express.json({ strict: false, limit: '8mb' }))
+
+const httpServer = createServer(app);
+
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  path: '/socket.io'
+});
 
 // Serve the API
 app.post(`/downlink`, async (req: Request, res: Response) => {
@@ -173,10 +191,10 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
   // find data by id
   const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === applicationId);
+  const deviceEui = req.body.EUI;
 
   if ( typeof application !== 'undefined' ) {
-
-    const device = `${ application.deviceIdPrefix }${ req.body.EUI}`;
+    const device = `${ application.deviceIdPrefix }${deviceEui}`;
 
     const thingerUplink = loriotToThinger(req.body, applicationId, device);
 
@@ -184,15 +202,110 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
       Log.log(`handling uplink callback for device ${device} and 'uplink ${response}'`);
       res.status(200).send();
     }).catch((error: ApiException<any>) => {
-      Log.error(`Error while handling uplink for device ${device}: ${error.message}`);
-       res.status(500).send();
+      Log.log("Error while handling uplink", error);
+      userEvents.push({
+        category: 'error',
+        severity: 'error',
+        title: `Failed to forward uplink from ${deviceEui}`,
+        device: deviceEui,
+        application: applicationId,
+        details: {
+          deviceId: device,
+          httpErrorCode: error.code || 'N/A',
+          error: error.message,
+          description: 'This plugin couldn\'t forward the uplink message to Thinger.io platform. Check you product id prefix',
+          fPort: thingerUplink.fPort,
+          fCnt: thingerUplink.fCnt
+        }
+      });
+      res.status(500).send();
+    }).catch((error: any) => {
+      Log.log("Unexpected error while handling uplink", error);
+      userEvents.push({
+        category: 'error',
+        severity: 'error',
+        title: `Unexpected error forwarding uplink from ${deviceEui}`,
+        device: deviceEui,
+        application: applicationId,
+        details: {
+          deviceId: device,
+          httpErrorCode: error.code || 'N/A',
+          error: error.message || 'Unknown unexpected error',
+          uplinkRecieved: req.body
+        }
+      });
+      res.status(500).send();
     });
 
   } else {
     Log.error(`Application ${applicationId} not found`);
+    userEvents.push({
+      category: 'uplink',
+      severity: 'warning',
+      title: `Uplink rejected: unknown application ${applicationId}`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        error: 'Application not configured in plugin settings',
+        applicationId: applicationId,
+        availableApplications: settings.applications.map(a => a.applicationId)
+      }
+    });
     res.status(404).send();
   }
+});
 
+io.on('connection', (socket) => {
+  Log.info('Client connected to events stream:', socket.id);
+
+  // Send initial data when client connects
+  socket.emit('initial-events', {
+    events: userEvents.getRecent({ limit: 20 }),
+    config: userEvents.getConfig(),
+    stats: userEvents.getStats()
+  });
+
+  // Handle client requests for filtered events
+  socket.on('get-events', (filters) => {
+    try {
+      const events = userEvents.getRecent(filters);
+      socket.emit('events-response', { events, filters });
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching events', error: error.message });
+    }
+  });
+
+  // Handle clear events request
+  socket.on('clear-events', () => {
+    try {
+      userEvents.clear();
+      socket.emit('events-cleared');
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error clearing events', error: error.message });
+    }
+  });
+
+  // Handle get stats request
+  socket.on('get-stats', () => {
+    try {
+      socket.emit('stats-response', userEvents.getStats());
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching stats', error: error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    Log.info('Client disconnected from events stream:', socket.id);
+  });
+});
+
+userEvents.on('new-event', (event) => {
+  io.emit('new-event', event);
+});
+
+// When events are cleared, notify all clients
+userEvents.on('events-cleared', () => {
+  io.emit('events-cleared');
 });
 
 // Endpoint to return the os environment variables that start with THINGER
@@ -236,7 +349,7 @@ function saveSettings(value: object = {}){
   return pluginsApi.createProperty(_user, _plugin, prop);
 }
 
-function readSettings(){
+async function readSettings(){
 
   pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: {applications: Application[]} }) => {
 
@@ -262,8 +375,9 @@ function readSettings(){
   });
 }
 // Read settings on startup
-readSettings();
+await readSettings();
 
-app.listen(3000, () => {
-  Log.log("Server running on port 3000");
+httpServer.listen(3000, () => {
+  Log.log("Server running on port 3000 with WebSocket support");
 });
+
