@@ -1,0 +1,16 @@
+/* app.component.css - Minimal CSS */
+
+:host {
+  display: block;
+  height: 100vh;
+}
+
+::ng-deep {
+  nz-card {
+    height: 100%;
+  }
+
+  .ant-card-body {
+    height: calc(100% - 57px);
+  }
+}

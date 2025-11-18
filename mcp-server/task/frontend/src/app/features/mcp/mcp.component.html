@@ -1,64 +1,96 @@
-<div class="min-h-screen flex items-center justify-center p-4">
-  <div class="fixed inset-0 -z-10 bg-[radial-gradient(1000px_600px_at_50%_20%,rgba(120,120,255,0.15),transparent)]"></div>
+<!-- mcp.component.html -->
+<div class="tw-h-full">
+  <nz-spin [nzSpinning]="loading()">
+    <div class="tw-space-y-4">
 
-  <div class="w-full max-w-2xl backdrop-blur-2xl bg-white/35 border border-white/50 shadow-2xl rounded-2xl p-6 md:p-8">
-    <div class="flex items-center justify-between mb-6">
-      <h2 nz-typography class="m-0 text-2xl font-semibold tracking-tight">MCP – Credentials</h2>
-      <button nz-button nzType="default" (click)="load()" [disabled]="loading()">
-        <span nz-icon nzType="reload"></span>
-        Reload
-      </button>
-    </div>
+      <!-- Error Alert -->
+      <nz-alert
+        *ngIf="error()"
+        nzType="error"
+        [nzMessage]="error()"
+        nzShowIcon>
+      </nz-alert>
 
-    <nz-spin [nzSpinning]="loading()">
-      <ng-container *ngIf="!loading()">
+      <ng-container *ngIf="!loading() && cfg() as c">
 
-        <nz-alert
-          *ngIf="error()"
-          nzType="error"
-          [nzMessage]="error()"
-          class="mb-4"
-          nzShowIcon>
-        </nz-alert>
+        <!-- Backend Status Badge -->
+        <div class="tw-flex tw-items-center tw-gap-2 tw-p-3 tw-bg-green-50 tw-border tw-border-green-200 tw-rounded-lg">
+          <span nz-icon nzType="check-circle" nzTheme="fill" class="tw-text-green-500 tw-text-lg"></span>
+          <span class="tw-text-sm tw-font-medium tw-text-green-700">Server Online</span>
+        </div>
 
-        <ng-container *ngIf="cfg() as c">
-          <!-- URL -->
-          <div class="mb-6">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs uppercase tracking-wide text-slate-600">URL</span>
-              <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Copy URL"
-                      (click)="copy(c.url)">
+        <!-- URL Section -->
+        <div class="tw-space-y-2">
+          <div class="tw-flex tw-items-center tw-justify-between">
+            <label class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-uppercase tw-tracking-wide">
+              Endpoint URL
+            </label>
+            <button
+              nz-button
+              nzType="text"
+              nzSize="small"
+              nz-tooltip
+              nzTooltipTitle="Copy URL"
+              (click)="copy(c.url)"
+              class="tw-text-gray-500 hover:tw-text-blue-500">
+              <span nz-icon nzType="copy"></span>
+            </button>
+          </div>
+          <div class="tw-relative">
+            <pre class="tw-bg-gray-50 tw-border tw-border-gray-200 tw-rounded-lg tw-p-3 tw-text-sm tw-font-mono tw-overflow-x-auto tw-m-0 tw-text-gray-700">{{ c.url }}</pre>
+          </div>
+        </div>
+
+        <!-- Token Section -->
+        <div class="tw-space-y-2">
+          <div class="tw-flex tw-items-center tw-justify-between">
+            <label class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-uppercase tw-tracking-wide">
+              Bearer Token
+            </label>
+            <nz-space nzSize="small">
+              <button
+                *nzSpaceItem
+                nz-button
+                nzType="text"
+                nzSize="small"
+                (click)="reveal.set(!reveal())"
+                [nzTooltipTitle]="reveal() ? 'Hide Token' : 'Show Token'"
+                nz-tooltip
+                class="tw-text-gray-500 hover:tw-text-blue-500">
+                <span nz-icon [nzType]="reveal() ? 'eye-invisible' : 'eye'"></span>
+              </button>
+              <button
+                *nzSpaceItem
+                nz-button
+                nzType="text"
+                nzSize="small"
+                nz-tooltip
+                nzTooltipTitle="Copy Token"
+                (click)="copy(c.token)"
+                class="tw-text-gray-500 hover:tw-text-blue-500">
                 <span nz-icon nzType="copy"></span>
               </button>
-            </div>
-            <pre class="rounded-xl border-2 border-violet-400 bg-white/40 p-3 text-sm font-mono overflow-x-auto shadow-md">
-{{ c.url }}</pre>
+            </nz-space>
           </div>
-
-          <!-- Token -->
-          <div class="mb-2">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs uppercase tracking-wide text-slate-600">Token (Bearer)</span>
-              <div class="flex gap-2">
-                <button nz-button nzType="default" nzSize="small" (click)="reveal.set(!reveal())"
-                        [nzTooltipTitle]="reveal() ? 'Hide' : 'Show'" nz-tooltip>
-                  <span nz-icon [nzType]="reveal() ? 'eye-invisible' : 'eye'"></span>
-                </button>
-                <button nz-button nzType="default" nzSize="small" nz-tooltip nzTooltipTitle="Copy token"
-                        (click)="copy(c.token)">
-                  <span nz-icon nzType="copy"></span>
-                </button>
-              </div>
-            </div>
-            <pre class="rounded-xl border-2 border-violet-400 bg-white/40 p-3 text-sm font-mono overflow-x-auto shadow-md">
-{{ maskedToken(c.token) }}</pre>
+          <div class="tw-relative">
+            <pre class="tw-bg-gray-50 tw-border tw-border-gray-200 tw-rounded-lg tw-p-3 tw-text-sm tw-font-mono tw-overflow-x-auto tw-m-0 tw-text-gray-700">{{ maskedToken(c.token) }}</pre>
           </div>
+        </div>
 
-          <p nz-typography class="text-xs text-slate-600 mt-4">
-            Select "Auth Bearer" in your LLM client and paste the token above.
-          </p>
-        </ng-container>
+        <!-- Info Box -->
+        <div class="tw-flex tw-items-start tw-gap-3 tw-p-4 tw-bg-blue-50 tw-border tw-border-blue-200 tw-rounded-lg">
+          <span nz-icon nzType="info-circle" nzTheme="fill" class="tw-text-blue-500 tw-text-lg tw-flex-shrink-0 tw-mt-0.5"></span>
+          <div class="tw-space-y-1">
+            <p class="tw-text-sm tw-font-medium tw-text-blue-900 tw-m-0">
+              How to Connect
+            </p>
+            <p class="tw-text-xs tw-text-blue-700 tw-m-0 tw-leading-relaxed">
+              Configure your MCP client with the endpoint URL above and select <strong>"Bearer Token"</strong> authentication.
+              Then paste the token to establish the connection.
+            </p>
+          </div>
+        </div>
       </ng-container>
-    </nz-spin>
-  </div>
+    </div>
+  </nz-spin>
 </div>

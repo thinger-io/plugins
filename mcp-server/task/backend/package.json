@@ -42,6 +42,7 @@
     "@thinger-io/thinger-node": "0.1.1-alpha.1",
     "cors": "^2.8.5",
     "express": "^4.21.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "socket.io": "^4.8.1"
   }
 }

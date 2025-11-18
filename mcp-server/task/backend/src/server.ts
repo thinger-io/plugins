@@ -3,9 +3,12 @@ import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { ProductsApi, DevicesApi } from '@thinger-io/thinger-node'
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 
 import { Log } from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
+import { UserEvents } from './lib/user-events.js';
 import {FrontEndRouter} from "./frontend/routes.js";
 
 // In order to improve scalability of the code, all server capabilities are implemented in mcp_capabilities directory.
@@ -35,6 +38,10 @@ const server = new McpServer({
     resources: {},
   }
 });
+
+// Set up user events logger. This logger is used to give the user feedback about
+// the plugin operations. It souldnt be used for debugging purposes.
+const userEvents = new UserEvents();
 
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18'];                  // MCP Protocol spec
 const REQUIRED_CLIENT_CAPABILITIES: string[] = [];                                        // Client capabilities
@@ -123,12 +130,74 @@ app.use(
 app.use(express.json());
 app.enable('trust proxy');
 
+const httpServer = createServer(app);
+
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  path: '/socket.io'
+});
+
 
 // Auth Bearer (development, this is useless) TODO
 const auth: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
-
   next();
 }
+
+io.on('connection', (socket) => {
+  Log.info('Client connected to events stream:', socket.id);
+
+  // Send initial data when client connects
+  socket.emit('initial-events', {
+    events: userEvents.getRecent({ limit: 20 }),
+    config: userEvents.getConfig(),
+    stats: userEvents.getStats()
+  });
+
+  // Handle client requests for filtered events
+  socket.on('get-events', (filters) => {
+    try {
+      const events = userEvents.getRecent(filters);
+      socket.emit('events-response', { events, filters });
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching events', error: error.message });
+    }
+  });
+
+  // Handle clear events request
+  socket.on('clear-events', () => {
+    try {
+      userEvents.clear();
+      socket.emit('events-cleared');
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error clearing events', error: error.message });
+    }
+  });
+
+  // Handle get stats request
+  socket.on('get-stats', () => {
+    try {
+      socket.emit('stats-response', userEvents.getStats());
+    } catch (error: any) {
+      socket.emit('error', { message: 'Error fetching stats', error: error.message });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    Log.info('Client disconnected from events stream:', socket.id);
+  });
+});
+
+userEvents.on('new-event', (event) => {
+  io.emit('new-event', event);
+});
+
+// When events are cleared, notify all clients
+userEvents.on('events-cleared', () => {
+  io.emit('events-cleared');
+});
 
 app.post('/mcp', auth, async (req: Request, res: Response) => {
   Log.info("Received MCP request: ", req.body["method"]);

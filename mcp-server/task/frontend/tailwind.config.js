@@ -2,6 +2,7 @@
 const colors = require('tailwindcss/colors')
 
 module.exports = {
+  prefix: 'tw-',
   darkMode: 'class',
   future: {
     hoverOnlyWhenSupported: true,

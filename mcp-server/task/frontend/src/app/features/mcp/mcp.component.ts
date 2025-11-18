@@ -1,3 +1,4 @@
+// mcp.component.ts
 import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { McpConfigService, McpConfig } from '../../core/services/mcp-config.service';
@@ -9,21 +10,23 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzSpaceModule } from 'ng-zorro-antd/space';
 
 @Component({
   selector: 'app-mcp',
   standalone: true,
   imports: [
     CommonModule,
+    NzCardModule,
     NzTypographyModule,
     NzButtonModule,
     NzIconModule,
     NzAlertModule,
     NzSpinModule,
     NzToolTipModule,
+    NzSpaceModule,
   ],
   templateUrl: './mcp.component.html',
-  styleUrls: ['./mcp.component.css'],
 })
 export class McpComponent {
   private api = inject(McpConfigService);
@@ -66,6 +69,6 @@ export class McpComponent {
     if (!full) return '';
     const tail = full.slice(-4);
     const head = full.slice(0, 4);
-    return head  + '****' + tail;
+    return head + '••••••••' + tail;
   }
 }

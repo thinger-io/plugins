@@ -1,1 +1,46 @@
-<router-outlet></router-outlet>
+<!-- app.component.html -->
+<nz-layout class="min-h-screen">
+  <nz-layout>
+    <!-- Main Content -->
+    <nz-layout class="bg-gray-50">
+      <nz-content class="m-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          <!-- MCP Configuration Card - Takes 1 column -->
+          <div class="lg:col-span-1">
+            <nz-card
+              nzTitle="MCP Configuration"
+              [nzExtra]="mcpExtra"
+              class="shadow-sm h-full">
+              <ng-template #mcpExtra>
+                <span nz-icon nzType="control" nzTheme="outline" class="text-blue-500"></span>
+              </ng-template>
+              <app-mcp></app-mcp>
+            </nz-card>
+          </div>
+
+          <!-- Event Inspector Card - Takes 2 columns -->
+          <div class="lg:col-span-2">
+            <nz-card
+              nzTitle="Event Inspector"
+              [nzExtra]="inspectorExtra"
+              class="shadow-sm h-full">
+              <ng-template #inspectorExtra>
+                <nz-space nzSize="small">
+                  <button *nzSpaceItem nz-button nzType="text" nzSize="small">
+                    <span nz-icon nzType="filter" nzTheme="outline"></span>
+                  </button>
+                  <button *nzSpaceItem nz-button nzType="text" nzSize="small">
+                    <span nz-icon nzType="download" nzTheme="outline"></span>
+                  </button>
+                </nz-space>
+              </ng-template>
+              <app-inspector></app-inspector>
+            </nz-card>
+          </div>
+
+        </div>
+      </nz-content>
+    </nz-layout>
+  </nz-layout>
+</nz-layout>
