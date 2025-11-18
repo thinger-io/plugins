@@ -51,8 +51,34 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
+  const { data, port, confirmed, uplink } = req.body;
+
+  if (!data || !uplink) {
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: 'Downlink rejected: missing required fields',
+      details: {
+        error: 'Missing data or uplink information',
+        received: { data, uplink }
+      }
+    });
+    res.status(400).send({ message: "Missing required fields: data or uplink" });
+    return;
+  }
+
   // Check if the downlink message is valid
-  if ( req.body.data === '' || req.body.data === null || req.body.data === 'null' ) {
+  if ( data === '' || data === null || data === 'null' ) {
+    userEvents.push({
+      category: 'downlink',
+      severity: 'warning',
+      title: 'Downlink rejected: invalid data',
+      device: uplink.deviceEui,
+      details: {
+        error: 'Empty or null data provided',
+        deviceId: uplink.deviceId
+      }
+    });
     res.status(200).send(
       {
         cmd: "",
@@ -68,14 +94,36 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
   }
 
   // find data by token
-  const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === req.body.uplink.appId);
+  const application: Application | undefined = settings.applications.find((app: {applicationId: string}) => app.applicationId === uplink.appId);
   if ( typeof application === 'undefined' ) {
-    Log.error(`Application ${req.body.uplink.appId} not found`);
+    Log.error(`Application ${uplink.appId} not found`);
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: 'Downlink failed: application not configured',
+      device: uplink.deviceEui,
+      details: {
+        error: 'Application not found in plugin settings',
+        deviceId: uplink.deviceId,
+        applicationId: uplink.appId
+      }
+    });
     res.status(404).send({message: "Application not found"});
     return;
   }
   if ( typeof application.accessToken === 'undefined' ) {
-    Log.error(`Access token not found for application ${req.body.uplink.appId}`);
+    Log.error(`Access token not found for application ${uplink.appId}`);
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: 'Downlink failed: missing access token',
+      device: uplink.deviceEui,
+      details: {
+        error: 'Application access token not configured',
+        deviceId: uplink.deviceId,
+        applicationId: uplink.appId
+      }
+    });
     res.status(400).send({message: "Application access token not found"});
     return;
   }
@@ -83,16 +131,27 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
   // Build downlink message to send to the device
   const msg: DownlinkMessage = {
     cmd: "tx",
-    EUI: req.body.uplink.deviceEui,
-    port: req.body.port,
-    confirmed: req.body.confirmed || false,
-    data: req.body.data,
-    appid: req.body.uplink.appId,
+    EUI: uplink.deviceEui,
+    port: port,
+    confirmed: confirmed || false,
+    data: data,
+    appid: uplink.appId,
   }
 
   const allDefined = Object.values(msg).every(value => value !== undefined);
   if ( !allDefined ) {
     Log.error("Downlink message is not well defined:\n", JSON.stringify(msg, null, 2));
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: 'Downlink failed: invalid message format',
+      device: uplink.deviceEui,
+      details: {
+        error: 'Downlink message is not well defined',
+        deviceId: uplink.deviceId,
+        message: msg
+      }
+    });
     res.status(400).send({message: "Downlink message is not well defined"});
     return;
   }
@@ -102,28 +161,115 @@ app.post(`/downlink`, async (req: Request, res: Response) => {
     "Authorization": `Bearer ${application.accessToken}`
   }
 
-  const token = parseEncodedToken(application.accessToken, null);
-  const server = token.serverId;
-  Log.log("Sending downlink message:\n", JSON.stringify(msg, null, 2) );
+  try {
+    const token = parseEncodedToken(application.accessToken, null);
+    const server = token.serverId;
+    Log.log("Sending downlink message:\n", JSON.stringify(msg, null, 2) );
 
-  const {
-    statusCode,
-    //headers,
-    body
-  } = await request(`https://${server}/1/rest`, { method: 'POST', headers: msg_headers , body: JSON.stringify(msg) })
+    userEvents.push({
+      category: 'downlink',
+      severity: 'info',
+      title: `Downlink initiated to ${uplink.deviceEui}`,
+      device: uplink.deviceEui,
+      application: uplink.appId,
+      details: {
+        deviceId: uplink.deviceId,
+        port: port,
+        confirmed: confirmed || false,
+        dataHex: data,
+        server: server
+      },
+      metadata: {
+        size: Buffer.from(data, 'hex').length
+      }
+    });
 
-  // Collect stream chunks into a string
-  let responseBody = '';
-  for await (const chunk of body) {
-    responseBody += chunk.toString(); // Assuming chunks are Buffer or string
+    const startTime = Date.now();
+    const {
+      statusCode,
+      //headers,
+      body
+    } = await request(`https://${server}/1/rest`, { method: 'POST', headers: msg_headers , body: JSON.stringify(msg) })
+    const duration = Date.now() - startTime;
+
+    // Collect stream chunks into a string
+    let responseBody = '';
+    for await (const chunk of body) {
+      responseBody += chunk.toString(); // Assuming chunks are Buffer or string
+    }
+
+    // Now parse if it's JSON
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(responseBody);
+    } catch {
+      parsedBody = responseBody;
+    }
+    console.log(parsedBody);
+
+    Log.debug(`Downlink response:\n`, statusCode, parsedBody);
+
+    if (statusCode >= 200 && statusCode < 300) {
+      userEvents.push({
+        category: 'downlink',
+        severity: 'success',
+        title: `Downlink sent to ${uplink.deviceEui}`,
+        device: uplink.deviceEui,
+        application: uplink.appId,
+        details: {
+          deviceId: uplink.deviceId,
+          port: port,
+          confirmed: confirmed || false,
+          statusCode: statusCode,
+          response: parsedBody
+        },
+        metadata: {
+          duration: duration,
+          size: Buffer.from(data, 'hex').length
+        }
+      });
+    } else {
+      userEvents.push({
+        category: 'downlink',
+        severity: 'error',
+        title: `Downlink failed for ${uplink.deviceEui} (HTTP ${statusCode})`,
+        device: uplink.deviceEui,
+        application: uplink.appId,
+        details: {
+          deviceId: uplink.deviceId,
+          statusCode: statusCode,
+          error: parsedBody,
+          request: {
+            port: port,
+            confirmed: confirmed || false,
+            dataHex: data
+          }
+        },
+        metadata: {
+          duration: duration
+        }
+      });
+    }
+
+    res.status(statusCode).send(parsedBody);
+
+  } catch (err: any) {
+    Log.error("Error while sending downlink:", err.message || err);
+
+    userEvents.push({
+      category: 'downlink',
+      severity: 'error',
+      title: `Downlink exception for ${uplink.deviceEui}`,
+      device: uplink.deviceEui,
+      details: {
+        deviceId: uplink.deviceId,
+        error: err.message || err,
+        stack: err.stack
+      }
+    });
+
+    res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
   }
-
-  // Now parse if it's JSON
-  const parsedBody = JSON.parse(responseBody);
-  console.log(parsedBody);
-
-  Log.debug(`Downlink response:\n`, statusCode, body);
-  res.status(statusCode).send(parsedBody);
 
 });
 
@@ -200,6 +346,19 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
 
     devicesApi.accessInputResources(_user, device, 'uplink', thingerUplink).then((response: object) => {
       Log.log(`handling uplink callback for device ${device} and 'uplink ${response}'`);
+      userEvents.push({
+        category: 'uplink',
+        severity: 'success',
+        title: `Uplink forwarded to Thinger (${device})`,
+        device: deviceEui,
+        application: applicationId,
+        details: {
+          deviceId: device,
+          action: 'forwarded_to_thinger',
+          fPort: thingerUplink.fPort,
+          fCnt: thingerUplink.fCnt
+        }
+      });
       res.status(200).send();
     }).catch((error: ApiException<any>) => {
       Log.log("Error while handling uplink", error);
