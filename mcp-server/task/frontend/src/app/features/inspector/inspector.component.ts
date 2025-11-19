@@ -34,7 +34,7 @@ export class InspectorComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     try {
-      await this.eventsSocketService.initialize('/socket.io', 5);
+      await this.eventsSocketService.initialize('/mcp/socket.io', 5);
 
       this.subscription.add(
         this.eventsSocketService.getEvents$().subscribe(events => {
