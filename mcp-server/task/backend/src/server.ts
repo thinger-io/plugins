@@ -55,6 +55,19 @@ function jsonRpcError(
   data?: Record<string, unknown>
 ) {
   Log.error("JSON-RPC Error:", { id, code, message, data });
+  userEvents.push({
+    category: 'error',
+    severity: 'error',
+    title: `JSON-RPC Error`,
+    details: {
+      mcpCode: code,
+      message: message,
+      data: data ?? null,
+    },
+    metadata: {
+      sessionId: id?.toString() ?? 'unknown',
+    }
+  });
   return data
     ? { jsonrpc: '2.0', id, error: { code, message, data } }
     : { jsonrpc: '2.0', id, error: { code, message } };
@@ -111,6 +124,21 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
     return false;
   }
 
+  userEvents.push({
+    category: 'initialization',
+    severity: 'info',
+    title: 'MCP Client initialized',
+    client: params.clientInfo?.name ?? 'unknown',
+    details: {
+      method: body.method ?? 'unknown',
+      protocolVersion: params.protocolVersion ?? 'unknown',
+      capabilities: caps,
+    },
+    metadata: {
+      sessionId: id?.toString() ?? 'unknown',
+    }
+  });
+
   return true;
 }
 
@@ -137,7 +165,7 @@ const io = new SocketIOServer(httpServer, {
     origin: "*",
     methods: ["GET", "POST"]
   },
-  path: '/socket.io'
+  path: '/mcp/socket.io'
 });
 
 
@@ -248,6 +276,19 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 
   } catch (err: any) {
     Log.error(err.message);
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: 'Internal server error processing MCP request',
+      details: {
+        error: err.message,
+        source: "",
+      },
+      metadata: {
+        method: req.body?.method ?? 'unknown',
+        sessionId: req.body?.sessionId ?? 'unknown',
+      }
+    })
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: '2.0',
@@ -267,6 +308,6 @@ app.get('/api/mcp/config', (req, res) => {
 
 app.use(FrontEndRouter);
 
-app.listen(PORT, () => {
-  Log.info("MCP Server listening on port", PORT);
+httpServer.listen(PORT, () => {
+  Log.log(`Server running on port ${PORT} with WebSocket support`);
 });

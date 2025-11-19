@@ -1,46 +1,41 @@
 <!-- app.component.html -->
-<nz-layout class="min-h-screen">
+<nz-layout class="min-h-screen bg-gray-50">
   <nz-layout>
     <!-- Main Content -->
-    <nz-layout class="bg-gray-50">
-      <nz-content class="m-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <nz-content style="padding: 24px;">
+      <div style="max-width: 1280px; margin: 0 auto;">
 
-          <!-- MCP Configuration Card - Takes 1 column -->
-          <div class="lg:col-span-1">
-            <nz-card
-              nzTitle="MCP Configuration"
-              [nzExtra]="mcpExtra"
-              class="shadow-sm h-full">
-              <ng-template #mcpExtra>
-                <span nz-icon nzType="control" nzTheme="outline" class="text-blue-500"></span>
-              </ng-template>
-              <app-mcp></app-mcp>
-            </nz-card>
-          </div>
+        <!-- MCP Configuration Card -->
+        <nz-card
+          nzTitle="MCP Configuration"
+          [nzExtra]="mcpExtra"
+          class="shadow-sm"
+          style="margin-bottom: 24px;">
+          <ng-template #mcpExtra>
+            <span nz-icon nzType="control" nzTheme="outline" class="text-blue-500"></span>
+          </ng-template>
+          <app-mcp></app-mcp>
+        </nz-card>
 
-          <!-- Event Inspector Card - Takes 2 columns -->
-          <div class="lg:col-span-2">
-            <nz-card
-              nzTitle="Event Inspector"
-              [nzExtra]="inspectorExtra"
-              class="shadow-sm h-full">
-              <ng-template #inspectorExtra>
-                <nz-space nzSize="small">
-                  <button *nzSpaceItem nz-button nzType="text" nzSize="small">
-                    <span nz-icon nzType="filter" nzTheme="outline"></span>
-                  </button>
-                  <button *nzSpaceItem nz-button nzType="text" nzSize="small">
-                    <span nz-icon nzType="download" nzTheme="outline"></span>
-                  </button>
-                </nz-space>
-              </ng-template>
-              <app-inspector></app-inspector>
-            </nz-card>
-          </div>
+        <!-- Event Inspector Card -->
+        <nz-card
+          nzTitle="Event Inspector"
+          [nzExtra]="inspectorExtra"
+          class="shadow-sm">
+          <ng-template #inspectorExtra>
+            <nz-space nzSize="small">
+              <button *nzSpaceItem nz-button nzType="text" nzSize="small">
+                <span nz-icon nzType="filter" nzTheme="outline"></span>
+              </button>
+              <button *nzSpaceItem nz-button nzType="text" nzSize="small">
+                <span nz-icon nzType="download" nzTheme="outline"></span>
+              </button>
+            </nz-space>
+          </ng-template>
+          <app-inspector></app-inspector>
+        </nz-card>
 
-        </div>
-      </nz-content>
-    </nz-layout>
+      </div>
+    </nz-content>
   </nz-layout>
 </nz-layout>
