@@ -2,19 +2,50 @@ import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable } from 'rxjs';
 
+export type EventCategory =
+  | 'connection'      // Connection lifecycle events
+  | 'initialization'  // Server/client initialization
+  | 'tool'           // Tool-related events (calls, list, etc)
+  | 'resource'       // Resource operations
+  | 'prompt'         // Prompt operations
+  | 'sampling'       // LLM sampling requests
+  | 'auth'           // Authentication/authorization events
+  | 'config'         // Configuration changes
+  | 'error'          // Error events
+  | 'warning';       // Warning events
+
+export type EventSeverity =
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'error';
+
 /**
- * User event interface matching backend structure
+ * Main event structure stored in the queue
  */
 export interface UserEvent {
-  id: string;
-  timestamp: string;
-  category: 'uplink' | 'downlink' | 'device' | 'config' | 'error' | 'warning';
-  severity: 'success' | 'info' | 'warning' | 'error';
-  title: string;
-  device?: string;
-  application?: string;
-  details: Record<string, any>;
-  metadata?: Record<string, any>;
+  id: string;                    // Unique identifier (UUID)
+  timestamp: string;             // ISO 8601 format
+  category: EventCategory;       // Event type
+  severity: EventSeverity;       // Importance level
+  title: string;                 // Short message for list view (max ~100 chars)
+  client?: string;               // Client identifier if applicable
+  tool?: string;                 // Tool name if applicable
+  resource?: string;             // Resource URI if applicable
+  details: Record<string, any>;  // Complete data for popup/details view
+  metadata?: EventMetadata;      // Optional additional info
+}
+
+/**
+ * Optional metadata for events
+ */
+export interface EventMetadata {
+  duration?: number;             // Processing time in ms
+  size?: number;                 // Payload/response size in bytes
+  retries?: number;              // Number of retry attempts
+  method?: string;               // MCP method name (e.g., 'tools/call', 'resources/read')
+  sessionId?: string;            // Session identifier for the connection
+  [key: string]: any;            // Extensible for future use
 }
 
 /**
@@ -96,7 +127,6 @@ export class EventsSocketService {
       console.log(`   Category: ${event.category}`);
       console.log(`   Severity: ${event.severity}`);
       console.log(`   Title: ${event.title}`);
-      console.log(`   Device: ${event.device || 'N/A'}`);
       console.log(`   Details:`, event.details);
 
       const current = this.events$.value;
@@ -106,7 +136,7 @@ export class EventsSocketService {
 
     // Events cleared
     this.socket.on('events-cleared', () => {
-      console.log('🗑Events cleared');
+      console.log('Events cleared');
       this.events$.next([]);
     });
 

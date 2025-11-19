@@ -271,6 +271,22 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
       clearTimeout(timeout);
     }
 
+    userEvents.push({
+      category: 'connection',
+      severity: 'info',
+      title: `MCP request processed`,
+      client: req.body?.params?.clientInfo?.name ?? 'unknown',
+      tool: req.body?.method ?? 'unknown',
+      details: {
+        method: req.body?.method ?? 'unknown',
+        sessionId: req.body?.sessionId ?? 'unknown'
+      },
+      metadata: {
+        method: req.body?.method ?? 'unknown',
+        sessionId: req.body?.sessionId ?? 'unknown',
+      }
+    });
+
     // Timeout responded (good stuff)
     if (timedOut) return;
 
