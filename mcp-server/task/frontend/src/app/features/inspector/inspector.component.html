@@ -120,13 +120,32 @@
         <!-- Details -->
         <div class="tw-mt-3">
           <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Details</div>
-          <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.details | json }}</pre>
+          <div class="tw-bg-gradient-to-br tw-from-gray-50 tw-to-white tw-rounded-lg tw-border tw-border-gray-200 tw-shadow-sm tw-overflow-hidden">
+            <div *ngFor="let key of objectKeys(event.details); let last = last"
+                 class="tw-px-4 tw-py-3"
+                 [class.tw-border-b]="!last"
+                 [class.tw-border-gray-100]="!last">
+              <div class="tw-flex tw-flex-col tw-gap-2">
+        <span class="tw-inline-flex tw-items-center tw-px-2 tw-py-1 tw-rounded-md tw-text-xs tw-font-semibold tw-bg-blue-100 tw-text-blue-800 tw-w-fit">
+          {{ key }}
+        </span>
+                <div class="tw-w-full">
+                  <div *ngIf="isObject(event.details[key])">
+                    <pre class="tw-text-xs tw-font-mono tw-m-0 tw-whitespace-pre-wrap tw-bg-gray-100 tw-text-gray-800 tw-p-3 tw-rounded-md tw-border tw-border-gray-200">{{ event.details[key] | json }}</pre>
+                  </div>
+                  <div *ngIf="!isObject(event.details[key])">
+                    <pre class="tw-m-0 tw-whitespace-pre-wrap tw-font-mono tw-text-xs tw-text-gray-800 tw-leading-relaxed tw-bg-gray-100 tw-p-3 tw-rounded-md tw-border tw-border-gray-200">{{ event.details[key] }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Metadata (if exists) -->
         <div *ngIf="event.metadata && hasMetadata(event.metadata)" class="tw-mt-3">
           <div class="tw-text-xs tw-font-semibold tw-text-gray-600 tw-mb-2">Metadata</div>
-          <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono">{{ event.metadata | json }}</pre>
+          <pre class="tw-text-xs tw-bg-white tw-p-3 tw-rounded tw-border tw-border-gray-200 tw-overflow-x-auto tw-m-0 tw-font-mono tw-whitespace-pre-wrap">{{ event.metadata | json }}</pre>
         </div>
       </div>
     </div>

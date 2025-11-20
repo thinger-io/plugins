@@ -100,6 +100,14 @@ export class InspectorComponent implements OnInit, OnDestroy {
     return colors[severity] || '#fafafa';
   }
 
+  objectKeys(obj: any): string[] {
+    return Object.keys(obj || {});
+  }
+
+  isObject(value: any): boolean {
+    return value !== null && typeof value === 'object';
+  }
+
   hasMetadata(metadata: any): boolean {
     return metadata && Object.keys(metadata).length > 0;
   }

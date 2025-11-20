@@ -1,22 +1,22 @@
 import express, {Request, Response, NextFunction, RequestHandler} from 'express';
 import cors from 'cors';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { ProductsApi, DevicesApi } from '@thinger-io/thinger-node'
-import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
+import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
+import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import {ProductsApi, DevicesApi} from '@thinger-io/thinger-node'
+import {createServer} from 'http';
+import {Server as SocketIOServer} from 'socket.io';
 
-import { Log } from "./lib/log.js";
+import {Log} from "./lib/log.js";
 import {thingerApiConfig} from "./lib/api.js";
-import { UserEvents } from './lib/user-events.js';
+import {UserEvents} from './lib/user-events.js';
 import {FrontEndRouter} from "./frontend/routes.js";
 
 // In order to improve scalability of the code, all server capabilities are implemented in mcp_capabilities directory.
 // Each capability is a tool registered in the MCP server instance.
-import { registerProductTools } from "./mcp_capabilities/product_tools.js";
-import { registerProductResources } from "./mcp_capabilities/product_resources.js";
-import { registerDevicesTools } from "./mcp_capabilities/devices_tools.js";
-import { registerDashboardsTools } from "./mcp_capabilities/dashboards_tools.js";
+import {registerProductTools} from "./mcp_capabilities/product_tools.js";
+import {registerProductResources} from "./mcp_capabilities/product_resources.js";
+import {registerDevicesTools} from "./mcp_capabilities/devices_tools.js";
+import {registerDashboardsTools} from "./mcp_capabilities/dashboards_tools.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
@@ -54,7 +54,7 @@ function jsonRpcError(
   message: string,
   data?: Record<string, unknown>
 ) {
-  Log.error("JSON-RPC Error:", { id, code, message, data });
+  Log.error("JSON-RPC Error:", {id, code, message, data});
   userEvents.push({
     category: 'error',
     severity: 'error',
@@ -69,8 +69,8 @@ function jsonRpcError(
     }
   });
   return data
-    ? { jsonrpc: '2.0', id, error: { code, message, data } }
-    : { jsonrpc: '2.0', id, error: { code, message } };
+    ? {jsonrpc: '2.0', id, error: {code, message, data}}
+    : {jsonrpc: '2.0', id, error: {code, message}};
 }
 
 function preflightInitializeGuard(body: any, res: Response): boolean {
@@ -142,78 +142,10 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
   return true;
 }
 
-/**
- * Helper to extract client info from request
- */
-function getClientInfo(body: any): string {
-  return body?.params?.clientInfo?.name ??
-    body?.params?._meta?.clientName ??
-    'unknown';
-}
-
-/**
- * Helper to log tool calls
- */
-function logToolCall(body: any, startTime: number, success: boolean, error?: any) {
-  const duration = Date.now() - startTime;
-  const toolName = body.params?.name ?? 'unknown';
-  const args = body.params?.arguments ?? {};
-
-  userEvents.push({
-    category: 'tool',
-    severity: success ? 'success' : 'error',
-    title: success
-      ? `Tool "${toolName}" executed successfully`
-      : `Tool "${toolName}" failed`,
-    client: getClientInfo(body),
-    tool: toolName,
-    details: {
-      toolName,
-      arguments: args,
-      ...(error && { error: error.message || error }),
-    },
-    metadata: {
-      duration,
-      method: body.method,
-      sessionId: body.id?.toString() ?? 'unknown',
-    }
-  });
-}
-
-/**
- * Helper to log resource operations
- */
-function logResourceOperation(body: any, startTime: number, success: boolean, error?: any) {
-  const duration = Date.now() - startTime;
-  const resourceUri = body.params?.uri ?? 'unknown';
-  const operation = body.method?.replace('resources/', '') ?? 'unknown';
-
-  userEvents.push({
-    category: 'resource',
-    severity: success ? 'success' : 'error',
-    title: success
-      ? `Resource ${operation}`
-      : `Resource ${operation} failed`,
-    client: getClientInfo(body),
-    resource: resourceUri,
-    details: {
-      operation,
-      resourceUri,
-      params: body.params ?? {},
-      ...(error && { error: error.message || error }),
-    },
-    metadata: {
-      duration,
-      method: body.method,
-      sessionId: body.id?.toString() ?? 'unknown',
-    }
-  });
-}
-
-registerProductTools({ server, productsApi });
-registerProductResources({ server, productsApi });
-registerDevicesTools({ server, devicesApi});
-registerDashboardsTools({ server, productsApi });
+registerProductTools({server, productsApi, userEvents});
+registerProductResources({server, productsApi});
+registerDevicesTools({server, devicesApi, userEvents});
+registerDashboardsTools({server, productsApi});
 
 const app = express();
 
@@ -247,7 +179,7 @@ io.on('connection', (socket) => {
 
   // Send initial data when client connects
   socket.emit('initial-events', {
-    events: userEvents.getRecent({ limit: 20 }),
+    events: userEvents.getRecent({limit: 20}),
     config: userEvents.getConfig(),
     stats: userEvents.getStats()
   });
@@ -256,9 +188,9 @@ io.on('connection', (socket) => {
   socket.on('get-events', (filters) => {
     try {
       const events = userEvents.getRecent(filters);
-      socket.emit('events-response', { events, filters });
+      socket.emit('events-response', {events, filters});
     } catch (error: any) {
-      socket.emit('error', { message: 'Error fetching events', error: error.message });
+      socket.emit('error', {message: 'Error fetching events', error: error.message});
     }
   });
 
@@ -268,7 +200,7 @@ io.on('connection', (socket) => {
       userEvents.clear();
       socket.emit('events-cleared');
     } catch (error: any) {
-      socket.emit('error', { message: 'Error clearing events', error: error.message });
+      socket.emit('error', {message: 'Error clearing events', error: error.message});
     }
   });
 
@@ -277,7 +209,7 @@ io.on('connection', (socket) => {
     try {
       socket.emit('stats-response', userEvents.getStats());
     } catch (error: any) {
-      socket.emit('error', { message: 'Error fetching stats', error: error.message });
+      socket.emit('error', {message: 'Error fetching stats', error: error.message});
     }
   });
 
@@ -296,8 +228,6 @@ userEvents.on('events-cleared', () => {
 });
 
 app.post('/mcp', auth, async (req: Request, res: Response) => {
-  const startTime = Date.now();
-  const method = req.body?.method ?? 'unknown';
   Log.info("Received MCP request: ", req.body["method"]);
   try {
     // Check 'initialize' requests before creating the transport
@@ -337,25 +267,10 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 
     try {
       await handlePromise;
-
-      // Log successful request based on method type
-      if (method.startsWith('tools/call')) {
-        logToolCall(req.body, startTime, true);
-      } else if (method.startsWith('resources/')) {
-        logResourceOperation(req.body, startTime, true);
-      }
     } catch (error: any) {
-      // Log failed request based on method type
-      if (method.startsWith('tools/call')) {
-        logToolCall(req.body, startTime, false, error);
-      } else if (method.startsWith('resources/')) {
-        logResourceOperation(req.body, startTime, false, error);
-      }
-
-      throw error;
-    } finally {
       clearTimeout(timeout);
     }
+
     // Timeout responded (good stuff)
     if (timedOut) return;
 
@@ -377,7 +292,7 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: '2.0',
-        error: { code: -32603, message: 'Internal server error' },
+        error: {code: -32603, message: 'Internal server error'},
         id: null,
       });
     }
