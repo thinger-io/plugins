@@ -50,7 +50,7 @@ export function registerProductTools(opts: {
         };
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -175,7 +175,7 @@ export function registerProductTools(opts: {
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -331,7 +331,7 @@ export function registerProductTools(opts: {
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -523,7 +523,7 @@ export function registerProductTools(opts: {
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -726,7 +726,7 @@ export function registerProductTools(opts: {
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -894,7 +894,7 @@ export function registerProductTools(opts: {
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -1002,7 +1002,7 @@ export function registerProductTools(opts: {
         };
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
@@ -1194,7 +1194,7 @@ export function registerProductTools(opts: {
         };
       } catch (err: unknown) {
         const errorMessage = err instanceof ApiException
-          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          ? `Thinger.io API Error:\n${JSON.stringify(err.body, null, 2) ?? err.message}`
           : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
         return {
