@@ -49,7 +49,7 @@ export class McpComponent {
     this.error.set(null);
     this.api.getConfig().subscribe({
       next: (cfg) => {
-        cfg.url = window.location.origin + window.location.pathname;
+        cfg.url = window.location.origin + window.location.pathname.replace(/\/$/, '') + '/mcp';
         this.cfg.set(cfg);
         this.loading.set(false);
       },

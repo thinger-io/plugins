@@ -142,6 +142,74 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
   return true;
 }
 
+/**
+ * Helper to extract client info from request
+ */
+function getClientInfo(body: any): string {
+  return body?.params?.clientInfo?.name ??
+    body?.params?._meta?.clientName ??
+    'unknown';
+}
+
+/**
+ * Helper to log tool calls
+ */
+function logToolCall(body: any, startTime: number, success: boolean, error?: any) {
+  const duration = Date.now() - startTime;
+  const toolName = body.params?.name ?? 'unknown';
+  const args = body.params?.arguments ?? {};
+
+  userEvents.push({
+    category: 'tool',
+    severity: success ? 'success' : 'error',
+    title: success
+      ? `Tool "${toolName}" executed successfully`
+      : `Tool "${toolName}" failed`,
+    client: getClientInfo(body),
+    tool: toolName,
+    details: {
+      toolName,
+      arguments: args,
+      ...(error && { error: error.message || error }),
+    },
+    metadata: {
+      duration,
+      method: body.method,
+      sessionId: body.id?.toString() ?? 'unknown',
+    }
+  });
+}
+
+/**
+ * Helper to log resource operations
+ */
+function logResourceOperation(body: any, startTime: number, success: boolean, error?: any) {
+  const duration = Date.now() - startTime;
+  const resourceUri = body.params?.uri ?? 'unknown';
+  const operation = body.method?.replace('resources/', '') ?? 'unknown';
+
+  userEvents.push({
+    category: 'resource',
+    severity: success ? 'success' : 'error',
+    title: success
+      ? `Resource ${operation}`
+      : `Resource ${operation} failed`,
+    client: getClientInfo(body),
+    resource: resourceUri,
+    details: {
+      operation,
+      resourceUri,
+      params: body.params ?? {},
+      ...(error && { error: error.message || error }),
+    },
+    metadata: {
+      duration,
+      method: body.method,
+      sessionId: body.id?.toString() ?? 'unknown',
+    }
+  });
+}
+
 registerProductTools({ server, productsApi });
 registerProductResources({ server, productsApi });
 registerDevicesTools({ server, devicesApi});
@@ -165,7 +233,7 @@ const io = new SocketIOServer(httpServer, {
     origin: "*",
     methods: ["GET", "POST"]
   },
-  path: '/mcp/socket.io'
+  path: '/socket.io'
 });
 
 
@@ -228,6 +296,8 @@ userEvents.on('events-cleared', () => {
 });
 
 app.post('/mcp', auth, async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const method = req.body?.method ?? 'unknown';
   Log.info("Received MCP request: ", req.body["method"]);
   try {
     // Check 'initialize' requests before creating the transport
@@ -267,26 +337,25 @@ app.post('/mcp', auth, async (req: Request, res: Response) => {
 
     try {
       await handlePromise;
+
+      // Log successful request based on method type
+      if (method.startsWith('tools/call')) {
+        logToolCall(req.body, startTime, true);
+      } else if (method.startsWith('resources/')) {
+        logResourceOperation(req.body, startTime, true);
+      }
+    } catch (error: any) {
+      // Log failed request based on method type
+      if (method.startsWith('tools/call')) {
+        logToolCall(req.body, startTime, false, error);
+      } else if (method.startsWith('resources/')) {
+        logResourceOperation(req.body, startTime, false, error);
+      }
+
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
-
-    userEvents.push({
-      category: 'connection',
-      severity: 'info',
-      title: `MCP request processed`,
-      client: req.body?.params?.clientInfo?.name ?? 'unknown',
-      tool: req.body?.method ?? 'unknown',
-      details: {
-        method: req.body?.method ?? 'unknown',
-        sessionId: req.body?.sessionId ?? 'unknown'
-      },
-      metadata: {
-        method: req.body?.method ?? 'unknown',
-        sessionId: req.body?.sessionId ?? 'unknown',
-      }
-    });
-
     // Timeout responded (good stuff)
     if (timedOut) return;
 

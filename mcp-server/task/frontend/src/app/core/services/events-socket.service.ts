@@ -63,7 +63,7 @@ export class EventsSocketService {
 
   constructor() {}
 
-  async initialize(socketEndpoint: string = '/mcp/socket.io', maxRetries: number = 5): Promise<void> {
+  async initialize(socketEndpoint: string = '/socket.io', maxRetries: number = 5): Promise<void> {
 
     const socketPath = window.location.pathname.replace(/\/$/, '') + socketEndpoint;
     console.log(`Socket.IO path: ${socketPath}`);
