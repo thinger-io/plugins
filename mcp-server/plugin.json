@@ -23,11 +23,7 @@
           "*": "*"
         },
         "Device": {
-          "*": [
-            "AccessDeviceResources",
-            "CreateDeviceProperty",
-            "ReadDeviceProperty"
-          ]
+          "*": "*"
         },
         "Plugin": {
           "mcp-server": "*"

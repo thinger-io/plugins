@@ -5,7 +5,7 @@
   "scripts": {
     "start": "NODE_ENV=production node --env-file=.env.production server.js",
     "build": "tsc -p .",
-    "dev": "NODE_ENV=development node --import=tsx --env-file=.env.development --watch-path=./src src/server.ts ",
+    "dev": "NODE_ENV=development node --import=tsx --env-file=.env.development src/server.ts ",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
@@ -42,6 +42,7 @@
     "@thinger-io/thinger-node": "0.1.1-alpha.1",
     "cors": "^2.8.5",
     "express": "^4.21.1",
+    "mqtt": "^5.14.1",
     "node-fetch": "^3.3.2",
     "socket.io": "^4.8.1"
   }
