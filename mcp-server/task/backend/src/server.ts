@@ -127,7 +127,7 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 
   userEvents.push({
     category: 'initialization',
-    severity: 'info',
+    severity: 'success',
     title: 'MCP Client initialized',
     client: params.clientInfo?.name ?? 'unknown',
     details: {
@@ -231,6 +231,19 @@ userEvents.on('events-cleared', () => {
 
 app.post('/mcp', auth, async (req: Request, res: Response) => {
   Log.info("Received MCP request: ", req.body["method"]);
+  userEvents.push({
+    category: 'connection',
+    severity: 'info',
+    title: 'MCP request received',
+    tool: req.body?.method ?? 'unknown',
+    details: {
+      method: req.body?.method ?? 'unknown',
+    },
+    metadata: {
+      sessionId: req.body?.sessionId ?? 'unknown',
+      size: JSON.stringify(req.body).length,
+    }
+  });
   try {
     // Check 'initialize' requests before creating the transport
     if (!preflightInitializeGuard(req.body, res)) return;

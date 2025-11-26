@@ -186,139 +186,175 @@ export function registerSimulationTools(opts: {
       };
 
       const password = "test";
-      const mqttBrokerUrl = 'mqtt://' + thingerHost + ':8883';
+      const mqttBrokerUrl = 'mqtts://' + thingerHost;
+      const maxRetries = 3;
+      const retryDelayMs = 1000;
 
       return new Promise((resolve) => {
-        const startTime = Date.now();
-        const timeoutMs = 10000;
+        let currentAttempt = 0;
 
-        const clientOptions: mqtt.IClientOptions = {
-          clientId: deviceId,
-          connectTimeout: timeoutMs,
-          ...(thingerUser && password && { thingerUser, password }),
-          clean: true
+        const attemptPublish = () => {
+          currentAttempt++;
+          const startTime = Date.now();
+          const timeoutMs = 10000;
+
+          const clientOptions: mqtt.IClientOptions = {
+            clientId: deviceId,
+            connectTimeout: timeoutMs,
+            clean: true,
+            password,
+            username: thingerUser,
+          };
+
+          Log.log(`Try ${currentAttempt}/${maxRetries} - Connected to MQTT Thinger Broker`, {mqttBrokerUrl, clientOptions});
+          const client = mqtt.connect(mqttBrokerUrl, clientOptions);
+
+          const timeoutId = setTimeout(() => {
+            client.end(true);
+
+            if (currentAttempt < maxRetries) {
+              Log.warn(`Try ${currentAttempt} timeout. Retrying in ${retryDelayMs}ms...`);
+              setTimeout(attemptPublish, retryDelayMs);
+            } else {
+              resolve({
+                isError: true,
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: 'Connection timeout',
+                        message: `Failed to connect to MQTT broker within ${timeoutMs}ms after ${maxRetries} attempts`,
+                        brokerUrl: mqttBrokerUrl,
+                        topic,
+                        attempts: currentAttempt,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              });
+            }
+          }, timeoutMs);
+
+          client.on('connect', () => {
+            Log.info(`MQTT client connected to ${mqttBrokerUrl} (try ${currentAttempt})`);
+
+            const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+
+            client.publish(
+              topic,
+              payloadString,
+              {
+                qos: 0,
+                retain: false,
+              },
+              (error: any) => {
+                clearTimeout(timeoutId);
+                const duration = Date.now() - startTime;
+
+                if (error) {
+                  Log.error(`MQTT publish error en intento ${currentAttempt}: ${error.message}`);
+                  client.end();
+
+                  if (currentAttempt < maxRetries) {
+                    Log.warn(`Retrying in ${retryDelayMs}ms...`);
+                    setTimeout(attemptPublish, retryDelayMs);
+                  } else {
+                    resolve({
+                      isError: true,
+                      content: [
+                        {
+                          type: 'text',
+                          text: JSON.stringify(
+                            {
+                              success: false,
+                              error: error.message,
+                              deviceId,
+                              topic,
+                              duration: `${duration}ms`,
+                              attempts: currentAttempt,
+                              message: `Failed after ${maxRetries} attempts`,
+                            },
+                            null,
+                            2
+                          ),
+                        },
+                      ],
+                    });
+                  }
+                } else {
+                  Log.info(`MQTT message published to topic ${topic} at try ${currentAttempt}: ${typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)}`);
+                  client.end();
+                  resolve({
+                    content: [
+                      {
+                        type: 'text',
+                        text: JSON.stringify(
+                          {
+                            success: true,
+                            message: 'MQTT message successfully published',
+                            deviceId,
+                            topic,
+                            qos: 0,
+                            retain: false,
+                            sentData: payload,
+                            duration: `${duration}ms`,
+                            attempts: currentAttempt,
+                            nextSteps: [
+                              'Verify device was created/updated in the Product',
+                              'Check device properties were set correctly',
+                              'Confirm data bucket entries were created (if configured)',
+                              'Review any triggered product actions or endpoints',
+                            ],
+                          },
+                          null,
+                          2
+                        ),
+                      },
+                    ],
+                  });
+                }
+              }
+            );
+          });
+
+          client.on('error', (error) => {
+            clearTimeout(timeoutId);
+            Log.error(`MQTT client error at try ${currentAttempt}: ${error.message}`);
+            client.end();
+
+            if (currentAttempt < maxRetries) {
+              Log.warn(`Retrying in ${retryDelayMs}ms...`);
+              setTimeout(attemptPublish, retryDelayMs);
+            } else {
+              resolve({
+                isError: true,
+                content: [
+                  {
+                    type: 'text',
+                    text: JSON.stringify(
+                      {
+                        success: false,
+                        error: error.message,
+                        brokerUrl: mqttBrokerUrl,
+                        topic,
+                        attempts: currentAttempt,
+                        message: `Failed after ${maxRetries} attempts`,
+                      },
+                      null,
+                      2
+                    ),
+                  },
+                ],
+              });
+            }
+          });
         };
 
-        Log.log("Conecting to mqtt broker", {mqttBrokerUrl, clientOptions});
-        const client = mqtt.connect(mqttBrokerUrl, clientOptions);
-
-        const timeoutId = setTimeout(() => {
-          client.end(true);
-          resolve({
-            isError: true,
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(
-                  {
-                    success: false,
-                    error: 'Connection timeout',
-                    message: `Failed to connect to MQTT broker within ${timeoutMs}ms`,
-                    brokerUrl: mqttBrokerUrl,
-                    topic,
-                  },
-                  null,
-                  2
-                ),
-              },
-            ],
-          });
-        }, timeoutMs);
-
-        client.on('connect', () => {
-          Log.info(`MQTT client connected to ${mqttBrokerUrl}`);
-
-          client.publish(
-            topic,
-            payload,
-            {
-              qos: 0,
-              retain: false,
-            },
-            (error: any) => {
-              clearTimeout(timeoutId);
-              const duration = Date.now() - startTime;
-
-              if (error) {
-                Log.error(`MQTT publish error: ${error.message}`);
-                client.end();
-                resolve({
-                  isError: true,
-                  content: [
-                    {
-                      type: 'text',
-                      text: JSON.stringify(
-                        {
-                          success: false,
-                          error: error.message,
-                          deviceId,
-                          topic,
-                          duration: `${duration}ms`,
-                        },
-                        null,
-                        2
-                      ),
-                    },
-                  ],
-                });
-              } else {
-                Log.info(`MQTT message published to topic ${topic}: ${typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2)}`);
-                client.end();
-                resolve({
-                  content: [
-                    {
-                      type: 'text',
-                      text: JSON.stringify(
-                        {
-                          success: true,
-                          message: 'MQTT message successfully published',
-                          deviceId,
-                          topic,
-                          qos: 0,
-                          retain: false,
-                          sentData: payload,
-                          duration: `${duration}ms`,
-                          nextSteps: [
-                            'Verify device was created/updated in the Product',
-                            'Check device properties were set correctly',
-                            'Confirm data bucket entries were created (if configured)',
-                            'Review any triggered product actions or endpoints',
-                          ],
-                        },
-                        null,
-                        2
-                      ),
-                    },
-                  ],
-                });
-              }
-            }
-          );
-        });
-
-        client.on('error', (error) => {
-          clearTimeout(timeoutId);
-          Log.error(`MQTT client error: ${error.message}`);
-          client.end();
-          resolve({
-            isError: true,
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(
-                  {
-                    success: false,
-                    error: error.message,
-                    brokerUrl: mqttBrokerUrl,
-                    topic,
-                  },
-                  null,
-                  2
-                ),
-              },
-            ],
-          });
-        });
+        attemptPublish();
       });
     },
   });

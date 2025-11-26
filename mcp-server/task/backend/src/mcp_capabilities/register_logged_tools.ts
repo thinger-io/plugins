@@ -54,6 +54,7 @@ export function registerLoggedTool<TInput extends Record<string, unknown>>(
           },
           metadata: {
             duration: Date.now() - start,
+            size: JSON.stringify(result).length,
           },
         });
 
@@ -70,6 +71,7 @@ export function registerLoggedTool<TInput extends Record<string, unknown>>(
           },
           metadata: {
             duration: Date.now() - start,
+            size: JSON.stringify(err).length,
           },
         });
 
