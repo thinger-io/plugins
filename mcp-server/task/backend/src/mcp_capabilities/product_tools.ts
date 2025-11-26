@@ -10,7 +10,7 @@ import {
   propertyItemSchema
 } from '../schemas.js';
 import {registerLoggedTool} from './register_logged_tools.js';
-import {UserEvents} from "../lib/user-events";
+import {UserEvents} from "../lib/user-events.js";
 
 
 export function registerProductTools(opts: {

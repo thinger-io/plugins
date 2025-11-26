@@ -2,7 +2,7 @@ import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {DevicesApi, ApiException} from '@thinger-io/thinger-node';
 import {Log} from '../lib/log.js';
 import {registerLoggedTool} from './register_logged_tools.js';
-import {UserEvents} from "../lib/user-events";
+import {UserEvents} from "../lib/user-events.js";
 
 
 export function registerDevicesTools(opts: {

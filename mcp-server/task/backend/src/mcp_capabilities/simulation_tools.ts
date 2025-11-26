@@ -4,8 +4,8 @@ import {z} from "zod";
 import mqtt from "mqtt";
 
 import { Log } from '../lib/log.js';
-import {UserEvents} from "../lib/user-events";
-import {registerLoggedTool} from "./register_logged_tools";
+import {UserEvents} from "../lib/user-events.js";
+import {registerLoggedTool} from "./register_logged_tools.js";
 
 
 export function registerSimulationTools(opts: {
