@@ -1,15 +1,12 @@
-
 # Grafana
 
 <p align="center">
-  <img src="/plugins/grafana/assets/grafana-icon.svg" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/grafana-icon.svg';this.onerror='';" alt="Grafana logo" width="200">
+  <img src="assets/grafana-logo.svg" style="height: 120px" alt="Grafana logo">
 </p>
 
 Grafana is a powerful and versatile open-source platform designed to streamline the monitoring and observability of your metrics, regardless of their storage location. With Grafana, you can effortlessly query, visualize, set up alerts, and gain deep insights into your data, fostering a data-driven culture within your team.
 
-<p align="center">
-  <img src="/plugins/grafana/assets/dashboard.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/dashboard.png';this.onerror='';" alt="Grafana dashboard inside thinger.io">
-</p>
+![Grafana dashboard inside thinger.io](assets/dashboard.png)
 
 ## Key Features
 
@@ -39,9 +36,7 @@ With Grafana, you can effortlessly mix different data sources within the same gr
 
 ## About thinger.io and Grafana Integration
 
-<p align="center">
-  <img src="/plugins/grafana/assets/integration.png" onerror="this.src='https://marketplace.thinger.io/plugins/grafana/assets/integration.png';this.onerror='';" alt="Diagram showing thinger.io and Grafana integration">
-</p>
+![Diagram showing thinger.io and Grafana integration](assets/integration.png)
 
 The integration of thinger.io with Grafana introduces an immensely valuable toolset for thinger.io users, enabling them to elevate their dashboards to a professional level, conduct intricate analytics in a scalable manner, and embark on collaborative visualization projects with fellow developers on their team. This seamless integration leverages the strengths of each component to create a powerful infrastructure, where thinger.io serves as a centralized hub for device administration and management.
 
@@ -58,7 +53,3 @@ Unsure if Grafana is for you? Watch Grafana in action on [play.grafana.org](http
 ## Official Documentation
 
 The Grafana documentation is available at [grafana.com/docs](https://grafana.com/docs/grafana/latest/getting-started/).
-
-## License
-
-Grafana is distributed under the [Apache 2.0 License](https://github.com/grafana/grafana/blob/master/LICENSE).

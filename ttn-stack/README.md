@@ -1,9 +1,7 @@
 
 # The Things Stack
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/tts-diagram.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/tts-diagram.png';this.onerror='';" alt="TTS diagrams and integration with Thinger.io">
-</p>
+![TTS diagrams and integration with Thinger.io](assets/tts-diagram.png)
 
 The Things Network is a LoRaWAN Network solution that simplifies the deployment of large IoT applications over a collaborative Internet of Things network that spans many countries around the world. From thinger.io we wanted to offer an improved integration to The Things Stack users by providing easy-to-configure tools for storing, analyzing, and showing device data in a simple way. This plugin allows retrieving The Things Stack webhook messages to enhance the integration with some interesting features such as:
 
@@ -38,21 +36,16 @@ This section describes the different interfaces that can be used to configure Th
 
 The first step to perform the integration is to create a new plugin configuration. It is possible to create multiple configuration profiles with custom behavior for each application deployed in The Things Stack. To create a new application profile, just type the application ID and press the green Add Application button. Note that the ID must be exactly the same identifier defined in The Things Stack application.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/application-configuration.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/application-configuration.png';this.onerror='';" alt="TTS plugin web ui application configuration">
-</p>
+![TTS plugin web ui application configuration](assets/application-configuration.png)
 
 The `Application Id` dropdown allows to select and configure a particular application profile, but if the "default" profile is selected, the configuration will be applied to all the applications integrated with the plugin.
 
-!!! warning
-
-    Always create applications with the same application identifier as defined in The Things Stack.
+> [!WARNING]
+> Always create applications with the same application identifier as defined in The Things Stack.
 
 ### Uplink Settings
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/uplink-settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/uplink-settings.png';this.onerror='';" alt="TTS plugin web ui uplink settings">
-</p>
+![TTS plugin web ui uplink settings](assets/uplink-settings.png)
 
 As shown in the image above, the parameters can be used to configure the plugin's behavior:
 
@@ -69,9 +62,7 @@ As shown in the image above, the parameters can be used to configure the plugin'
 
 The Things Stack Downlink processes can be configured from Thinger.io in order to select the behavior in some parameters as shown below:
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/downlink-settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/downlink-settings.png';this.onerror='';" alt="tts plugin web ui downlink settings">
-</p>
+![tts plugin web ui downlink settings](assets/downlink-settings.png)
 
 * **Confirmed Downlink:** Set to enabled if downlink messages must be confirmed by the device.
 * **Push To Downlink Queue:** Enable to push downlink messages instead of replace previous ones.
@@ -83,16 +74,13 @@ This tab is used to configure the payload data treatment in order to transform f
 
 The interface provides a code editor for Node.js scripts, where it is possible to define the codification / decodification processes and also provides a testing tool that allows to verify the behavior of both  `uplink` and `downlink` processes.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/payload-processing.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/payload-processign.png';this.onerror='';" alt="tts plugin web ui payload processing">
-</p>
+![tts plugin web ui payload processing](assets/payload-processing.png)
 
 The following sections provide additional information about how to configure the uplink and downlink methods.
 
 === "Uplink"
 
     The uplink method will be called after a gateway sends a new message over The Things Stack network. Depending on the configuration done in The Things Stackapplication, this function will receive different inputs:
-
 
     * **Base64 String**: If The Things Stack application defines `Custom Javascript Formatter` for the payload but does not provide a decoder function, this method will receive the raw payload encoded in base64. In this case, it will be necessary to write a function to transform this base64 data to a JSON object.
     * **JSON Object from Cayene LPP**: If The Things Stack application defines a `Cayene LPP` payload formatter, The Things Stack will automatically convert the binary data to a JSON object that can be used directly by the platform. In this case, it is not necessary to define a custom uplink method unless you want to do some extra processing like incorporating calculated fields.
@@ -112,9 +100,8 @@ The following sections provide additional information about how to configure the
     };
     ```
 
-    !!! info
-
-        The uplink method must always return a JSON object.
+    > [!NOTE]
+    > The uplink method must always return a JSON object.
 
 === "Downlink"
 
@@ -144,9 +131,8 @@ The following sections provide additional information about how to configure the
     };
     ```
 
-    !!! info
-
-        The downlink method should return a base64 string if The Things Stack application does not define a converter.
+    > [!NOTE]
+    > The downlink method should return a base64 string if The Things Stack application does not define a converter.
 
 ## The Things Stack Console Configuration
 
@@ -154,31 +140,23 @@ The following sections provide additional information about how to configure the
 
 The last tab of the plugin configuration interface is called "Webhook settings", it has been created to help the developers to complete the integration in The Things Stack Console, by providing all the information required to set up the webhook profile.&#x20;
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/webhook-settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/webhook-settings.png';this.onerror='';" alt="tts plugin web ui webhook settings">
-</p>
+![tts plugin web ui webhook settings](assets/webhook-settings.png)
 
-!!! info
-
-    Note that the REST API does not define the application ID, this parameter will be checked by the plugin software to manage the payload according to the configuration.
+> [!NOTE]
+> Note that the REST API does not define the application ID, this parameter will be checked by the plugin software to manage the payload according to the configuration.
 
 To create a new webhook integration follow the next steps in The Things Stack web console:
 1. Select the Application to be integrated.
 2. In the main menu open the "Integrations" section and click the "Webhooks" option. The webhooks list will be shown.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/webhook-integration.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/webhook-integration.png';this.onerror='';" alt="tts plugin web ui webhook settings">
-</p>
+![tts plugin web ui webhook settings](assets/webhook-integration.png)
 
 3\. Clicking the `+Add webhook` blue button in the right top corner of the interface allows choosing between different webhooks integration templates. Select Thinger.io template. Then, configure the webhook only requires filling the form with the information provided by Thinger.io "webhook settings" tab and selecting JSON webhook format.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/webhook-integration-settings.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/webhook-integration-settings.png';this.onerror='';" alt="the Things Stack webhook template for Thinger.io">
-</p>
+![the Things Stack webhook template for Thinger.io](assets/webhook-integration-settings.png)
 
-!!! info
-
-    Note that the Authorization header must be set up using the access token including the "Bearer" command
+> [!NOTE]
+> Note that the Authorization header must be set up using the access token including the "Bearer" command
 
 ### Downlink Configuration
 
@@ -202,13 +180,8 @@ There are multiple ways to view the data sent by the device in [Thinger.io](http
 
 As long as the uplink messages are being sent by The Things Stack, the raw data will be available in the [Thinger.io](https://thinger.io/) **Data Bucket** configured or auto-provisioned by the [The Things Stack Plugin](/plugins/ttn-stack), without any further configuration.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/data_bucket.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/data_bucket.png';this.onerror='';" alt="Thinger.io data bucket showing raw data sent by The Things Stack device">
-</p>
+![Thinger.io data bucket showing raw data sent by The Things Stack device](assets/data_bucket.png)
 
 Nevertheless, it is recommended to create a [Dashboard](https://docs.thinger.io/features/dashboards) in [Thinger.io](https://thinger.io/) to be able to view the data in a more comprehensive way.
 
-<p align="center">
-  <img src="/plugins/ttn-stack/assets/data-dashboard.png" onerror="this.src='https://marketplace.thinger.io/plugins/ttn-stack/assets/data-dashboard.png';this.onerror='';" alt="Thinger.io dashobard showing data form The Things Stack device">
-</p>
-
+![Thinger.io dashobard showing data form The Things Stack device](assets/data-dashboard.png)

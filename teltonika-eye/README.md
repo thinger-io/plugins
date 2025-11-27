@@ -40,7 +40,6 @@ Provide any additional resources, documents, or links to external sites that can
 - [Teltonika Support Forum](https://community.teltonika.lt/)
 - [Thinger.io Community](https://community.thinger.io/)
 
-
 ## FAQ
 
 Include a section for frequently asked questions to address common issues or queries.

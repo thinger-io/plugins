@@ -5,9 +5,7 @@ Node-RED is an Open Source project created by IBM to provide the Rule Engines ma
 
 This technology begins especially useful for IoT projects, to process and analyze data or create rules to automate behaviors in response to events produced by the IoT devices measures. It can also be used as an MQTT broker or to show data in customizable dashboards. However, its greatest potential is obtained when used in combination with an IoT platform like [Thinger.io](https://thinger.io/), leaving one in charge of data acquisition, storage, and device management and the other one for processing, automation, etc.
 
-<p align="center">
-  <img src="/plugins/node-red/assets/laptop.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/laptop.png';this.onerror='';" alt="Thinger.io web console with Node-RED plugin and ad-hoc nodes">
-</p>
+![Thinger.io web console with Node-RED plugin and ad-hoc nodes](assets/laptop.png)
 
 ## Thinger.io and Node-RED integration&#x20;
 
@@ -44,19 +42,19 @@ The "Nodes" are the basic building blocks for creating flows. Each node contains
 
 #### **Inject Nodes**
 
-<img src="/plugins/node-red/assets/node-inject.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-inject.png';this.onerror='';" alt="Inject node image of Node-RED" style="height: 35px">
+![Inject node image of Node-RED](assets/node-inject.png)
 
 This node allows to automatically start a flow when an event is triggered, at regular intervals defined in the properties form or manually over the web editor. The message sent by these nodes has the payload and topic properties set.&#x20;
 
 **Function, Change, Switch Nodes**
 
-<img src="/plugins/node-red/assets/node-function.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-function.png';this.onerror='';" alt="Function node image of Node-RED" style="height: 35px">
+![Function node image of Node-RED](assets/node-function.png)
 
 Node-RED counts with some nodes that allows working with the flow's payload using pre-configured tools or coding their behavior in JavaScript functions that can be created within the editor using a rich text editor. With this proposal, these nodes are provided with both input and output connectors.
 
 **Output and Debug Nodes**
 
-<img src="/plugins/node-red/assets/node-debug.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-debug.png';this.onerror='';" alt="Debug node image of Node-RED" style="height: 35px">
+![Debug node image of Node-RED](assets/node-debug.png)
 
 These nodes only have an input connector that allows extracting data from the flow to third parties, files, or debugs console in the web editor.
 
@@ -70,9 +68,7 @@ A flow is represented as a tab within the editor workspace and is the main way t
 
 The flow editor makes it easy to wire together flows using the wide range of nodes in the palette. Flows can be then deployed to the runtime just clicking into "debloy" button:
 
-<p align="center">
-  <img src="/plugins/node-red/assets/button-deploy.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/button-deploy.png';this.onerror='';" alt="Deploy flow button in Node-RED" style="height: 35px">
-</p>
+![Deploy flow button in Node-RED](assets/button-deploy.png)
 
 ### Debug Console
 
@@ -80,9 +76,8 @@ Is a section of the right slide bar that provides a structured view of the messa
 
 Alongside each message, the debug sidebar includes information about the time the message was received and which Debug node sent it. Clicking on the source node id will reveal that node within the workspace.
 
-!!! note "Node-RED documentation"
-
-    You can find additional documentation about the use of this tool in Node-RED's official website: [https://nodered.org/docs/user-guide/editor/workspace/](https://nodered.org/docs/user-guide/editor/workspace/)
+> [!NOTE] Node-RED documentation
+> You can find additional documentation about the use of this tool in Node-RED's official website: [https://nodered.org/docs/user-guide/editor/workspace/](https://nodered.org/docs/user-guide/editor/workspace/)
 
 ## Starting with Thinger.io Nodes
 
@@ -90,21 +85,16 @@ In this section, it is described **how to configure Node-RED** "Thinger.io Nodes
 
 To make this configuration, just drag any Thinger.io Node to the canvas and open its properties form, then go to the last input, called "Server " and click into the edition button, which will open the Thinger-Server configuration menu.
 
-<p align="center">
-  <img src="/plugins/node-red/assets/node-form.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-form.png';this.onerror='';" alt="Node-RED node configuration form">
-</p>
+![Node-RED node configuration form](assets/node-form.png)
 
 This form allows you to introduce the credentials of the specific Thinger.io instance address and authorization that is going to receive your Node-RED requests. However, it is important to take care of the next considerations in order to make a proper configuration:
 
-!!! tip
-
-    * If you are using Node-RED in a Thinger.io Plugin and you want to work with the same Thinger.io server that is hosting the plugin,  it is only necessary to include `$(THINGER_HOST)` into "Host" box and `$(THINGER_TOKEN_NODE_RED_PLUGIN)` in the "Token" box, then you can disable SSL communication, as all messages are going to run into the same computer.
+> [!TIP]
+> * If you are using Node-RED in a Thinger.io Plugin and you want to work with the same Thinger.io server that is hosting the plugin,  it is only necessary to include `$(THINGER_HOST)` into "Host" box and `$(THINGER_TOKEN_NODE_RED_PLUGIN)` in the "Token" box, then you can disable SSL communication, as all messages are going to run into the same computer.
 
     * if you want to use a different Thinger.io Server or you aren't running Node-RED from a plugin, it will be necessary to **include its URL or IP Address** in the "Host" box and also a Thinger.io **Access Token with Admin-Access** privileges in the "Token" box, finally, SSL would be preferable in this case.
 
-<p align="center">
-  <img src="/plugins/node-red/assets/node-server-configuration.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-server-configuration.png';this.onerror='';" alt="Node-RED server node configuration form">
-</p>
+![Node-RED server node configuration form](assets/node-server-configuration.png)
 
 ## Thinger.io Nodes
 
@@ -112,7 +102,7 @@ As it was explained in the beginning, this plugin has two purposes: Host a Node-
 
 ### Asset Iterator
 
-<img src="/plugins/node-red/assets/node-asset-iterator.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-asset-iterator.png';this.onerror='';" alt="Asset iterator node from Thinger.io image of Node-RED" style="height: 35px">
+![Asset iterator node from Thinger.io image of Node-RED](assets/node-asset-iterator.png)
 
 It is a **Function** Node that iterates over all the desired assets avaible on Thinger.io Platform given a filter. It is able to receive a JSON from Node-RED flow and automatically query the backend. This node is useful to execute operations over multiple assets at the same time.
 
@@ -122,7 +112,7 @@ There will be as many output messages as assets retrieved, each containing the i
 
 ### Bucket Create
 
-<img src="/plugins/node-red/assets/node-bucket-create.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-create.png';this.onerror='';" alt="Bucket create node from Thinger.io image of Node-RED" style="height: 35px">
+![Bucket create node from Thinger.io image of Node-RED](assets/node-bucket-create.png)
 
 It is a **Function** Node that creates a Data Bucket into a Thinger.io Platform. It is able to receive a JSON from Node-RED flow and automatically create the Bucket, so results quite useful to implement scalable and on demand data storage to any project.
 
@@ -132,7 +122,7 @@ The output message will contain the result and details of the operation.
 
 ### Bucket Export
 
-<img src="/plugins/node-red/assets/node-bucket-export.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-export.png';this.onerror='';" alt="Bucket export node from Thinger.io image of Node-RED" style="height: 35px">
+![Bucket export node from Thinger.io image of Node-RED](assets/node-bucket-export.png)
 
 It is a **Function** Node that executes a Thinger.io Data Bucket export operation and waits until the data is ready to be downloaded, returning the download file URL or the contents as desired. It is useful to extract data from Thinger.io for further analysis, storage or forwarding to other services.
 
@@ -140,7 +130,7 @@ The configuration of this Node requires introducing of at least the `Bucket ID`,
 
 ### Bucket Read
 
-<img src="/plugins/node-red/assets/node-bucket-read.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-read.png';this.onerror='';" alt="Bucket read node from Thinger.io image of Node-RED" style="height: 35px">
+![Bucket read node from Thinger.io image of Node-RED](assets/node-bucket-read.png)
 
 It is a **Function** Node that retrieves data from a specific Thinger.io Data Bucket when an injection Node requires it. It is useful to get data from buckets with a Node-RED programmed sampling interval.
 
@@ -148,7 +138,7 @@ To configure this node just include the `Bucket ID`, `Filter` and `Sorting` into
 
 ### Bucket Write
 
-<img src="/plugins/node-red/assets/node-bucket-write.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-bucket-write.png';this.onerror='';" alt="Bucket write node from Thinger.io image of Node-RED" style="height: 35px">
+![Bucket write node from Thinger.io image of Node-RED](assets/node-bucket-write.png)
 
 It is an **Output** Node that allows to store data into the Thinger.io Data Bucket. It is able to receive a JSON from Node-RED flow and automatically create an entry into the Bucket, so results quite useful to implement scalable data storage to any project.
 
@@ -156,7 +146,7 @@ The configuration of this Node just requires introducing the `Bucket ID`, howeve
 
 ### Device Callback
 
-<img src="/plugins/node-red/assets/node-device-callback.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-device-callback.png';this.onerror='';" alt="Device callback node from Thinger.io image of Node-RED" style="height: 35px">
+![Device callback node from Thinger.io image of Node-RED](assets/node-device-callback.png)
 
 It is a **Function** Node that calls an HTTP device callback in order to send a message or retrieve what the device has configured in its callback. If the device does not exist it will manage the auto provisioning of a new device and data bucket. It is useful to get auto provision new devices based of different events save its data from the beginning.
 
@@ -164,7 +154,7 @@ To configure this node just include the `Device ID` into the node parameters for
 
 ### Device Create
 
-<img src="/plugins/node-red/assets/node-device-create.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-device-create.png';this.onerror='';" alt="Device create node from Thinger.io image of Node-RED" style="height: 35px">
+![Device create node from Thinger.io image of Node-RED](assets/node-device-create.png)
 
 It is a **Function** Node that creates a Device into the Thinger.io Platform. It is able to receive a JSON from Node-RED flow and automatically create the Device, so results quite useful to implement scalable and on demand device creation to any project.
 
@@ -174,7 +164,7 @@ The output message will contain the result and details of the operation.
 
 ### Device Read
 
-<img src="/plugins/node-red/assets/node-device-read.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-device-read.png';this.onerror='';" alt="Device read node from Thinger.io image of Node-RED" style="height: 35px">
+![Device read node from Thinger.io image of Node-RED](assets/node-device-read.png)
 
 It is a **Function** Node that retrieves data from a specific Thinger.io device resource when an injection Node requires it. It is useful to get data from devices with a Node-RED programmed sampling interval.
 
@@ -182,7 +172,7 @@ To configure this node just include the `Device ID`and the `Resource Name` into 
 
 ### Device Stream
 
-<img src="/plugins/node-red/assets/node-device-stream.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-device-stream.png';this.onerror='';" alt="Device stream node from Thinger.io image of Node-RED" style="height: 35px">
+![Device stream node from Thinger.io image of Node-RED](assets/node-device-stream.png)
 
 It is an **Injection** Node that retrieves data from a specific Thinger.io Device Resource on regular defined interval expressed in seconds into the properties form.
 
@@ -190,7 +180,7 @@ To configure this node just include the `Device ID`and the `Resource Name` into 
 
 ### Device Write
 
-<img src="/plugins/node-red/assets/node-device-write.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-device-write.png';this.onerror='';" alt="Device write node from Thinger.io image of Node-RED" style="height: 35px">
+![Device write node from Thinger.io image of Node-RED](assets/node-device-write.png)
 
 It is a **Function** Node that allows sending data to a Thinger.io connected Device. It is able to receive a JSON from Node-RED flow and automatically send it to other devices in real-time. So results quite useful to implement scalable device communication for any project.
 
@@ -198,7 +188,7 @@ The configuration of this Node just requires introducing the `Device ID` and the
 
 ### Endpoint Call
 
-<img src="/plugins/node-red/assets/node-endpoint-call.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-endpoint-call.png';this.onerror='';" alt="Endpoint call node from Thinger.io image of Node-RED" style="height: 35px">
+![Endpoint call node from Thinger.io image of Node-RED](assets/node-endpoint-call.png)
 
 It is a **Function** Node that allows calling the execution of a Thinger.io endpoint profile. It is able to receive a JSON that can be introduced in the endpoint in order to use that data in an e-mail or send it to third parties, so it is quite useful to create notifications or to integrating an IoT project with other systems.
 
@@ -206,7 +196,7 @@ The configuration of this Node just requires introducing the `Endpoint ID`, howe
 
 ### Property Read
 
-<img src="/plugins/node-red/assets/node-property-read.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-property-read.png';this.onerror='';" alt="Property read node from Thinger.io image of Node-RED" style="height: 35px">
+![Property read node from Thinger.io image of Node-RED](assets/node-property-read.png)
 
 It is a **Function** Node that retrieves data from a specific Thinger.io device, type or group property when an injection Node requires it. It is useful to get data from assets with a Node-RED programmed sampling interval.
 
@@ -214,7 +204,7 @@ To configure this node just include the `Asset Type`, `Asset ID`and `Property Na
 
 ### Property Write
 
-<img src="/plugins/node-red/assets/node-property-write.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-property-write.png';this.onerror='';" alt="Property write node from Thinger.io image of Node-RED" style="height: 35px">
+![Property write node from Thinger.io image of Node-RED](assets/node-property-write.png)
 
 It is a **Function** Node that writes data into a specific Thinger.io device, type or group property when an injection Node requires it. It is useful to save data into assets in order to manage different configurations and act accordingly.
 
@@ -222,7 +212,7 @@ To configure this node just include the `Asset Type`, `Asset ID`and `Property Na
 
 ### Storage Read
 
-<img src="/plugins/node-red/assets/node-storage-read.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-storage-read.png';this.onerror='';" alt="Storage read node from Thinger.io image of Node-RED" style="height: 35px">
+![Storage read node from Thinger.io image of Node-RED](assets/node-storage-read.png)
 
 It is a **Function** Node that reads any file saved in a Thinger.io storage and returns it to Node-RED. It is able to read any file, returning the string representation for text files (plain, csv, json, ...) or a Buffer otherwise. Useful for retrieving and treating information or being able to pass the info to third party nodes.
 
@@ -230,7 +220,7 @@ The configuration of the node requires only the `Storage ID`, as it is able to r
 
 ### Storage Write
 
-<img src="/plugins/node-red/assets/node-storage-write.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-storage-write.png';this.onerror='';" alt="Storage write node from Thinger.io image of Node-RED" style="height: 35px">
+![Storage write node from Thinger.io image of Node-RED](assets/node-storage-write.png)
 
 It is an **Output** Node that allows to store data into the Thinger.io File Storage. It is able to receive a payload from Node-RED flow and automatically save or append into a file in the Storage, so results quite useful to implement scalable file storage to any project.
 
@@ -238,7 +228,7 @@ The configuration of this Node just requires introducing the `Storage ID`, howev
 
 ### Server Events
 
-<img src="/plugins/node-red/assets/node-server-events.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/node-server-events.png';this.onerror='';" alt="Server events node from Thinger.io image of Node-RED" style="height: 35px">
+![Server events node from Thinger.io image of Node-RED](assets/node-server-events.png)
 
 It is an **Inject** Node that allows triggering in real-time any event that takes places in Thinger.io IoT Server over all existing assets, like device, types, groups or buckets. Some events contain also additional filter fields to filter from.
 
@@ -246,9 +236,8 @@ The configuration of each type requires to include the ID of the element that wa
 
 When any of these events is triggered, this Node is able to inject a JSON in the flow with the identifier of the Bucket, Device, or Endpoint that has produced the event along with the relevant data.
 
-!!! tip
-
-    If you need further technical information, you can find all the details for each node in Node-RED help dialog.
+> [!TIP]
+> If you need further technical information, you can find all the details for each node in Node-RED help dialog.
 
 ## Useful Example Flows
 
@@ -258,15 +247,12 @@ In this section, you can find our own cookbook with some useful flows that you c
 
     Using the "Device Status Change" property of the Server Event Node, it is possible to detect the disconnection of any device of your IoT network and execute a flow in Node-RED to notify the incidence using an endpoint sending an email for example.
 
-    !!! warning
-
-        [Learn how to create an email endpoint here. ](https://docs.thinger.io/features/endpoints-1#email-endpoint)
+    > [!WARNING]
+    > [Learn how to create an email endpoint here. ](https://docs.thinger.io/features/endpoints-1#email-endpoint)
 
     The next flow uses two Thinger.io Nodes, the first one is triggering the Device Disconnection Server Event that will throw a JSON formatted message with the device ID, the status and the timestamp of the change. The second Node allows calling the Endpoint profile to send the alert with the device information JSON attached so it is possible to custom the message to easily identify the problem.&#x20;
 
-    <p align="center">
-      <img src="/plugins/node-red/assets/flow-device-disconnection-alert.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/flow-device-disconnection-alert.png';this.onerror='';" alt="On device state change call DisconnectionAlert endpoint">
-    </p>
+    ![On device state change call DisconnectionAlert endpoint](assets/flow-device-disconnection-alert.png)
 
     This flow can be easily imported into your Node-RED workspace using the next JSON:
 
@@ -280,12 +266,10 @@ In this section, you can find our own cookbook with some useful flows that you c
 
     MQTT is an extended communication protocol  in IoT that works on top of the TCP/IP protocol suite. It is designed for connections with remote locations where a "small code footprint" is required or the network bandwidth is limited. The next flow allows sending data from a device hosted by NodeRED MQTT Server to the REST API Callback of a Thinger.io HTTP device, in order to store, analyze an show that information with Thinger.io features.  &#x20;
 
-    !!! info
-        [Learn how to work with Thinger.io HTTP device callback here](https://docs.thinger.io/http-devices)
+    > [!NOTE]
+    > [Learn how to work with Thinger.io HTTP device callback here](https://docs.thinger.io/http-devices)
 
-    <p align="center">
-      <img src="/plugins/node-red/assets/flow-mqtt-to-thinger.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/flow-mqtt-to-thinger.png';this.onerror='';" alt="From MQTT Topic to device callback">
-    </p>
+    ![From MQTT Topic to device callback](assets/flow-mqtt-to-thinger.png)
 
     This flow can be easily imported into your Node-RED workspace using the next JSON:
 
@@ -299,15 +283,12 @@ In this section, you can find our own cookbook with some useful flows that you c
 
     Geofencing is an interesting IoT use case, with many applications in asset management, fleets or package tracking. The next flow shows how to monitor the location of any device to create an alert when it leaves an area specified with a Geofence Node. &#x20;
 
-    <p align="center">
-      <img src="/plugins/node-red/assets/flow-gps-geofences.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/flow-gps-geofences.png';this.onerror='';" alt="When device outside geofence call alert endpoint">
-    </p>
+    ![When device outside geofence call alert endpoint](assets/flow-gps-geofences.png)
 
     Creating this integration with the "device\_location" property, it is possible to integrate any kind of device including Thinger.io Software Clients, Sigfox, TTN or even HTTP devices in a very simple way.
 
-    !!! info
-
-        [Learn how to create an email endpoint here. ](https://docs.thinger.io/console#email-endpoint)
+    > [!NOTE]
+    > [Learn how to create an email endpoint here. ](https://docs.thinger.io/console#email-endpoint)
 
     This flow can be easily imported into your Node-RED workspace using the next JSON:
 
@@ -315,14 +296,11 @@ In this section, you can find our own cookbook with some useful flows that you c
     [{"id":"5f747490.ef8edc","type":"tab","label":"GPS Geofences","disabled":false,"info":""},{"id":"207937f8.10dc48","type":"server-events","z":"5f747490.ef8edc","name":"","asset":"","event":"device_callback_call","filter":"","filters":{},"bucket":"","device":"","endpoint":"","state":"","server":"ec0dd4b1ef5aa9a8","x":158.60000228881836,"y":264.00000381469727,"wires":[["8f3dd8cd.71e4e8","56adf62.4aa1108"]]},{"id":"553ff10.2e60c1","type":"geofence","z":"5f747490.ef8edc","name":"","mode":"polyline","inside":"false","rad":0,"points":[{"latitude":39.89203705190782,"longitude":-3.8814695924520493},{"latitude":40.06041580712444,"longitude":-3.507934436202049},{"latitude":40.09404176311921,"longitude":-3.0025633424520493},{"latitude":41.14474248673421,"longitude":-3.5299070924520493},{"latitude":40.253538217286675,"longitude":-4.628539904952049},{"latitude":40.102445657515226,"longitude":-3.771606311202049}],"centre":{},"floor":"","ceiling":"","worldmap":false,"outputs":1,"x":573.0000076293945,"y":265.0000276565552,"wires":[["be251c21.6d6e3","233f843b.94472c"]]},{"id":"be251c21.6d6e3","type":"endpoint-call","z":"5f747490.ef8edc","name":"","endpoint":"alert","server":"ec0dd4b1ef5aa9a8","x":771.6000595092773,"y":266.0000286102295,"wires":[[]]},{"id":"8f3dd8cd.71e4e8","type":"debug","z":"5f747490.ef8edc","name":"","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"false","x":399.6000061035156,"y":346.00000762939453,"wires":[]},{"id":"233f843b.94472c","type":"debug","z":"5f747490.ef8edc","name":"","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"false","x":790.6000366210938,"y":347.0000057220459,"wires":[]},{"id":"56adf62.4aa1108","type":"change","z":"5f747490.ef8edc","name":"","rules":[{"t":"set","p":"payload","pt":"msg","to":"payload.payload","tot":"msg"}],"action":"","property":"","from":"","to":"","reg":false,"x":389.6000061035156,"y":265.00000381469727,"wires":[["553ff10.2e60c1"]]},{"id":"ec0dd4b1ef5aa9a8","type":"thinger-server","host":"$(THINGER_HOST)","name":"local","ssl":false}]
     ```
 
-
 === "Modify Incoming data"
 
     In some situations it is required to change the unit or metric of any variable, it is now possible to make this transformations before store data in a data bucket by use this Node-RED flow:
 
-    <p align="center">
-      <img src="/plugins/node-red/assets/flow-modify-incoming-data.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/flow-modify-incoming-data.png';this.onerror='';" alt="Receive device callback, convert units and store">
-    </p>
+    ![Receive device callback, convert units and store](assets/flow-modify-incoming-data.png)
 
     The configuration is quite simple, fist node retrieves the measurement of any device to be modified by the "function" node, that contains the codification that has been included below, and finally the "bucket write" node allows storing the transformed data.
 
@@ -344,9 +322,7 @@ In this section, you can find our own cookbook with some useful flows that you c
 
     With the "Device create" and "Bucket create" nodes it is possible to create multiple devices, with the same or different credentials, types or groups; and create buckets associated to the recently created devices.
 
-    <p align="center">
-      <img src="/plugins/node-red/assets/flow-device-creation.png" onerror="this.src='https://marketplace.thinger.io/plugins/node-red/assets/flow-device-creation.png';this.onerror='';" alt="Creation of devices and assignment of buckets">
-    </p>
+    ![Creation of devices and assignment of buckets](assets/flow-device-creation.png)
 
     This flow can be easily imported into your Node-RED workspace using the next JSON:
 
@@ -354,6 +330,5 @@ In this section, you can find our own cookbook with some useful flows that you c
     [{"id":"a4b9f2e08c15ad79","type":"tab","label":"Device creation","disabled":false,"info":"","env":[]},{"id":"507f1a24287e53e2","type":"function","z":"a4b9f2e08c15ad79","name":"loop - 10 devices","func":"let device = msg.device;\n\nfor (let i= 0; i < 10; i++) {\n    msg.device = `${device}_${i}`;\n    msg.name = `${device} ${i}`;\n    msg.description = \"Device auto generated from Node-RED flow\";\n    node.send(msg);\n}","outputs":1,"noerr":0,"initialize":"","finalize":"","libs":[],"x":490,"y":220,"wires":[["752ee26eb02bed51"]]},{"id":"415e0ad528c64866","type":"inject","z":"a4b9f2e08c15ad79","name":"inject device name","props":[{"p":"device","v":"climastick","vt":"str"}],"repeat":"","crontab":"","once":false,"onceDelay":0.1,"topic":"","x":270,"y":220,"wires":[["507f1a24287e53e2"]]},{"id":"752ee26eb02bed51","type":"device-create","z":"a4b9f2e08c15ad79","name":"","deviceType":"Generic","deviceId":"","deviceCredentials":"&Xzi3LlG&lyaoyO2","deviceName":"","description":"","assetType":"temperature","assetGroup":"house","server":"ec0dd4b1ef5aa9a8","x":690,"y":220,"wires":[["e1da854b042efd77"]]},{"id":"69d16e383e46acd9","type":"debug","z":"a4b9f2e08c15ad79","name":"debug","active":true,"tosidebar":true,"console":false,"tostatus":false,"complete":"true","targetType":"full","statusVal":"","statusType":"auto","x":715,"y":300,"wires":[],"l":false},{"id":"3be83c6bcc65f1cb","type":"comment","z":"a4b9f2e08c15ad79","name":"Create 10 device and assign a bucket to all of them","info":"This node creates 10 devices in Thinger.io Platform, in this case climasticks, from 0 to 9; all of them with the same credentials, type and group. Also, 10 buckets are created with the date source being the devices created.\n\n### Device create node\nThe device id, name and description are passed as input to the device create node, while the credentials, type and group is configured through the device create node dialog.\n\n### Bucket create node\nThe id, bucket name and description are passed as input to the bucket create node, as well as the extra source (the device in this case) for the data source.\nThe source (device), resource, update interval and asset type and group are configured through the bucket create node dialog.","x":350,"y":160,"wires":[]},{"id":"05af9a7c2958e6c6","type":"bucket-create","z":"a4b9f2e08c15ad79","name":"","bucketId":"","bucket":"","description":"","enabled":true,"source":"device","extraSource":"","resource":"temperature","update":"interval","interval":"1m","assetType":"temperature","assetGroup":"house","server":"ec0dd4b1ef5aa9a8","x":570,"y":300,"wires":[["69d16e383e46acd9"]]},{"id":"e1da854b042efd77","type":"change","z":"a4b9f2e08c15ad79","name":"Reorder message to create bucket","rules":[{"t":"delete","p":"payload","pt":"msg"},{"t":"set","p":"id","pt":"msg","to":"device","tot":"msg"},{"t":"move","p":"name","pt":"msg","to":"bucket","tot":"msg"}],"action":"","property":"","from":"","to":"","reg":false,"x":320,"y":300,"wires":[["05af9a7c2958e6c6"]]},{"id":"ec0dd4b1ef5aa9a8","type":"thinger-server","host":"$(THINGER_HOST)","name":"local","ssl":false}]
     ```
 
-    !!! info
-
-        Learn how to create devices [here](https://docs.thinger.io/features/devices-administration), and data buckets [here](https://docs.thinger.io/features/buckets)
+    > [!NOTE]
+    > Learn how to create devices [here](https://docs.thinger.io/features/devices-administration), and data buckets [here](https://docs.thinger.io/features/buckets)

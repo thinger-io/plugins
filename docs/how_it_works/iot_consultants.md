@@ -10,13 +10,12 @@ Thinger.io Marketplace presents an unparalleled opportunity for consultancies to
 Thinger.io Marketplace offers a unique opportunity for consultancies to develop last-mile integrations and facilitate seamless device deployment for their clients. By leveraging our platform, consultancies can efficiently connect with potential customers and identify the best-suited devices for their specific solutions, resulting in improved customer satisfaction and project success.
 
 
-!!! note "Benefits"
-
-    Fast and simpler development processes
-
-    Reduce long-term technologic debt
-
-    Win-win relationship: They find customers growing our SAAS sales
+> [!NOTE] Benefits
+> Fast and simpler development processes
+>
+> Reduce long-term technologic debt
+>
+> Win-win relationship: They find customers growing our SAAS sales
 
 Incorporating Thinger.io Marketplace into your consultancy toolkit offers a multitude of benefits, which include:
 

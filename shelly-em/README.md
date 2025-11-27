@@ -23,6 +23,5 @@ Checkout the official documentation of the Shelly EM at this [link](https://shel
 - Operating temperature: -0 to + 40 °C
 
 <p align="center">
-  <img src="/plugins/shelly-em/assets/shelly-em-clamp-50a.png" onerror="this.src='https://marketplace.thinger.io/plugins/shelly-em/assets/shelly-em-clamp-50a.png';this.onerror='';" alt="Shelly EM picture" width="250">
+  <img src="assets/shelly-em-clamp-50a.png" style="height: 250px" alt="Shelly EM">
 </p>
-

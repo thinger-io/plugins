@@ -1,8 +1,0 @@
-site_name: plugins/grafana
-
-nav:
-  - "index.md"
-  - Get Started: "get_started.md"
-  - Working with Grafana: "working_with_grafana.md"
-  - Changelog: "changelog.md"
-  - Plugin file: "plugin_file.md"

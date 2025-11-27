@@ -2,7 +2,7 @@
   "name" : "sigfox",
   "version" : "1.4.1",
   "description" : "Plugin for handling Sigfox integration",
-  "author" : "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Sigfox",
     "description" : "Sigfox Integration",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/sigfox/sigfox-image.jpg",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/sigfox/sigfox-icon.png"
+    "category" : "connectivity",
+    "image" : "assets/sigfox-image.jpg",
+    "icon" : "assets/sigfox-icon.png"
   },
   "tokens" : {
     "sigfox_plugin" : {

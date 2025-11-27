@@ -1,7 +1,7 @@
 # HTTP Devices
 
 <p align="center">
-  <img src="/plugins/http-device/assets/http-device-logo.png" onerror="this.src='https://marketplace.thinger.io/plugins/http-device/assets/http-device-logo.png';this.onerror='';" width="200" alt="Thinger.io web console with VS Code plugin and OTA upload">
+  <img src="assets/http-device-logo.png" style="height: 120px" alt="HTTP Device logo">
 </p>
 
 This plugin is specially useful for fleets of generic devices that can make HTTP requests.

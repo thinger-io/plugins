@@ -2,7 +2,7 @@
 # Alertmanager
 
 <p align="center">
-  <img src="/plugins/alertmanager/assets/prometheus-logo.svg" onerror="this.src='https://marketplace.thinger.io/plugins/alertmanager/assets/prometheus-logo.svg';this.onerror='';" alt="Prometheus logo">
+  <img src="assets/prometheus-logo.svg" style="height: 120px" alt="Prometheus logo">
 </p>
 
 The Alertmanager handles alerts sent by clients applications such as Prometheus server. More information in their [official documentation](https://prometheus.io/docs/alerting/latest/alertmanager/).
@@ -13,13 +13,9 @@ This plugins requires the existence of the [Prometheus plugin](https://marketpla
 
 In order for the connection to take place, edit the `prometheus.yml` file by introducing your details and selecting your desired configuration.
 
-<p align="center">
-  <img src="/plugins/alertmanager/assets/prometheus-alerts.png" onerror="this.src='https://marketplace.thinger.io/plugins/alertmanager/assets/prometheus-alerts.png';this.onerror='';" alt="Prometheus alerts showcasing and alert over a metric devices disconnected greater than 5">
-</p>
+![Prometheus alerts showcasing and alert over a metric devices disconnected greater than 5](assets/prometheus-alerts.png)
 
-<p align="center">
-  <img src="/plugins/alertmanager/assets/alertmanager.png" onerror="this.src='https://marketplace.thinger.io/plugins/alertmanager/assets/alertmanager.png';this.onerror='';" alt="Alertmanager dashboard showcasing and alert over a metric devices disconnected greater than 5" >
-</p>
+![Alertmanager dashboard showcasing and alert over a metric devices disconnected greater than 5](assets/alertmanager.png)
 
 ## Official Documentation
 
@@ -29,12 +25,7 @@ You can find how to configure Alermanager at [this link](https://prometheus.io/d
 
 More details regarding the configuration of Prometheus at [this link](https://prometheus.io/docs/prometheus/latest/configuration/configuration/).
 
-!!! note
-
-    Any configuration change in `prometheus.yml` or `rules.yml` requires a
-    restart of the Prometheus plugin, and any change to `alertmanager.yml`
-    requires a restart of the Alertmanager plugin.
-
-## License
-
-Alertmanager, as well as Prometheus are distributed under the [Apache 2.0 License](https://prometheus.io/docs/introduction/faq/#what-license-is-prometheus-released-under).
+> [!NOTE]
+> Any configuration change in `prometheus.yml` or `rules.yml` requires a
+> restart of the Prometheus plugin, and any change to `alertmanager.yml`
+> requires a restart of the Alertmanager plugin.

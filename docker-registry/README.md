@@ -2,7 +2,7 @@
 # Docker Registry
 
 <p align="center">
-  <img src="https://github.com/distribution/distribution/raw/main/distribution-logo.svg" alt="Docker Registry logo" width="200"/>
+  <img src="assets/docker-registry-logo.svg" style="height: 120px" alt="Docker Registry logo">
 </p>
 
 Thinger.io plugin for running a Docker Registry in order to be able to upload and persist images of ML Models.

@@ -2,7 +2,7 @@
   "name" : "alertmanager",
   "version" : "0.26.0-1",
   "description" : "Alertmanager alarm handler system",
-  "author" : "Jaime Bautista",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Alertmanager",
     "description" : "Integration of Alertmanager with Thinger.io",
-    "image" : "docs/assets/prometheus-logo.svg",
-    "icon" : "docs/assets/prometheus-logo.svg"
+    "category" : "monitoring",
+    "image" : "assets/prometheus-logo.svg",
+    "icon" : "assets/prometheus-logo.svg"
   },
   "tokens" : {
     "alertmanager_plugin_callback" : {

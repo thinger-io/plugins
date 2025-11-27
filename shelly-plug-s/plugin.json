@@ -2,7 +2,7 @@
   "name": "shelly-plug-s",
   "version": "1.0.1",
   "description": "Shelly Plug S",
-  "author": "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,8 +12,9 @@
   "metadata": {
     "name": "Shelly Plug S",
     "description": "Shelly Plug S",
-    "image": "docs/assets/shelly-plug-s.jpg",
-    "icon": "docs/assets/shelly-plug-s.jpg"
+    "category": "devices",
+    "image": "assets/shelly-plug-s.jpg",
+    "icon": "assets/shelly-plug-s.jpg"
   },
   "resources": {
     "products": [
