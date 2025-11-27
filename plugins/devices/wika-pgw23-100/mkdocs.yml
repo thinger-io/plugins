@@ -1,0 +1,7 @@
+site_name: plugins/devices/wika-pgw23-100
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"

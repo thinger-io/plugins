@@ -1,0 +1,7 @@
+site_name: plugins/devices/dragino-lt22222l
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"

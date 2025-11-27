@@ -1,0 +1,9 @@
+site_name: plugins/monitoring/grafana
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Get Started: "get_started.md"
+  - Working With Grafana: "working_with_grafana.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
