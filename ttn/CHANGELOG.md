@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.2] - 2025-11-27
+
+### Add
+
+- Added support for enabling/disabling individual applications in the backend
+- Improved Inspector messages
+- Auto completion for application edition in the plugin configuration page
+
+### Fix
+
+- Fixed multiple application selection bug in the plugin configuration page
+- Fixed edition of existing plugin applications
+
 ## [2.1.1] - 2025-11-13
 
 ### Add
