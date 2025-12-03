@@ -1,0 +1,35 @@
+{
+  "name" : "uptime-kuma",
+  "version" : "1.0.0",
+  "description" : "Plugin for Uptime-Kuma integration",
+  "author": "Thinger.io",
+  "license" : "MIT",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/thinger-io/plugins.git",
+    "directory" : "uptime-kuma"
+  },
+  "metadata" : {
+    "name" : "Uptime Kuma",
+    "description" : "A self-hosted monitoring tool.",
+    "category" : "development",
+    "image" : "assets/Uptime-Kuma-Logo.png",
+    "icon" : "assets/Uptime-Kuma-Logo.png"
+  },
+  "tokens" : { },
+  "task" : {
+    "type" : "docker",
+    "image" : "thinger/uptime-kuma-plugin",
+    "volumes" : {
+      "data" : "/data"
+    }
+  },
+  "interface" : {
+    "main" : {
+      "proxy_to" : {
+        "plugin" : "uptime-kuma",
+        "port" : 3001
+      }
+    }
+  }
+}
