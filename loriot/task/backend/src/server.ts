@@ -340,9 +340,52 @@ app.post(`/:applicationId/uplink`, (req: Request, res: Response) => {
   const deviceEui = req.body.EUI;
 
   if ( typeof application !== 'undefined' ) {
+    if (!application.enabled) {
+      Log.warn(`Application ${applicationId} is disabled, ignoring uplink`);
+
+      userEvents.push({
+        category: 'uplink',
+        severity: 'warning',
+        title: `Uplink ignored: application ${applicationId} is disabled`,
+        device: deviceEui,
+        application: applicationId,
+        details: {
+          deviceId: deviceEui,
+          applicationId: applicationId
+        }
+      });
+      res.status(200).send({ message: "Application is disabled, uplink ignored" });
+      return;
+    }
+
     const device = `${ application.deviceIdPrefix }${deviceEui}`;
 
     const thingerUplink = loriotToThinger(req.body, applicationId, device);
+
+    const hasDecodedPayload = thingerUplink.decodedPayload &&
+      Object.keys(thingerUplink.decodedPayload).length > 0;
+
+    userEvents.push({
+      category: 'uplink',
+      severity: 'info',
+      title: hasDecodedPayload
+        ? `Uplink from ${deviceEui}`
+        : `Uplink from ${deviceEui} (no decoded payload)`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: device,
+        fPort: thingerUplink.fPort,
+        fCnt: thingerUplink.fCnt,
+        payload: thingerUplink.payload,
+        decodedPayload: thingerUplink.decodedPayload,
+        metadata: thingerUplink.metadata
+      },
+      metadata: {
+        size: thingerUplink.payload ? Buffer.from(thingerUplink.payload, 'hex').length : 0
+      }
+    });
+
 
     devicesApi.accessInputResources(_user, device, 'uplink', thingerUplink).then((response: object) => {
       Log.log(`handling uplink callback for device ${device} and 'uplink ${response}'`);

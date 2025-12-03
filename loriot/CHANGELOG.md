@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1] - 2025-12-03
+
+### Add
+
+- Added support for enabling/disabling individual applications in the backend
+- Improved Inspector messages
+
 ## [2.1.0] - 2025-11-18
 
 ### Add
