@@ -10,9 +10,10 @@
         "directory": "dragino-lt22222l"
     },
     "metadata": {
-        "name": "Dragino LT-22222-L LoRa I/O Controller",
+        "name": "Dragino LT-22222-L",
         "description": "Dragino LT-22222-L integration with Thinger.io",
-        "image": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/dragino-lt22222l/img/LT-22222-L.png"
+        "category": "devices",
+        "image": "assets/dragino-lt22222l.png"
     },
     "resources": {
         "products": [

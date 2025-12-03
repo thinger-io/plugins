@@ -2,16 +2,14 @@
 # RStudio Web IDE
 
 <p align="center">
-  <img width="250" src="/plugins/rstudio/assets/RStudio_logo_flat.svg" onerror="this.src='https://marketplace.thinger.io/plugins/rstudio/assets/RStudio_logo_flat.svg';this.onerror='';" alt="RStudio logo">
+  <img src="assets/rstudio-logo.svg" style="height: 120px" alt="RStudio logo">
 </p>
 
 RStudio® is an integrated development environment (IDE) for R, a programming language for statistical computing and graphics. The RStudio Web IDE plugin provides a web-based RStudio Server instance that can be accessed from the Thinger.io console.
 
 Integrating RStudio with Thinger.io can greatly benefit data scientists, IoT developers, and researchers who need to analyze and visualize IoT data effectively. This integration empowers professionals across various domains to make data-driven decisions and optimize their IoT solutions.
 
-<p align="center">
-  <img src="/plugins/rstudio/assets/screen-front.png" onerror="this.src='https://marketplace.thinger.io/plugins/rstudio/assets/screen-front.png';this.onerror='';" alt="Thinger.io web console with Node-RED plugin and ad-hoc nodes">
-</p>
+![Thinger.io web console with Node-RED plugin and ad-hoc nodes](assets/screen-front.png)
 
 ## Thinger.io and RStudio integration
 
@@ -52,9 +50,3 @@ resp
 ## Additional Resources
 
 You may refer to the official website of R for additional resources and documentation: [R](https://www.r-project.org/), as well as the official website of RStudio for more information on RStudio IDE: [RStudio](https://www.rstudio.com/).
-
-## License
-
-R is distributed under the GNU GPL v2 license. RStudio is distributed under the AGPL v3 license. For more information, please refer to the official websites of [R](https://www.r-project.org/), the Rocker Dockerfiles used by the plugin are licensed under the GPL 2 or later. [RStudio](https://www.rstudio.com/). RStudio® is a registered trademark of RStudio, Inc.
-
-No affiliation with R, Rocker or RStudio is implied or intended by this plugin.

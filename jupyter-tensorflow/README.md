@@ -2,7 +2,7 @@
 # Jupyter TensorFlow
 
 <p align="center">
-  <img src="/plugins/jupyter-tensorflow/assets/jupyter_image.svg" onerror="this.src='https://marketplace.thinger.io/plugins/jupyter-tensorflow/assets/jupyter_image.svg';this.onerror='';" alt="Jupyter logo" width="200">
+  <img src="assets/jupyter_image.svg" style="height: 120px" alt="Jupyter logo">
 </p>
 
 Thinger.io plugin for running Jupyter TensorFlow version on the Cloud, integrating with Thinger.io file storages.
@@ -27,6 +27,4 @@ More details in what this plugins includes can be found [here](https://jupyter-d
 
 ## Screenshots
 
-<p align="center">
-  <img src="/plugins/jupyter-tensorflow/assets/jupyter-thinger.png" onerror="this.src='https://marketplace.thinger.io/plugins/jupyter-tensorflow/assets/jupyter-thinger.png';this.onerror='';" alt="Mockup of Jupyter Notebook integrated within Thinger.io" width="1000">
-</p>
+![Mockup of Jupyter Notebook integrated within Thinger.io](assets/jupyter-thinger.png)

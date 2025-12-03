@@ -1,9 +1,8 @@
 # Comet Tx6xx and Tx5xx Series
 
 <p align="center">
-  <img src="/plugins/comet-tx5xx-tx6xx/assets/comet-tx5xx-tx6xx.png">
+  <img src="assets/comet-tx5xx-tx6xx.png" style="height: 250px" alt="Comet TX5xx/TX6xx">
 </p>
-
 
 A Thinger.io plugin that seamlessly ingests SOAP XML data coming from Comet Tx5xx / Tx6xx dataloggers (temperature, humidity, CO₂ and/or pressure) and converts it into structured JSON records stored in a Data Bucket. The plugin provides an HTTPS endpoint, automatic device provisioning, data parsing in Node JS, and ready-to-use dashboards and alarms.
 
@@ -22,7 +21,6 @@ firmware v1.0 & v1.1 XML versions.
 
 ## Requirements
 
-
 | Component | Minimum version | Notes |
 |-----------|-----------------|-------|
 | Thinger.io instance | 6.5.4-developer or newer | Must support **Plugins** and **Proxy Forwarders** |
@@ -30,7 +28,6 @@ firmware v1.0 & v1.1 XML versions.
 | `node-red-contrib-http-custom-port` | latest | Allows HTTP listeners on custom ports (4444 by default) |
 | Comet Tx5xx / Tx6xx logger | any SOAP-capable firmware | Device must be configured to POST data to `http://your-host:4444/` |
 | External TCP/UDP reachability | Port **4444** (or chosen) | Forwarded to Node-RED via Thinger **Proxy Forwarder** |
-
 
 ## Get Started
 
@@ -130,7 +127,6 @@ firmware v1.0 & v1.1 XML versions.
 5. Finally, enter the node "http-request", select "Use authentication", select "Bearer authentication" and paste `${THINGER_TOKEN_NODE_RED_PLUGIN}` in Token. Then press "Done"
 6. Press "Deploy" to start Node RED instance.
 
-
 ### Usage
 
 1. Configure each Comet logger's **SOAP destination** to `https://<your-host>/4444/`.
@@ -141,4 +137,3 @@ firmware v1.0 & v1.1 XML versions.
 ## Additional Resources
 
 - [Documentation](https://www.cometsystem.es/productos/reg-t6640)
-

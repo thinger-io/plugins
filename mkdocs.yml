@@ -2,6 +2,7 @@
 # Project information
 site_name: Thinger.io Marketplace
 site_url: https://marketplace.thinger.io/
+site_dir: _site
 site_author: Thinger.io
 site_description: >-
   Experience IoT innovation with powerful integrations, updates, and refined capabilities. Join us and embark on a data-driven journey
@@ -12,7 +13,7 @@ repo_url: https://github.com/thinger-io/plugins
 
 # Copyright
 copyright: >
-  Copyright &copy; 2016 - 2024 Thinger.io<br />
+  Copyright &copy; Thinger.io<br />
 #  <a href="#__consent">Change cookie settings</a>
 
 # Configuration
@@ -60,6 +61,7 @@ theme:
 
 # Plugins
 plugins:
+  - callouts
   - monorepo
   - social
   - blog:
@@ -162,39 +164,53 @@ nav:
   - Plugins:
     - 'plugins/index.md'
     - Managing Plugins: 'plugins/managing.md'
-    #- Plugins: '*include ./*/mkdocs.yml'
+    # AUTO-GENERATED-PLUGINS-START
     - Integrations:
-      - Alertmanager: '!include ./alertmanager/mkdocs.yml'
-      - Comet-Tx5xx-Tx6xx: '!include ./comet-tx5xx-tx6xx/mkdocs.yml'
-      - ChirpStack: '!include ./chirpstack/mkdocs.yml'
-      - Docker Registry: '!include ./docker-registry/mkdocs.yml'
-      - Dragino LT22222L: '!include ./dragino-lt22222l/mkdocs.yml'
-      - Grafana: '!include ./grafana/mkdocs.yml'
-      - HTTP Devices: '!include ./http-device/mkdocs.yml'
-      - InfluxDB2: '!include ./influxdb2/mkdocs.yml'
-      - Jupyter Minimal: '!include ./jupyter-minimal/mkdocs.yml'
-      - Jupyter R: '!include ./jupyter-r/mkdocs.yml'
-      - Jupyter TensorFlow: '!include ./jupyter-tensorflow/mkdocs.yml'
-      - LoRaWAN Product Template: '!include ./lorawan-product-template/mkdocs.yml'
-      - LORIOT: '!include ./loriot/mkdocs.yml'
-      - Milesight AM103: '!include ./milesight-am103/mkdocs.yml'
-      - RStudio: '!include ./rstudio/mkdocs.yml'
-      - Node-RED: '!include ./node-red/mkdocs.yml'
-      - Prometheus Exporter: '!include ./prometheus-exporter/mkdocs.yml'
-      - Prometheus: '!include ./prometheus/mkdocs.yml'
-      - SFTPGo: '!include ./sftpgo/mkdocs.yml'
-      - Shelly 1L: '!include ./shelly-1l/mkdocs.yml'
-      - Shelly EM: '!include ./shelly-em/mkdocs.yml'
-      - Shelly Plug S: '!include ./shelly-plug-s/mkdocs.yml'
-      - Shelly Plus 1PM: '!include ./shelly-plus-1pm/mkdocs.yml'
-      - Sigfox: '!include ./sigfox/mkdocs.yml'
-      - Teltonika Eye: '!include ./teltonika-eye/mkdocs.yml'
-      - Teltonika Telematics: '!include ./teltonika-telematics/mkdocs.yml'
-      - TTN: '!include ./ttn/mkdocs.yml'
-      - Siemens LOGO!: '!include ./siemens-logo/mkdocs.yml'
-      - VS Code: '!include ./vscode/mkdocs.yml'
-      - Wika PGW23-100: '!include ./wika-pgw23-100/mkdocs.yml'
-      - Wika PEW1000: '!include ./wika-pew1000/mkdocs.yml'
+      - Devices:
+        - Overview: 'plugins/devices/index.md'
+        - Comet Tx: '!include ./_build/plugins/devices/comet-tx5xx-tx6xx/mkdocs.yml'
+        - Dragino LT-22222-L: '!include ./_build/plugins/devices/dragino-lt22222l/mkdocs.yml'
+        - Milesight AM103: '!include ./_build/plugins/devices/milesight-am103/mkdocs.yml'
+        - Shelly 1L: '!include ./_build/plugins/devices/shelly-1l/mkdocs.yml'
+        - Shelly EM: '!include ./_build/plugins/devices/shelly-em/mkdocs.yml'
+        - Shelly Plug S: '!include ./_build/plugins/devices/shelly-plug-s/mkdocs.yml'
+        - Shelly Plus 1PM: '!include ./_build/plugins/devices/shelly-plus-1pm/mkdocs.yml'
+        - Siemens LOGO!: '!include ./_build/plugins/devices/siemens-logo/mkdocs.yml'
+        - Teltonika Eye: '!include ./_build/plugins/devices/teltonika-eye/mkdocs.yml'
+        - Teltonika Telematics: '!include ./_build/plugins/devices/teltonika-telematics/mkdocs.yml'
+        - WIKA PEW-1000: '!include ./_build/plugins/devices/wika-pew1000/mkdocs.yml'
+        - Wika PGW23-100 Pressure Sensor: '!include ./_build/plugins/devices/wika-pgw23-100/mkdocs.yml'
+      - Connectivity:
+        - Overview: 'plugins/connectivity/index.md'
+        - ChirpStack: '!include ./_build/plugins/connectivity/chirpstack/mkdocs.yml'
+        - HTTP Device: '!include ./_build/plugins/connectivity/http-device/mkdocs.yml'
+        - LORIOT: '!include ./_build/plugins/connectivity/loriot/mkdocs.yml'
+        - Sigfox: '!include ./_build/plugins/connectivity/sigfox/mkdocs.yml'
+        - The Things Stack: '!include ./_build/plugins/connectivity/ttn/mkdocs.yml'
+        - The Things Stack: '!include ./_build/plugins/connectivity/ttn-stack/mkdocs.yml'
+      - Monitoring:
+        - Overview: 'plugins/monitoring/index.md'
+        - Alertmanager: '!include ./_build/plugins/monitoring/alertmanager/mkdocs.yml'
+        - Grafana: '!include ./_build/plugins/monitoring/grafana/mkdocs.yml'
+        - InfluxDB2: '!include ./_build/plugins/monitoring/influxdb2/mkdocs.yml'
+        - Prometheus: '!include ./_build/plugins/monitoring/prometheus/mkdocs.yml'
+        - Prometheus Exporter: '!include ./_build/plugins/monitoring/prometheus-exporter/mkdocs.yml'
+      - Development:
+        - Overview: 'plugins/development/index.md'
+        - Jupyter Minimal: '!include ./_build/plugins/development/jupyter-minimal/mkdocs.yml'
+        - Jupyter R: '!include ./_build/plugins/development/jupyter-r/mkdocs.yml'
+        - Jupyter TensorFlow: '!include ./_build/plugins/development/jupyter-tensorflow/mkdocs.yml'
+        - Node-RED: '!include ./_build/plugins/development/node-red/mkdocs.yml'
+        - RStudio: '!include ./_build/plugins/development/rstudio/mkdocs.yml'
+        - VS Code: '!include ./_build/plugins/development/vscode/mkdocs.yml'
+      - Infrastructure:
+        - Overview: 'plugins/infrastructure/index.md'
+        - Docker Registry: '!include ./_build/plugins/infrastructure/docker-registry/mkdocs.yml'
+        - SFTPGo: '!include ./_build/plugins/infrastructure/sftpgo/mkdocs.yml'
+      - Templates:
+        - Overview: 'plugins/templates/index.md'
+        - LoRaWAN Device Template: '!include ./_build/plugins/templates/lorawan-product-template/mkdocs.yml'
+    # AUTO-GENERATED-PLUGINS-END
   - Contributing:
     - 'contributing/index.md'
     - Plugin System Infrastructure: 'contributing/plugin-system-infrastructure.md'

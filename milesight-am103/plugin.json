@@ -12,6 +12,7 @@
     "metadata": {
         "name": "Milesight AM103",
         "description": "Milesight AM103 device template for integrating into Thinger.io",
+        "category": "devices",
         "image": "assets/milesight-am103.png"
     },
     "resources": {

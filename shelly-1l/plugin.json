@@ -12,7 +12,8 @@
   "metadata": {
     "name": "Shelly 1L",
     "description": "Shelly 1L with Thinger.io",
-    "image": "docs/assets/shelly-1l.png"
+    "category": "devices",
+    "image": "assets/shelly-1l.png"
   },
   "resources": {
     "products" : [

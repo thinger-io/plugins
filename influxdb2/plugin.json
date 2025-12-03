@@ -2,8 +2,11 @@
   "name" : "influxdb2",
   "version" : "1.0.0",
   "description" : "Plugin for InfluxBD2 access",
-  "author" : "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
+  "deprecated": {
+    "message": "InfluxDB is no longer the default time series database. This plugin may not work with your instance"
+  },
   "repository" : {
     "type" : "git",
     "url" : "https://github.com/thinger-io/plugins.git",
@@ -12,8 +15,9 @@
   "metadata" : {
     "name" : "InfluxDB2",
     "description" : "InfluxDB2 Plugin",
-    "image" : "docs/assets/influxdb.svg",
-    "icon" : "docs/assets/influxdb.svg"
+    "category" : "monitoring",
+    "image" : "assets/influxdb.svg",
+    "icon" : "assets/influxdb.svg"
   },
   "resources" : {
     "proxies" : [

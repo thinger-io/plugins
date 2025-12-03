@@ -15,7 +15,9 @@
   },
   "keywords": [
     "loriot",
-    "thinger"
+    "thinger",
+    "LNS",
+    "LoRaWAN"
   ],
   "author": "Thinger.io",
   "license": "MIT",
@@ -35,6 +37,7 @@
   },
   "dependencies": {
     "@thinger-io/thinger-node": "0.1.0-alpha.4",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1"
   }
 }

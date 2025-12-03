@@ -22,5 +22,5 @@ The Shelly 1L is a small and compact Wi-Fi smart switch that enables you to cont
 - Certification: CE, RoHS
 
 <p align="center">
-  <img src="/plugins/shelly-1l/assets/shelly-1l.png" onerror="this.src='https://marketplace.thinger.io/plugins/shelly-1l/assets/shelly-1l.png';this.onerror='';" alt="Shelly 1L picture" width="250">
+  <img src="assets/shelly-1l.png" style="height: 250px" alt="Shelly 1L">
 </p>

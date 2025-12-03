@@ -1,7 +1,0 @@
-
-site_name: plugins/teltonika-telematics
-
-nav:
-  - "index.md"
-  - Changelog: "changelog.md"
-  - Plugin file: "plugin_file.md"

@@ -106,7 +106,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   if (!data || !uplink) {
     userEvents.push({
-      category: 'error',
+      category: 'downlink',
       severity: 'error',
       title: 'Downlink rejected: missing required fields',
       details: {
@@ -120,7 +120,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
 
   if (data === '' || data === null || data === 'null') {
     userEvents.push({
-      category: 'warning',
+      category: 'downlink',
       severity: 'warning',
       title: 'Downlink rejected: invalid data',
       device: uplink.deviceEui,
@@ -142,7 +142,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
   if (typeof application === 'undefined') {
     Log.error(`Application not found`);
     userEvents.push({
-      category: 'error',
+      category: 'downlink',
       severity: 'error',
       title: 'Downlink failed: application not configured',
       device: uplink.deviceEui,
@@ -167,7 +167,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     if (!downlinkUrl || !apiKey) {
       Log.error("Downlink URL or API key not found in device properties");
       userEvents.push({
-        category: 'error',
+        category: 'downlink',
         severity: 'error',
         title: 'Downlink failed: missing configuration',
         device: uplink.deviceEui,
@@ -277,7 +277,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
       });
     } else {
       userEvents.push({
-        category: 'error',
+        category: 'downlink',
         severity: 'error',
         title: `Downlink failed for ${uplink.deviceEui} (HTTP ${statusCode})`,
         device: uplink.deviceEui,
@@ -303,7 +303,7 @@ app.post("/downlink", async (req: Request, res: Response) => {
     Log.error("Error while sending downlink:", err.message || err);
 
     userEvents.push({
-      category: 'error',
+      category: 'downlink',
       severity: 'error',
       title: `Downlink exception for ${uplink.deviceEui}`,
       device: uplink.deviceEui,
@@ -324,20 +324,38 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
 
+  let applicationId: string;
+  let deviceEui: string;
+  let application: ttnApplication | undefined;
+
   // Application id is recieved in payload from TTN according to
   // TTN-Data-Format specifications:
   // https://www.thethingsindustries.com/docs/integrations/data-formats/
-  const applicationId = req.body.end_device_ids.application_ids.application_id;
-  const deviceEui = req.body.end_device_ids.dev_eui;
-
-  const application: ttnApplication | undefined = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+  try {
+    applicationId = req.body.end_device_ids.application_ids.application_id;
+    deviceEui = req.body.end_device_ids.dev_eui;
+    application = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+  } catch (error: any) {
+    Log.error("Error parsing uplink message:", error.message || error);
+    userEvents.push({
+      category: 'uplink',
+      severity: 'error',
+      title: 'Uplink rejected: invalid message format',
+      details: {
+        error: error.message || 'Unknown error parsing uplink message',
+        receivedBody: req.body
+      }
+    });
+    res.status(400).send({ message: "Invalid message format" });
+    return;
+  }
 
   if (typeof application === 'undefined') {
     Log.error(`Application ${applicationId} not found`);
 
     userEvents.push({
-      category: 'error',
-      severity: 'error',
+      category: 'uplink',
+      severity: 'warning',
       title: `Uplink rejected: unknown application ${applicationId}`,
       device: deviceEui,
       application: applicationId,
@@ -352,6 +370,24 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     return;
   }
 
+  if (!application.enabled) {
+    Log.log(`Application ${applicationId} is disabled, ignoring uplink`);
+
+    userEvents.push({
+      category: 'uplink',
+      severity: 'warning',
+      title: `Uplink ignored: application ${applicationId} is disabled`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: deviceEui,
+        applicationId: applicationId
+      }
+    });
+    res.status(200).send({ message: "Application is disabled, uplink ignored" });
+    return;
+  }
+
   const device = `${application.deviceIdPrefix}${deviceEui}`;
   console.log("Device:", device);
 
@@ -363,7 +399,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
   userEvents.push({
     category: 'uplink',
-    severity: 'success',
+    severity: 'info',
     title: hasDecodedPayload
       ? `Uplink from ${deviceEui}`
       : `Uplink from ${deviceEui} (no decoded payload)`,
@@ -415,26 +451,44 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     devicesApi.createProperty(_user, device, prop)
       .then(() => {
         Log.info("Downlink info updated for device", device);
-        userEvents.push({
-          category: 'device',
-          severity: 'info',
-          title: `Downlink config updated for ${deviceEui}`,
-          device: deviceEui,
-          application: applicationId,
-          details: {
-            deviceId: device,
-            hasApiKey: !!downlinkInfo.api_key,
-            hasPushUrl: !!downlinkInfo.push_url,
-            hasReplaceUrl: !!downlinkInfo.replace_url
-          }
-        });
+        // If downlink info is not present, warn the user
+        if (!downlinkInfo.api_key || !downlinkInfo.push_url || !downlinkInfo.replace_url) {
+          userEvents.push({
+            category: 'device',
+            severity: 'warning',
+            title: `Incomplete downlink config for ${deviceEui}`,
+            device: deviceEui,
+            application: applicationId,
+            details: {
+              deviceId: device,
+              hasApiKey: !!downlinkInfo.api_key,
+              hasPushUrl: !!downlinkInfo.push_url,
+              hasReplaceUrl: !!downlinkInfo.replace_url,
+              description: 'Essential downlink configuration parameters are missing from TTN request headers. Uplink messages will be forwarded, but downlink functionality is disabled.'
+            }
+          });
+        } else {
+          userEvents.push({
+            category: 'device',
+            severity: 'success',
+            title: `Downlink config updated for ${deviceEui}`,
+            device: deviceEui,
+            application: applicationId,
+            details: {
+              deviceId: device,
+              hasApiKey: !!downlinkInfo.api_key,
+              hasPushUrl: !!downlinkInfo.push_url,
+              hasReplaceUrl: !!downlinkInfo.replace_url
+            }
+          });
+        }
         res.status(200).send();
       })
       .catch((err: ApiException<any>) => {
         Log.error("Error saving downlink info", err);
 
         userEvents.push({
-          category: 'warning',
+          category: 'uplink',
           severity: 'warning',
           title: `Failed to save downlink config for ${deviceEui}`,
           device: deviceEui,
@@ -457,9 +511,27 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       application: applicationId,
       details: {
         deviceId: device,
-        error: error.message || 'Unknown error forwarding to Thinger',
+        httpErrorCode: error.code || 'N/A',
+        error: error.message,
+        description: 'This plugin couldn\'t forward the uplink message to Thinger.io platform. Check you product id prefix',
         fPort: ttnMessage.fPort,
         fCnt: ttnMessage.fCnt
+      }
+    });
+    res.status(500).send();
+  }).catch((error: any) => {
+    Log.log("Unexpected error while handling uplink", error);
+    userEvents.push({
+      category: 'error',
+      severity: 'error',
+      title: `Unexpected error forwarding uplink from ${deviceEui}`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: device,
+        httpErrorCode: error.code || 'N/A',
+        error: error.message || 'Unknown unexpected error',
+        uplinkRecieved: req.body
       }
     });
     res.status(500).send();

@@ -22,6 +22,5 @@ Shelly Plus 1PM is a Wi-Fi enabled smart switch designed for efficient control o
 - Enclosure: UL94V-0 flame retardant polymer
 
 <p align="center">
-  <img src="/plugins/shelly-plus-1pm/assets/shelly-plus-1pm.png" onerror="this.src='https://marketplace.thinger.io/plugins/shelly-plus-1pm/assets/shelly-plus-1pm.png';this.onerror='';" alt="Shelly Plus 1PM" width="250">
+  <img src="assets/shelly-plus-1pm.png" style="height: 250px" alt="Shelly Plus 1PM">
 </p>
-

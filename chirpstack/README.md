@@ -1,7 +1,7 @@
 # ChirpStack 
 
 <p align="center">
-  <img src="/plugins/chirpstack/assets/chirpstack-logo.png" alt="ChirpStack logo" style="max-width: 200px; height: auto;" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/chirpstack-logo.png';this.onerror='';">
+  <img src="assets/chirpstack-logo.png" style="height: 120px" alt="ChirpStack logo">
 </p>
 
 ChirpStack is a flexible, open-source LoRaWAN® Network Server that allows organisations to deploy and operate their own private or public IoT networks with full control over infrastructure and data. It is widely used by companies, research institutions, and communities looking for reliable large-scale LoRaWAN deployments without vendor lock-in.
@@ -35,10 +35,7 @@ Open the plugin settings page. In the **Applications** table click **Add +** an
 | **Port**             | The gRPC service port exposed by ChirpStack (default is `8080`). If you are running ChirpStack behind a reverse proxy, make sure this port is accessible or properly forwarded. |
 | **Enabled**          | Toggles the application integration on or off.                                                                                                                                  |
 
-
-<p align="center">
-  <img src="/plugins/chirpstack/assets/add_application.png" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/add_application.png';this.onerror='';" alt="Add application modal in ChirpStack Thinger.io Plugin">
-</p>
+![Add application modal in ChirpStack Thinger.io Plugin](assets/add_application.png)
 
 Unlike TTN or LORIOT, ChirpStack must be deployed and managed by the user. The plugin backend communicates with ChirpStack using gRPC (HTTP/2), which provides efficient and real-time interaction but also requires that the gRPC service port is reachable by Thinger.io.
 
@@ -50,7 +47,6 @@ In most cases, you will need to either:
 
 Since ChirpStack is self-hosted, network accessibility is critical. In our tests we verified connectivity by forwarding the gRPC port from the router directly to the ChirpStack server, ensuring uplinks and downlinks were processed correctly.
 
-
 ## ChirpStack Webhook Configuration
 
 Log in to the ChirpStack Application Server and select the target Application.
@@ -59,13 +55,12 @@ Navigate to Integrations → Add Integration and choose the generic HTTP integra
 
 Complete the form with the values provided by the Thinger.io plugin:
 
-<p align="center"> <img src="/plugins/chirpstack/assets/chirpstack_webhook.png" onerror="this.src='https://marketplace.thinger.io/plugins/chirpstack/assets/chirpstack_webhook.png';this.onerror='';" alt="ChirpStack HTTP Webhook Settings for Thinger.io integration"> </p>
+![ChirpStack HTTP Webhook Settings for Thinger.io integration](assets/chirpstack_webhook.png)
 
 | Field                     | Value                                                                                                                                                                               |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Event endpoint URL(s)** | Copy the value shown in the plugin under **Endpoint Base URL for Uplinks**. ChirpStack will send all application traffic (uplinks, join events, acknowledgements) to this endpoint. |
 | **Headers**               | Add a new header with key **Authorization** and value equal to the **ChirpStack API Token** provided in the plugin settings page.                                                   |
-
 
 After saving, uplink traffic will start appearing in the plugin Logs panel.
 At this point the devices may still be unrecognised; autoprovision occurs once a matching Device Template is installed or created.
@@ -89,35 +84,4 @@ Search the Marketplace for a template that matches your device model. If none ex
 > **Important**  
 > Ensure the template **autoprovision prefix** matches the **Device ID Prefix** configured in the plugin.
 
-
 ---
-
-## License
-
-<a href="http://opensource.org/">
-  <img style="float: right;" width="100px" height="137px" src="/assets/OSI_Standard_Logo_0.svg" onerror="this.src='https://marketplace.thinger.io/assets/OSI_Standard_Logo_0.svg';this.onerror='';">
-</a>
-
-This plugin is released under the **MIT License**:
-
-```
-Copyright © Thinger.io
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```

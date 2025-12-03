@@ -2,8 +2,12 @@
   "name" : "ttn-stack",
   "version" : "1.2.1",
   "description" : "Plugin for handling The Things Stack integration",
-  "author" : "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
+  "deprecated": {
+    "message": "This plugin is no longer maintained",
+    "replacement": "ttn"
+  },
   "repository" : {
     "type" : "git",
     "url": "https://github.com/thinger-io/plugins.git",
@@ -12,8 +16,9 @@
   "metadata" : {
     "name" : "The Things Stack",
     "description" : "The Things Stack Integration",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-logo.png",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/ttn-stack/img/ttn-stack-icon.png"
+    "category" : "connectivity",
+    "image" : "assets/ttn-stack-logo.png",
+    "icon" : "assets/ttn-stack-icon.png"
   },
   "tokens" : {
     "ttn_stack_plugin" : {

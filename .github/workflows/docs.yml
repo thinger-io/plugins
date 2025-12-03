@@ -41,11 +41,14 @@ jobs:
       - run: |
           pip install mkdocs-material
           pip install mkdocs-minify-plugin
-          pip install mkdocs-redirects
           pip install mkdocs-monorepo-plugin
           pip install mkdocs-rss-plugin
           pip install mkdocs-git-revision-date-localized-plugin
           pip install "mkdocs-material[imaging]"
           pip install mkdocs-glightbox
+          pip install mkdocs-callouts
+
+      - name: Pre-build documentation
+        run: python3 build_docs.py
 
       - run: mkdocs gh-deploy --force

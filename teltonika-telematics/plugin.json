@@ -12,6 +12,7 @@
     "metadata": {
         "name": "Teltonika Telematics",
         "description": "Decoder and preconfiguration for Teltonika GPS Telematics devices",
+        "category": "devices",
         "image": "assets/teltonika-telematics.png"
     },
     "resources": {

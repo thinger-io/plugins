@@ -2,7 +2,7 @@
   "name" : "docker-registry",
   "version" : "2.8.1-1",
   "description" : "Docker Registry",
-  "author" : "Álvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Docker Registry",
     "description" : "A Registry for images build in Thinger.io",
-    "image" : "docs/assets/registry-logo.svg",
-    "icon" : "docs/assets/registry-icon.svg"
+    "category" : "infrastructure",
+    "image" : "assets/registry-logo.svg",
+    "icon" : "assets/registry-icon.svg"
   },
   "task": {
     "type": "docker",

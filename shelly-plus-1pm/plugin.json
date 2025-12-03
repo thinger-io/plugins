@@ -12,7 +12,8 @@
     "metadata": {
         "name": "Shelly Plus 1PM",
         "description": "Shelly Plus 1PM with Thinger.io",
-        "image": "docs/assets/shelly-plus-1pm.png"
+        "category": "devices",
+        "image": "assets/shelly-plus-1pm.png"
     },
     "resources": {
         "products": [

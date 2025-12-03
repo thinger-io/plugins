@@ -2,7 +2,7 @@
   "name" : "http-device",
   "version" : "1.1.1",
   "description" : "Plugin for handling generic HTTP devices.",
-  "author" : "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "HTTP Device",
     "description" : "HTTP Devices Integration",
-    "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/http-device/img/http-device-logo.png",
-    "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/http-device/img/http-device-icon.png"
+    "category" : "connectivity",
+    "image" : "assets/http-device-logo.png",
+    "icon" : "assets/http-device-icon.png"
   },
   "tokens" : {
     "http_device_plugin" : {

@@ -2,7 +2,7 @@
   "name" : "node-red",
   "version" : "1.9.2-1",
   "description" : "Plugin for Node-RED integration",
-  "author" : "Alvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Node-RED",
     "description" : "Node-RED integration for Thinger.io",
-    "image" : "docs/assets/node-red-logo.svg",
-    "icon" : "https://raw.githubusercontent.com/thinger-io/plugins/main/node-red/docs/assets/node-red-icon.svg"
+    "category" : "development",
+    "image" : "assets/node-red-logo.svg",
+    "icon" : "assets/node-red-icon.svg"
   },
   "tokens" : {
     "node_red_plugin" : {
