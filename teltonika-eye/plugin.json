@@ -12,6 +12,7 @@
     "metadata": {
         "name": "Teltonika Eye",
         "description": "Decoder and preconfiguration for Teltonika Eye devices",
+        "category": "devices",
         "image": "assets/teltonika-eye.png"
     },
     "resources": {

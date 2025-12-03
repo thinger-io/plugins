@@ -7,18 +7,16 @@ The core of Thinger.io IoT Platform is designed to be lean and lightweight, to m
 
 For instructions and information about installing, upgrading, troubleshooting, and managing Thinger.io plugins, see [Managing Plugins](managing) section. For learning how to use any existent plugin, just find on the left a list of each one.
 
-!!! note
+> [!NOTE]
+> Plugins are only available for premium Thinger.io servers. Check out the pricing
+> page to create your own instance within minutes.
+>
+> [To the pricing](https://thinger.io/pricing/){ .md-button .md-button--primary }
 
-    Plugins are only available for premium Thinger.io servers. Check out the pricing
-    page to create your own instance within minutes.
-
-    [To the pricing](https://thinger.io/pricing/){ .md-button .md-button--primary }
-
-!!! tip
-
-    Thinger.io plugins source code is now available in our Github repository,so
-    if you want to contribute do not hesitate on forking to project and send your pull-requests.
-    Link is in the top right corner of the page.
+> [!TIP]
+> Thinger.io plugins source code is now available in our Github repository, so
+> if you want to contribute do not hesitate on forking to project and send your pull-requests.
+> Link is in the top right corner of the page.
 
 ## Custom Plugins Development
 

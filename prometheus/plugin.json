@@ -2,7 +2,7 @@
   "name" : "prometheus",
   "version" : "2.46.0-1",
   "description" : "Prometheus monitoring system",
-  "author" : "Jaime Bautista",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Prometheus",
     "description" : "Integration of Prometheus with Thinger.io",
-    "image" : "docs/assets/prometheus-logo.svg",
-    "icon" : "docs/assets/prometheus-logo.svg"
+    "category" : "monitoring",
+    "image" : "assets/prometheus-logo.svg",
+    "icon" : "assets/prometheus-logo.svg"
   },
   "tokens" : {
     "prometheus_plugin_callback" : {

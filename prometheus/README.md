@@ -2,7 +2,7 @@
 # Prometheus
 
 <p align="center">
-  <img src="/plugins/prometheus/assets/prometheus-logo.svg" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus/assets/prometheus-logo.svg';this.onerror='';" alt="Prometheus logo">
+  <img src="assets/prometheus-logo.svg" style="height: 120px" alt="Prometheus logo">
 </p>
 
 Prometheus is an open-source monitoring system and time series database that allows you to collect and store metrics about your infrastructure and applications, and provides a powerful query language called PromQL that you can use to analyze and graph these metrics.
@@ -21,21 +21,17 @@ In order for the connection to take place, edit the file by introducing your det
 
 This file can also be used to configure external systems scraping.
 
-!!! note
+> [!NOTE]
+> Check out also the [Alertmanager plugin](https://marketplace.thinger.io/plugins/alertmanager)
 
-    Check out also the [Alertmanager plugin](https://marketplace.thinger.io/plugins/alertmanager)
-
-<p align="center">
-  <img src="/plugins/prometheus/assets/query.png" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus/assets/query.png';this.onerror='';" alt="Prometheus integration showing a query over devices_total in Thinger.io">
-</p>
+![Prometheus integration showing a query over devices_total in Thinger.io](assets/query.png)
 
 ## Integration with Grafana
 
 Grafana provides native support for Prometheus, therefore, we can configure a connection between the two plugins.
 
-!!! note
-
-    Refer to the [Grafana plugin page](https://marketplace.thinger.io/plugins/grafana) if you need more details on how to get started
+> [!NOTE]
+> Refer to the [Grafana plugin page](https://marketplace.thinger.io/plugins/grafana) if you need more details on how to get started
 
 Once grafana in installed and logged in, you may go to 'Settings'->'Data sources'. Click on `Add data source` and click on 'Prometheus'.
 The data to configure the Prometheus as data source you'll need:
@@ -43,9 +39,7 @@ The data to configure the Prometheus as data source you'll need:
 
 And thats it, you may start now creating dashboard in grafana with prometheus as the backend.
 
-<p align="center">
-  <img src="/plugins/prometheus/assets/grafana-dashboard.png" onerror="this.src='https://marketplace.thinger.io/plugins/prometheus/assets/grafana-dashboard.png';this.onerror='';" alt="Prometheus integration showing a devices_total dashboard in Grafana">
-</p>
+![Prometheus integration showing a devices_total dashboard in Grafana](assets/grafana-dashboard.png)
 
 ## Official Documentation
 
@@ -53,10 +47,5 @@ The Prometheus documentation is available at [prometheus.io/docs](https://promet
 
 More details regarding the configuration of Prometheus at [this link](https://prometheus.io/docs/prometheus/latest/configuration/configuration/).
 
-!!! note
-
-    Any configuration change in `prometheus.yml` requires a restart of the Prometheus plugin.
-
-## License
-
-Prometheus is distributed under the [Apache 2.0 License](https://prometheus.io/docs/introduction/faq/#what-license-is-prometheus-released-under).
+> [!NOTE]
+> Any configuration change in `prometheus.yml` requires a restart of the Prometheus plugin.

@@ -22,5 +22,5 @@ Shelly Plug can automatically monitor and control lighting, heating and any othe
 - Certification: CE
 
 <p align="center">
-  <img src="/plugins/shelly-plug-s/assets/shelly-plug-s.jpg" onerror="this.src='https://marketplace.thinger.io/plugins/shelly-plug-s/assets/shelly-plug-s.jpg';this.onerror='';" alt="Shelly Plug S picture" width="250">
+  <img src="assets/shelly-plug-s.jpg" style="height: 250px" alt="Shelly Plug S">
 </p>

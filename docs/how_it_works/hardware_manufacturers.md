@@ -13,13 +13,12 @@ Are you a hardware manufacturer with groundbreaking devices waiting to be introd
 
 We provide a platform to showcase and introduce their innovative devices to a global audience. By joining our marketplace, hardware manufacturers can increase the visibility of their products, leading to enhanced device sales and market reach.
 
-!!! note "Benefits"
-
-    Reduce time-to-market & developments costs
-
-    Increase hardware product visibility & sales
-
-    Creates an ecosystem of compatible devices in which they must be
+> [!NOTE] Benefits
+> Reduce time-to-market & developments costs
+>
+> Increase hardware product visibility & sales
+>
+> Creates an ecosystem of compatible devices in which they must be
 
 In just four easy steps a simple hardware can be integrated in the platform for thousand of users:
 

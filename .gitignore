@@ -2,8 +2,20 @@
 node_modules/
 *swp
 .cache
+.DS_Store
 
-# jekyll
-_site/
+# Jekyll
 vendor/
 .jekyll-cache/
+
+# MkDocs
+_site/
+_build/
+
+# Auto-generated category index pages
+docs/plugins/connectivity/
+docs/plugins/devices/
+docs/plugins/monitoring/
+docs/plugins/development/
+docs/plugins/infrastructure/
+docs/plugins/templates/

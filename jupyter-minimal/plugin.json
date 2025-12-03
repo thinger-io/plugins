@@ -2,7 +2,7 @@
   "name" : "jupyter-minimal",
   "version" : "3.10.10-1",
   "description" : "Jupyter Minimal Plugin for Thinger.io",
-  "author" : "Álvaro Luis Bustamante",
+  "author": "Thinger.io",
   "license" : "MIT",
   "repository" : {
     "type" : "git",
@@ -12,8 +12,9 @@
   "metadata" : {
     "name" : "Jupyter Minimal",
     "description" : "Jupyter Notebook Minimal",
-    "image" : "docs/assets/jupyter_image.svg",
-    "icon" : "docs/assets/jupyter_icon.svg"
+    "category" : "development",
+    "image" : "assets/jupyter_image.svg",
+    "icon" : "assets/jupyter_icon.svg"
   },
   "task": {
     "type": "docker",

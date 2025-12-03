@@ -1,6 +1,0 @@
-site_name: plugins/vscode
-
-nav:
-  - "index.md"
-  - Changelog: "changelog.md"
-  - Plugin file: "plugin_file.md"

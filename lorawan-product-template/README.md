@@ -1,7 +1,7 @@
 # LoRaWAN Thinger.io Product Template
 
 <p align="center">
-  <img src="/plugins/lorawan-product-template/assets/lorawan.png" alt="LoRaWAN Thinger.io Product" style="max-width: 200px; height: auto;" onerror="this.src='https://www.weble.ch/wp-content/uploads/2019/12/lw.png';this.onerror='';">
+  <img src="assets/lorawan.png" style="height: 120px" alt="LoRaWAN logo">
 </p>
 
 The LoRaWAN Product Template is a foundational framework designed to accelerate the development of LoRaWAN-based IoT products within the Thinger.io ecosystem. It provides a standardized approach to configuring LoRaWAN devices, ensuring seamless integration with any of the supported LoRaWAN Network Servers (LNS) while maintaining complete LNS-agnostic product logic.

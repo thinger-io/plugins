@@ -18,9 +18,7 @@ Alongside, the corresponding plugin for the selected LoRaWAN server needs to be 
 
 ### Installation
 
-<p align="center">
-  <img src="/plugins/milesight-am103/assets/plugin-install.png" onerror="this.src='https://marketplace.thinger.io/plugins/milesight-am103/assets/plugin_install.png';this.onerror='';" alt="Milesight AM103 Plugin Installation into Thinger.io">
-</p>
+![Milesight AM103 Plugin Installation into Thinger.io](assets/plugin-install.png)
 
 Once the plugin is installed a new Product will be created for this device.
 

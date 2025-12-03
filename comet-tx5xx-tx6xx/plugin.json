@@ -12,6 +12,7 @@
     "metadata": {
         "name": "Comet Tx",
         "description": "Integration of Comet Tx6xx and Tx5xx Series",
+        "category": "devices",
         "image": "assets/comet-tx5xx-tx6xx.png"
     },
     "resources": {

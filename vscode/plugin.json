@@ -2,7 +2,7 @@
     "name" : "vscode",
     "version" : "4.89.1-1",
     "description" : "VS Code Plugin for Thinger.io",
-    "author" : "Alvaro Luis Bustamante",
+    "author": "Thinger.io",
     "license" : "MIT",
     "repository" : {
       "type" : "git",
@@ -12,8 +12,9 @@
     "metadata" : {
         "name" : "VS Code",
         "description" : "VS Code Plugin for Thinger.io",
-        "image" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.png",
-        "icon" : "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/vscode/img/vscode-icon.png"
+        "category" : "development",
+        "image" : "assets/vscode-icon.png",
+        "icon" : "assets/vscode-icon.png"
     },
     "tokens" : {
       "vscode_plugin" : {

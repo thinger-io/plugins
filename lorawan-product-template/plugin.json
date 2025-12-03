@@ -12,7 +12,8 @@
   "metadata": {
     "name": "LoRaWAN Device Template",
     "description": "Product template for LoRaWAN-driven devices. Preconfigured to work with any LNS Thinger plugin.",
-    "image": "https://www.weble.ch/wp-content/uploads/2019/12/lw.png"
+    "category": "templates",
+    "image": "assets/lorawan.png"
   },
   "resources": {
     "products": [

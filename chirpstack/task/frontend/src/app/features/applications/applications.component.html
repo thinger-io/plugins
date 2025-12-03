@@ -35,10 +35,10 @@
     <tbody>
       @for (application of applicationsTable.data; track application) {
       <tr>
-        <td [nzChecked]="checkedApplications.has(application.applicationId)"
-          (nzCheckedChange)="onItemChecked(application.applicationId, $event)"></td>
+        <td [nzChecked]="checkedApplications.has(application.applicationName || '')"
+          (nzCheckedChange)="onItemChecked(application.applicationName || '', $event)"></td>
         <td>
-          <a (click)="showModal(application.applicationId)">
+          <a (click)="showModal(application.applicationName || '')">
             <span class="tw-text-gray-700 tw-font-semibold">
               @if ( application.applicationName ) {
               {{ application.applicationName }}
@@ -47,7 +47,7 @@
               }
             </span>
           </a>
-          @if ( application.applicationName ) {
+          @if ( application.applicationId && application.applicationName !== application.applicationId ) {
           <div class="tw-text-gray-500">{{ application.applicationId }}</div>
           }
         </td>
@@ -65,8 +65,11 @@
           <span *ngIf="!application.accessToken" class="tw-text-gray-400">—</span>
         </td>
         <td class="tw-hidden lg:tw-table-cell tw-align-middle">
-          <nz-switch nzSize="small" [(ngModel)]="application.enabled"
-            (ngModelChange)="onSwitchChange(application.applicationId, $event)">
+          <nz-switch
+            nzSize="small"
+            [ngModel]="application.enabled"
+            (ngModelChange)="onSwitchChange(application.applicationName || '', $event)"
+            [disabled]="disabled">
           </nz-switch>
         </td>
       </tr>
@@ -101,10 +104,17 @@
   }
 </ng-template>
 
-<nz-modal [(nzVisible)]="modalVisible" nzTitle="{{ selectedApplication ? 'Edit Application' : 'Add Application'}}"
-  (nzOnCancel)="handleCancel()" (nzOnOk)="submitForm()">
+<nz-modal
+  [(nzVisible)]="modalVisible"
+  [nzTitle]="selectedApplication ? 'Edit Application' : 'Add Application'"
+  (nzOnCancel)="handleCancel()"
+  (nzOnOk)="submitForm()">
   <ng-container *nzModalContent>
-    <app-application #applicationForm [applications]="applications" [application]="selectedApplication"
-      (applicationChange)="onFormSubmit($event)"></app-application>
+    <app-application
+      #applicationForm
+      [applications]="applications"
+      [application]="selectedApplication"
+      (applicationChange)="onFormSubmit($event)">
+    </app-application>
   </ng-container>
 </nz-modal>

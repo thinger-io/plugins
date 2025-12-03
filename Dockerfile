@@ -5,4 +5,6 @@ RUN pip install \
   mkdocs-monorepo-plugin \
   mkdocs-rss-plugin \
   mkdocs-glightbox \
+  mkdocs-minify-plugin \
+  mkdocs-callouts \
   "mkdocs-material[imaging]"

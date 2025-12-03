@@ -1,6 +1,0 @@
-site_name: plugins/comet-tx5xx-tx6xx
-
-nav:
-  - "index.md"
-  - Changelog: "changelog.md"
-  - Plugin file: "plugin_file.md"

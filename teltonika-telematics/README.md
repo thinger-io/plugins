@@ -1,6 +1,8 @@
 # Teltonika Telematics
 
-!['teltonika_telematics.png'](/plugins/teltonika-telematics/assets/teltonika_telematics.png)
+<p align="center">
+  <img src="assets/teltonika_telematics.png" alt="Teltonika Telematics">
+</p>
 
 The Teltonika Telematics Plugin for Thinger.io enables the integration of Teltonika's GPS tracking devices with the Thinger.io Platform. This plugin facilitates real-time monitoring, data visualization, and management of your Teltonika devices within the Thinger.io ecosystem.
 
@@ -32,7 +34,7 @@ Afterwards create some generic certificates with the following commands, configu
 openssl req -x509 -newkey rsa:4096 -keyout private.pem.key -out cert.pem.crt -sha256 -days 9125 -nodes
 ```
 
-!['certificate_creation.png'](/plugins/teltonika-telematics/assets/certificate_creation.png)
+!['certificate_creation.png'](assets/certificate_creation.png)
 
 ### Configuration
 
@@ -46,15 +48,15 @@ Once the device is connected, the following changes need to be done:
 
 - In the `Security Tab`, upload the device certificates.
 
-!['teltonika_configurator_security.png'](/plugins/teltonika-telematics/assets/teltonika_configurator_security.png)
+!['teltonika_configurator_security.png'](assets/teltonika_configurator_security.png)
 
 - In the `GPRS Tab`, set the Server Settings box with your Thinger.io instance domain, the Port `8883`, Protocol `MQTT` and TLS Encryption `TLS/DTLS`. Then in the MQTT Settings box, select `AWS IoT Custom` and leave the default settings as shown in the image.
 
-!['teltonika_configurator_gprs.png'](/plugins/teltonika-telematics/assets/teltonika_configurator_gprs.png)
+!['teltonika_configurator_gprs.png'](assets/teltonika_configurator_gprs.png)
 
 After that, copy the device IMEI from the status page, as it will be the device Id in Thinger.io.
 
-!['teltonika_configurator_status.png'](/plugins/teltonika-telematics/assets/teltonika_configurator_status.png)
+!['teltonika_configurator_status.png'](assets/teltonika_configurator_status.png)
 
 After the configuration is done, make sure to reboot the device.
 
@@ -62,7 +64,7 @@ After the configuration is done, make sure to reboot the device.
 
 Create a new device through the `Devices` menu, of type HTTP, the Id the IMEI of the device and assign it to the product `Teltonika Telematics`. At this point assign it random credentials, they will not be used in favor of the certificates.
 
-!['teltonika_mqtt_device.png'](/plugins/teltonika-telematics/assets/teltonika_mqtt_device.png)
+!['teltonika_mqtt_device.png'](assets/teltonika_mqtt_device.png)
 
 ### Usage
 

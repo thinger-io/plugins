@@ -12,7 +12,8 @@
   "metadata": {
     "name": "Siemens LOGO!",
     "description": "Siemens LOGO! integration with Thinger.io",
-    "image": "https://s3.eu-west-1.amazonaws.com/thinger.io.files/plugins/siemens_logo/img/logo_plc.svg"
+    "category": "devices",
+    "image": "assets/logo-plc.svg"
   },
   "resources": {
     "products": [
