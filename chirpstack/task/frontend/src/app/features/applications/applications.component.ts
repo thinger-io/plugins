@@ -71,14 +71,23 @@ export class ApplicationsComponent {
     this.settingsService.loadSettings().then( () => {
 
       this.applications = settingsService.getApplications();
-
     });
-
   }
 
-  showModal(id: string = "") {
-    if ( id.length > 0 )
-      this.selectedApplication = this.applications.find(app => app.applicationId === id );// || null;
+  private generateApplicationId(): string {
+    return `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getApplicationKey(app: Application): string {
+    return app.applicationName ?? '';
+  }
+
+  showModal(name: string = "") {
+    if (name.length > 0) {
+      this.selectedApplication = this.applications.find(
+        app => this.getApplicationKey(app) === name
+      );
+    }
     this.modalVisible = true;
   }
 
@@ -92,90 +101,113 @@ export class ApplicationsComponent {
   }
 
   removeItems() {
+    this.applications = this.applications.filter(
+      application => !this.checkedApplications.has(this.getApplicationKey(application))
+    );
 
-    // remove the applications from the list
-    this.applications = this.applications.filter(application => !this.checkedApplications.has(application.applicationId));
-
-    // remove the application Id from this.tokenVisible
-    this.checkedApplications.forEach(applicationId => {
-      delete this.tokenVisible[applicationId];
-    })
+    this.checkedApplications.forEach(appName => {
+      delete this.tokenVisible[appName];
+    });
 
     this.checkedApplications.clear();
+    this.allChecked = false;
 
     this.settingsService.saveApplications(this.applications).then(() => {
+      console.log('Applications removed successfully');
+    }).catch(error => {
+      console.error('Failed to save applications', error);
     });
   }
 
-  updateCheckedSet(applicationId: string, checked: boolean) {
-    if(checked){
-      this.checkedApplications.add(applicationId);
-    }else{
-      this.checkedApplications.delete(applicationId);
+  updateCheckedSet(applicationName: string, checked: boolean) {
+    if (checked) {
+      this.checkedApplications.add(applicationName);
+    } else {
+      this.checkedApplications.delete(applicationName);
     }
+
+    // Update allChecked status
+    this.allChecked = this.applications.length > 0 &&
+      this.checkedApplications.size === this.applications.length;
   }
 
   onAllChecked(checked: boolean) {
-    if(checked){
-      for (let index = 0; index < this.applications.length; index++) {
-        this.checkedApplications.add(this.applications[index].applicationId);
-      }
-    }else{
+    this.allChecked = checked;
+    if (checked) {
+      this.applications.forEach(app => {
+        this.checkedApplications.add(this.getApplicationKey(app));
+      });
+    } else {
       this.checkedApplications.clear();
     }
   }
 
-  onItemChecked(applicationId: string, checked: boolean) {
-    this.updateCheckedSet(applicationId, checked);
+  onItemChecked(applicationName: string, checked: boolean) {
+    this.updateCheckedSet(applicationName, checked);
   }
 
   // Change the enable status of the application processing based on the switch in the applications table
-  onSwitchChange(appId: string, checked: any) {
+  onSwitchChange(appName: string, checked: boolean) {
+    console.log('onSwitchChange called with:', { appName, checked });
 
-    // set the application to enabled or disabled
-    const index = this.applications.findIndex(app => app.applicationId === appId);
+    const index = this.applications.findIndex(
+      app => this.getApplicationKey(app) === appName
+    );
+
+    console.log('Found index:', index);
+
     if (index === -1) {
-      console.error("Application not found");
+      console.error("Application not found:", appName);
+      return;
     }
-    this.applications[index].enabled = checked;
 
-    this.settingsService.saveApplications(this.applications).catch(() => {
-      console.error("Failed to save applications");
-    });
+    console.log('Application before update:', this.applications[index]);
 
+    // Update the specific application
+    this.applications[index] = {
+      ...this.applications[index],
+      enabled: checked
+    };
+
+    console.log('Application after update:', this.applications[index]);
+
+    // Save changes
+    this.settingsService.saveApplications(this.applications)
+      .then(() => {
+        console.log(`Application ${appName} enabled status updated to ${checked}`);
+      })
+      .catch(error => {
+        console.error("Failed to save applications:", error);
+        // Revert the change if save fails
+        this.applications[index].enabled = !checked;
+      });
   }
 
   onFormSubmit(application?: Application) {
+    if (typeof application === 'undefined') return;
 
-    // return if application is undefined
-    if ( typeof application === 'undefined' ) return;
+    if (typeof this.selectedApplication !== 'undefined') {
+      const index = this.applications.findIndex(
+        app => this.getApplicationKey(app) === this.getApplicationKey(this.selectedApplication!)
+      );
 
-    // Validity has already been checked in form
-    const index = this.applications.findIndex(app => app.applicationId === this.selectedApplication?.applicationId);
-
-    if ( typeof this.selectedApplication !== 'undefined' ) {
-      // Update existing application
-      const index = this.applications.findIndex(app => app.applicationId === this.selectedApplication?.applicationId);
       if (index === -1) {
         console.error("Application not found");
+        return;
       }
-      this.applications[index] = application;
-      this.applications = [
-        ...this.applications,
-      ]
 
+      this.applications[index] = application;
+      this.applications = [...this.applications];
     } else {
-      this.applications = [
-        ...this.applications,
-        application
-      ]
+      this.applications = [...this.applications, application];
     }
 
     this.settingsService.saveApplications(this.applications).then(() => {
       this.modalVisible = false;
       this.selectedApplication = undefined;
+    }).catch(error => {
+      console.error("Failed to save application:", error);
     });
-
   }
 
   truncateToken(token: string): string {

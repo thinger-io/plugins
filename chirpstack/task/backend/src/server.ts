@@ -346,6 +346,24 @@ app.post(`/uplink`, (req: Request, res: Response) => {
     res.status(404).send({ message: "Application not found" });
     return;
   }
+  if (!application.enabled) {
+    Log.log(`Application ${applicationId} is disabled, ignoring uplink`);
+
+    userEvents.push({
+      category: 'uplink',
+      severity: 'warning',
+      title: `Uplink ignored: application ${applicationId} is disabled`,
+      device: deviceEui,
+      application: applicationId,
+      details: {
+        deviceId: deviceEui,
+        applicationId: applicationId
+      }
+    });
+    res.status(200).send({ message: "Application is disabled, uplink ignored" });
+    return;
+  }
+
 
   const device = `${application.deviceIdPrefix}${deviceEui}`;
 

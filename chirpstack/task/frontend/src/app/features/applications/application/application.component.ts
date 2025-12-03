@@ -1,4 +1,4 @@
-import { Component, input, model, OnInit, OnDestroy } from '@angular/core';
+import { Component, input, output, OnInit, OnDestroy } from '@angular/core';
 import { Application } from "../applications.component";
 
 // Forms
@@ -30,9 +30,10 @@ import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 })
 export class ApplicationComponent implements OnInit, OnDestroy {
   applications = input<Application[]>();
-  application = model<Application>();
+  application = input<Application>();
 
   protected applicationForm: FormGroup;
+  applicationChange = output<Application>();
 
   faInfoCircle = faInfoCircle;
 
@@ -71,10 +72,18 @@ export class ApplicationComponent implements OnInit, OnDestroy {
   }
 
   deviceIdPrefixValidator(control: AbstractControl) {
-    if (!control.value || typeof this.applications() === 'undefined' ) return null;
-    if ( this.applications()?.find(app => app.deviceIdPrefix === control.value) ) {
+    if (!control.value || typeof this.applications() === 'undefined') return null;
+
+    const duplicate = this.applications()?.find(app => app.deviceIdPrefix === control.value);
+
+    if (duplicate) {
+      const currentApp = this.application();
+      if (currentApp && duplicate.applicationName === currentApp.applicationName) {
+        return null;
+      }
       return { error: true, prefixUnique: true };
     }
+
     return null;
   }
 
@@ -83,35 +92,42 @@ export class ApplicationComponent implements OnInit, OnDestroy {
   }
 
   onSubmit() {
-    if (!this.applicationForm.valid) return;
-
+    if (!this.applicationForm.valid) {
+      Object.values(this.applicationForm.controls).forEach(control => {
+        control.markAsTouched();
+      });
+      return;
+    }
 
     const raw = this.applicationForm.getRawValue() as any;
-    // serverUrl = host:port
-    const composed = this.buildHostPort(raw.serverUrl, raw.port, 8080);
+    const composed = raw.serverUrl ? this.buildHostPort(raw.serverUrl, raw.port, 8080) : '';
 
-    const { port, server, ...rest } = raw; // quita si existieran
-    const payload = { ...rest, serverUrl: composed };
+    const { port, server, ...rest } = raw;
+    const payload: Application = {
+      applicationId: this.application()?.applicationId || '',
+      applicationName: rest.applicationName || null,
+      deviceIdPrefix: rest.deviceIdPrefix,
+      accessToken: rest.accessToken || '',
+      serverUrl: composed,
+      enabled: rest.enabled ?? true
+    };
 
-    this.application.set(payload);
+    this.applicationChange.emit(payload);
   }
 
   ngOnInit() {
     this.applicationForm = this.fb.group({
       applicationName: [this.application()?.applicationName || ''],
       deviceIdPrefix: [this.application()?.deviceIdPrefix || '', [Validators.required, this.deviceIdPrefixValidator.bind(this)]],
-      accessToken: [this.application()?.accessToken || '', [Validators.minLength(16)]],
-      serverUrl: [this.application()?.serverUrl || '', [Validators.required]],
+      accessToken: [this.application()?.accessToken || ''],
+      serverUrl: [this.application()?.serverUrl || ''],
       port: [8080, [Validators.min(1), Validators.max(65535)]],
-      enabled: [true]
+      enabled: [this.application()?.enabled ?? true]
     });
 
-    if ( this.application() !== undefined ) {
-      this.applicationForm.get('accessToken')?.disable();
-    }
-
     const serverCtrl = this.applicationForm.get('serverUrl')!;
-    const portCtrl   = this.applicationForm.get('port')!;
+    const portCtrl = this.applicationForm.get('port')!;
+
     this.subs.push(
       serverCtrl.valueChanges.subscribe((raw: string) => {
         if (!raw) return;
