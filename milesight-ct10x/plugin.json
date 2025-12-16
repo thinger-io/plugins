@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "milesight-sct"
+    "directory": "milesight-ct10x"
   },
   "metadata": {
     "name": "Milesight CT10X",
