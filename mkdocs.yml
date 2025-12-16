@@ -171,6 +171,7 @@ nav:
         - Comet Tx: '!include ./_build/plugins/devices/comet-tx5xx-tx6xx/mkdocs.yml'
         - Dragino LT-22222-L: '!include ./_build/plugins/devices/dragino-lt22222l/mkdocs.yml'
         - Milesight AM103: '!include ./_build/plugins/devices/milesight-am103/mkdocs.yml'
+        - Milesight CT10X: '!include ./_build/plugins/devices/milesight-ct10x/mkdocs.yml'
         - Shelly 1L: '!include ./_build/plugins/devices/shelly-1l/mkdocs.yml'
         - Shelly EM: '!include ./_build/plugins/devices/shelly-em/mkdocs.yml'
         - Shelly Plug S: '!include ./_build/plugins/devices/shelly-plug-s/mkdocs.yml'
