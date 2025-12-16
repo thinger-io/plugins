@@ -180,6 +180,7 @@ nav:
         - Teltonika Telematics: '!include ./_build/plugins/devices/teltonika-telematics/mkdocs.yml'
         - WIKA PEW-1000: '!include ./_build/plugins/devices/wika-pew1000/mkdocs.yml'
         - Wika PGW23-100 Pressure Sensor: '!include ./_build/plugins/devices/wika-pgw23-100/mkdocs.yml'
+        - Yobiiq EM2101: '!include ./_build/plugins/devices/yobiiq-em2101/mkdocs.yml'
       - Connectivity:
         - Overview: 'plugins/connectivity/index.md'
         - ChirpStack: '!include ./_build/plugins/connectivity/chirpstack/mkdocs.yml'

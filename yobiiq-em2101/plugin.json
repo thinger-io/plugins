@@ -1,0 +1,1338 @@
+{
+  "name": "EM2101",
+  "version": "1.0.0",
+  "description": "The YOBIIQ iQ Electricity EM2101 is a smart electricity meter with LoRaWAN® connectivity",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "EM2101"
+  },
+  "metadata": {
+    "name": "Yobiiq EM2101",
+    "description": "The YOBIIQ iQ Electricity EM2101 is a smart electricity meter with LoRaWAN® connectivity",
+    "category": "devices",
+    "image": "assets/EM2101.png"
+  },
+  "resources": {
+    "products": [
+      {
+        "enabled": true,
+        "name": "EM2101",
+        "product": "EM2101",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {}
+              },
+              "response": {
+                "data": {}
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            }
+          },
+          "autoprovisions": {
+            "em2101_autoprovision": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "yobiiq_em2101_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "em2101_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            },
+            "em2101_energy_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "validateEnergyMeterPayload",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            },
+            "em2101_power_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "validatePowerMeterPayload",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "\n// Returns device ID from an uplink payload\n// This function assumes it is receiving its argument \n// following the standardized format of LoRaWAN Thinger plugins.\nfunction getId(payload)\n{\n    return payload.deviceId;\n}\n\n// Returns device properties from an uplink payload\n// This function assumes it is receiving its argument \n// following the standardized format of LoRaWAN Thinger plugins.\nfunction decodeThingerProperties(payload)\n{\n    var decoded = {};\n    decoded.devEui = payload.deviceEui;\n    decoded.appName = payload.appId;\n    decoded[VERSION_CONTROL.CODEC.NAME] = VERSION_CONTROL.CODEC.VERSION;\n    decoded[VERSION_CONTROL.DEVICE.NAME] = VERSION_CONTROL.DEVICE.MODEL;\n    decoded[VERSION_CONTROL.PRODUCT.NAME] = VERSION_CONTROL.PRODUCT.CODE;\n    decoded[VERSION_CONTROL.MANUFACTURER.NAME] = VERSION_CONTROL.MANUFACTURER.COMPANY;\n    return decoded;\n}\n\n// Prepare payload from a LoRaWAN - Thinger plugin \n// to be decoded in a YOBIIQ custom decoder. \n// This function assumes it is receiving its argument \n// following the standardized format of LoRaWAN Thinger plugins.\nfunction decodeThingerUplink(payload) {\n    \n    // If the payload comes from TTN and IT HAS ALREADY BEEN DECODED, we can just return\n    // the already-decoded data\n    // if (payload.decodedPayload && Object.keys(payload.decodedPayload).length > 0) {\n    //     return payload.decodedPayload;\n    // }\n\n    // The \"decodeUplink\" function from YOBIIQ's decoders expects\n    // as input a JSON object with fPort, bytes, and variables.\n    var arg = {\n        \"fPort\": payload.fPort,\n        \"bytes\": hexToByteArray(payload.payload),\n        \"variables\": \"dummy\" // TODO\n    };\n\n    let decoded = decodeUplink(arg).data;\n    if(typeof decoded.timestamp == 'number')\n    {\n        decoded.ts = decoded.timestamp * 1000; // ms\n        delete decoded.timestamp;\n    }\n    // Use dataloggerTimestamp if available\n    if(typeof decoded.dataloggerTimestamp == 'number')\n    {\n        decoded.ts = decoded.dataloggerTimestamp * 1000; // ms\n        delete decoded.dataloggerTimestamp;\n    }\n\n    return decoded;\n}\n\n// HELPER: converts hex string to byte array\nfunction hexToByteArray(hexString) {\n  hexString = hexString.replace(/^0x/, '').replace(/\\s+/g, '');\n\n  if (hexString.length % 2 !== 0) {\n    return null;\n  }\n\n  const byteArray = new Uint8Array(hexString.length / 2);\n\n  for (let i = 0; i < hexString.length; i += 2) {\n    byteArray[i / 2] = parseInt(hexString.substr(i, 2), 16);\n  }\n\n  return byteArray;\n}\n\n// The following functions are used inside data-buckets decoders\nfunction validateEnergyMeterPayload(payload) {\n\n    const decoded = decodeThingerUplink(payload);\n\n    // The following fields are required to be all present in the payload.\n    // If any of them is missing, this function will return null and the data\n    // bucket won't store any data.\n    const requiredFields = [\n        'activeEnergyImportL1T1',\n        'activeEnergyImportL1T2',\n        'modbusErrorCode'\n    ];\n\n    const allFieldsPresent = requiredFields.every(field => \n        decoded.hasOwnProperty(field)\n    );\n\n    return allFieldsPresent ? decoded : null;\n}\n\nfunction validatePowerMeterPayload(payload) {\n\n    const decoded = decodeThingerUplink(payload);\n\n    // The following fields are required to be all present in the payload.\n    // If any of them is missing, this function will return null and the data\n    // bucket won't store any data.\n    const requiredFields = [\n        'activePowerL1',\n        'currentL1',\n        'frequency',\n        'phaseAngleL1',\n        'powerFactorL1',\n        'voltageL1N'\n    ];\n\n    const allFieldsPresent = requiredFields.every(field => \n        decoded.hasOwnProperty(field)\n    );\n\n    return allFieldsPresent ? decoded : null;\n}\n\n\n// ####################################### PASTE HERE YOBIIQ DECODER #######################################\n\n/**\n * Codec for EM2101 device : compatible with TTN, ChirpStack v4 and v3, etc...\n * Release Date : 16 June 2023\n * Update  Date : 18 November 2024\n */\n\n// Version Control\nvar VERSION_CONTROL = {\n    CODEC : {VERSION: \"1.0.1\", NAME: \"codecVersion\"},\n    DEVICE: {MODEL : \"EM2101\", NAME: \"genericModel\"},\n    PRODUCT: {CODE : \"P1002009\", NAME: \"productCode\"},\n    MANUFACTURER: {COMPANY : \"YOBIIQ B.V.\", NAME: \"manufacturer\"},\n}\n\n// Configuration constants for device basic info and current settings\nvar CONFIG_INFO = {\n    FPORT     : 50,\n    CHANNEL  : parseInt(\"0xFF\", 16),\n    TYPES    : {\n        \"0x09\" : {SIZE : 2, NAME : \"hardwareVersion\", DIGIT: false},\n        \"0x0A\" : {SIZE : 2, NAME : \"firmwareVersion\", DIGIT: false},\n        \"0x16\" : {SIZE : 4, NAME : \"deviceSerialNumber\"},\n        \"0x0F\" : {SIZE : 1, NAME : \"deviceClass\",\n            VALUES     : {\n                \"0x00\" : \"Class A\",\n                \"0x01\" : \"Class B\",\n                \"0x02\" : \"Class C\",\n            },\n        },\n        \"0x0B\" : {SIZE : 1, NAME : \"powerEvent\",\n            VALUES     : {\n                \"0x00\" : \"AC Power Off\",\n                \"0x01\" : \"AC Power On\",\n            },\n        },\n        \"0x00\" : {SIZE : 1, NAME : \"relayStatus\",\n            VALUES     : {\n                \"0x00\" : \"LOW\",\n                \"0x01\" : \"HIGH\"\n            },\n        },\n        \"0x1E\" : {SIZE : 2, NAME : \"primaryCurrentTransformerRatio\",},\n        \"0x1F\" : {SIZE : 1, NAME : \"secondaryCurrentTransformerRatio\",},\n        \"0x20\" : {SIZE : 4, NAME : \"primaryVoltageTransformerRatio\",},\n        \"0x21\" : {SIZE : 2, NAME : \"secondaryVoltageTransformerRatio\",},\n        \"0x28\" : {SIZE : 0, NAME : \"deviceModel\",},\n        \"0x3C\" : {SIZE : 2, NAME : \"currentLimitFallback\", UNIT : \"A\", RESOLUTION : 0.1,},\n        \"0x3D\" : {SIZE : 2, NAME : \"voltageLimitFallback\", UNIT : \"V\",},\n        \"0x3E\" : {SIZE : 2, NAME : \"powerLimitFallback\", UNIT : \"W\",},\n        \"0x3F\" : {SIZE : 2, NAME : \"deactivationDelayFallback\", UNIT : \"s\",},\n        \"0x40\" : {SIZE : 2, NAME : \"activationDelayFallback\", UNIT : \"s\",},\n        \"0x41\" : {SIZE : 2, NAME : \"offsetCurrentFallback\", UNIT : \"A\", RESOLUTION : 0.1,},\n        \"0x42\" : {SIZE : 2, NAME : \"offsetDelayFallback\", UNIT : \"s\",},\n        \"0x43\" : {SIZE : 2, NAME : \"resetTimeFallback\", UNIT : \"s\",},\n        \"0x44\" : {SIZE : 1, NAME : \"resetAmountFallback\",},\n        \"0x50\" : {SIZE : 2, NAME : \"currentLimitDynamic\", UNIT : \"A\", RESOLUTION : 0.1},\n        \"0x51\" : {SIZE : 2, NAME : \"voltageLimitDynamic\", UNIT : \"V\",},\n        \"0x52\" : {SIZE : 2, NAME : \"powerLimitDynamic\", UNIT : \"W\",},\n        \"0x53\" : {SIZE : 2, NAME : \"deactivationDelayDynamic\", UNIT : \"s\",},\n        \"0x54\" : {SIZE : 2, NAME : \"activationDelayDynamic\", UNIT : \"s\",},\n        \"0x55\" : {SIZE : 2, NAME : \"offsetCurrentDynamic\", UNIT : \"A\", RESOLUTION : 0.1},\n        \"0x56\" : {SIZE : 2, NAME : \"offsetDelayDynamic\", UNIT : \"s\",},\n        \"0x57\" : {SIZE : 2, NAME : \"resetTimeDynamic\", UNIT : \"s\",},\n        \"0x58\" : {SIZE : 1, NAME : \"resetAmountDynamic\",},\n    },\n    WARNING_NAME   : \"warning\",\n    ERROR_NAME     : \"error\",\n    INFO_NAME      : \"info\"\n}\n\n// Configuration constants for measurement registers\n var CONFIG_MEASUREMENT = {\n    FPORT_MIN : 1,\n    FPORT_MAX : 10,\n    TYPES : {\n        \"0x00\" : {SIZE : 4, NAME : \"index\",},\n        \"0x01\" : {SIZE : 4, NAME : \"timestamp\",},\n        \"0x03\" : {SIZE : 4, NAME : \"dataloggerTimestamp\",},\n        \"0x04\" : {SIZE : 4, NAME : \"activeEnergyImportL1T1\", UNIT : \"Wh\",},\n        \"0x05\" : {SIZE : 4, NAME : \"activeEnergyImportL1T2\", UNIT : \"Wh\",},\n        \"0x06\" : {SIZE : 4, NAME : \"activeEnergyExportL1T1\", UNIT : \"Wh\",},\n        \"0x07\" : {SIZE : 4, NAME : \"activeEnergyExportL1T2\", UNIT : \"Wh\",},\n        \"0x08\" : {SIZE : 4, NAME : \"reactiveEnergyImportL1T1\", UNIT : \"varh\",},\n        \"0x09\" : {SIZE : 4, NAME : \"reactiveEnergyImportL1T2\", UNIT : \"varh\",},\n        \"0x0A\" : {SIZE : 4, NAME : \"reactiveEnergyExportL1T1\", UNIT : \"varh\",},\n        \"0x0B\" : {SIZE : 4, NAME : \"reactiveEnergyExportL1T2\", UNIT : \"varh\",},\n        \"0x0C\" : {SIZE : 4, NAME : \"voltageL1N\", UNIT : \"V\", RESOLUTION : 0.1, SIGNED : true,},\n        \"0x10\" : {SIZE : 4, NAME : \"currentL1\", UNIT : \"mA\", SIGNED : true,},\n        \"0x14\" : {SIZE : 4, NAME : \"activePowerL1\", UNIT : \"W\", SIGNED : true,},\n        \"0x17\" : {SIZE : 4, NAME : \"reactivePowerL1\", UNIT : \"kvar\", RESOLUTION : 0.001, SIGNED : true,},\n        \"0x1A\" : {SIZE : 4, NAME : \"apparentPowerL1\", UNIT : \"kVA\", RESOLUTION : 0.001, SIGNED : true,},\n        \"0x1D\" : {SIZE : 1, NAME : \"powerFactorL1\", RESOLUTION : 0.01, SIGNED : true,},\n        \"0x20\" : {SIZE : 2, NAME : \"phaseAngleL1\", UNIT : \"degree\", RESOLUTION : 0.01, SIGNED : true,},\n        \"0x23\" : {SIZE : 2, NAME : \"frequency\", UNIT : \"Hz\", RESOLUTION : 0.01, SIGNED : true,},\n        \"0x24\" : {SIZE : 4, NAME : \"totalSystemActivePower\", UNIT : \"kW\",},\n        \"0x25\" : {SIZE : 4, NAME : \"totalSystemReactivePower\", UNIT : \"kvar\", RESOLUTION : 0.001,},\n        \"0x26\" : {SIZE : 4, NAME : \"totalSystemApparentPower\", UNIT : \"kVA\", RESOLUTION : 0.001,},\n        \"0x27\" : {SIZE : 4, NAME : \"maximumL1CurrentDemand\", UNIT : \"mA\", SIGNED : true,},\n        \"0x2A\" : {SIZE : 4, NAME : \"averagePower\", UNIT : \"W\", SIGNED : true,},\n        \"0x2B\" : {SIZE : 4, NAME : \"midYearOfCertification\",},\n        \"0xF0\" : {SIZE : 2, NAME : \"manufacturedYear\", DIGIT: true,},\n        \"0xF1\" : {SIZE : 2, NAME : \"firmwareVersion\", DIGIT: false,},\n        \"0xF2\" : {SIZE : 2, NAME : \"hardwareVersion\", DIGIT: false,},\n    },\n    WARNING_NAME   : \"warning\",\n    ERROR_NAME     : \"error\",\n    INFO_NAME      : \"info\"\n}\n\n// Configuration constants for change of state\nvar CONFIG_STATE = {\n    FPORT : 11,\n    TYPES : {\n        \"0x01\" : {SIZE : 1, NAME : \"relayStatus\",\n            VALUES     : {\n                \"0x00\" : \"OPEN\",\n                \"0x01\" : \"CLOSED\"\n            },\n        },\n        \"0x02\" : {SIZE : 1, NAME : \"digitalInputStatus\",\n            VALUES     : {\n                \"0x00\" : \"OPEN\",\n                \"0x01\" : \"CLOSED\"\n            },\n        },\n    },\n    WARNING_NAME   : \"warning\",\n    ERROR_NAME     : \"error\",\n    INFO_NAME      : \"info\"\n}\n\n// Configuration constants for event logging\nvar CONFIG_LOGGING = {\n    FPORT : 60,\n    CHANNEL  : parseInt(\"0xFD\", 16),\n    TYPES : {\n        \"0x01\" : {SIZE : 1, NAME : \"relaySwitchingOffReason\",\n            VALUES     : {\n                \"0x00\" : \"Invalid\",\n                \"0x01\" : \"Due to too high current limit\",\n                \"0x02\" : \"By control from the Lora network\",\n                \"0x03\" : \"By operation via display\"\n            },\n        },\n        \"0x02\" : {SIZE : 1, NAME : \"relayEnableReason\",\n            VALUES     : {\n                \"0x00\" : \"Invalid\",\n                \"0x01\" : \"By reset based on time\",\n                \"0x02\" : \"By reset from the Lora network\",\n                \"0x03\" : \"By operation via display\",\n                \"0x04\" : \"By control from the Lora network\"\n            },\n        },\n        \"0x03\" : {SIZE : 4, NAME : \"relaySwitchOffTime\",},\n        \"0x04\" : {SIZE : 4, NAME : \"relayEnableTime\",},\n        \"0x05\" : {SIZE : 4, NAME : \"currentWhenRelaySwitchingOff\",},\n        \"0x06\" : {SIZE : 4, NAME : \"voltageWhenRelaySwitchingOff\",},\n        \"0x07\" : {SIZE : 4, NAME : \"activePowerWhenRelaySwitchingOff\",},\n        \"0x08\" : {SIZE : 1, NAME : \"resetAmountStatus\",\n            VALUES     : {\n                \"0x01\" : \"Current reset count is less than the reset amount\",\n                \"0x02\" : \"Current reset count exceeds the reset amount\",\n            },\n        },\n    },\n    WARNING_NAME   : \"warning\",\n    ERROR_NAME     : \"error\",\n    INFO_NAME      : \"info\"\n}\n\nfunction decodeBasicInformation(bytes)\n{\n    var LENGTH = bytes.length;\n    var decoded = {};\n    var index = 0;\n    var channel = 0;\n    var type = \"\";\n    var size = 0;\n    if(LENGTH == 1)\n    {\n        if(bytes[0] == 0)\n        {\n            decoded[CONFIG_INFO.INFO_NAME] = \"Downlink command succeeded\";\n\n        } else if(bytes[0] == 1)\n        {\n            decoded[CONFIG_INFO.WARNING_NAME] = \"Downlink command failed\";\n        }\n        return decoded;\n    }\n    try\n    {\n        while(index < LENGTH)\n        {\n            channel = bytes[index];\n            index = index + 1;\n            // No channel checking\n            // Type of basic information\n            type = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n            index = index + 1;\n            var info = CONFIG_INFO.TYPES[type];\n            size = info.SIZE;\n            // Decoding\n            var value = 0;\n            if(size != 0)\n            {\n                if(info.DIGIT || info.DIGIT == false)\n                {\n                    if(info.DIGIT == false)\n                    {\n                        // Decode into \"V\" + DIGIT STRING + \".\" DIGIT STRING format\n                        value = getDigitStringArrayNoFormat(bytes, index, size);\n                        value = \"V\" + value[0] + \".\" + value[1];\n                    }else\n                    {\n                        // Decode into DIGIT STRING format\n                        value = getDigitStringArrayEvenFormat(bytes, index, size);\n                        value = value.toString();\n                    }\n                }\n                else if(info.VALUES)\n                {\n                    // Decode into STRING (VALUES specified in CONFIG_INFO)\n                    value = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n                    value = info.VALUES[value];\n                }else\n                {\n                    // Decode into DECIMAL format\n                    value = getValueFromBytesBigEndianFormat(bytes, index, size);\n                }\n                if(info.RESOLUTION)\n                {\n                    value = value * info.RESOLUTION;\n                    value = parseFloat(value.toFixed(2));\n                }\n                if(info.UNIT)\n                {\n                    // decoded[info.NAME] = {};\n                    // decoded[info.NAME][\"data\"] = value;\n                    // decoded[info.NAME][\"unit\"] = info.UNIT;\n                    decoded[info.NAME] = value;\n                }else\n                {\n                    decoded[info.NAME] = value;\n                }\n                index = index + size;\n            }else\n            {\n                // Device Model (End of decoding)\n                size = LENGTH - index;\n                decoded[info.NAME] = getStringFromBytesBigEndianFormat(bytes, index, size);\n                index = index + size;\n            }\n        }\n    }catch(error)\n    {\n        decoded[CONFIG_INFO.ERROR_NAME] = error.message;\n    }\n\n    return decoded;\n}\n\nfunction decodeDeviceData(bytes)\n{\n    var LENGTH = bytes.length;\n    var decoded = {};\n    var index = 0;\n    var channel = 0;\n    var type = \"\";\n    var size = 0;\n    if(LENGTH == 1)\n    {\n        if(bytes[0] == 0)\n        {\n            decoded[CONFIG_MEASUREMENT.INFO_NAME] = \"Downlink command succeeded\";\n\n        } else if(bytes[0] == 1)\n        {\n            decoded[CONFIG_MEASUREMENT.WARNING_NAME] = \"Downlink command failed\";\n        }\n        return decoded;\n    }\n    try\n    {\n        while(index < LENGTH)\n        {\n            channel = bytes[index];\n            index = index + 1;\n            // Type of device measurement\n            type = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n            index = index + 1;\n            \n            // channel checking\n            if(channel == 11 && type == \"0x0A\")\n            {\n                // Modbus error code decoding\n                decoded.modbusErrorCode = bytes[index];\n                index = index + 1;\n                continue; // next channel\n            }\n\n            var measurement = CONFIG_MEASUREMENT.TYPES[type];\n            size = measurement.SIZE;\n            // Decoding\n            var value = 0;\n            if(measurement.DIGIT || measurement.DIGIT == false)\n            {\n                if(measurement.DIGIT == false)\n                {\n                    // Decode into \"V\" + DIGIT STRING + \".\" DIGIT STRING format\n                    value = getDigitStringArrayNoFormat(bytes, index, size);\n                    value = \"V\" + value[0] + \".\" + value[1];\n                }else\n                {\n                    // Decode into DIGIT NUMBER format\n                    value = getDigitStringArrayEvenFormat(bytes, index, size);\n                    value = parseInt(value.join(\"\"));\n                }\n            }else\n            {\n                // Decode into DECIMAL format\n                value = getValueFromBytesBigEndianFormat(bytes, index, size);\n            }\n            if(measurement.SIGNED)\n            {\n                value = getSignedIntegerFromInteger(value, size);\n            }\n            if(measurement.RESOLUTION)\n            {\n                value = value * measurement.RESOLUTION;\n                value = parseFloat(value.toFixed(2));\n            }\n            if(measurement.UNIT)\n            {\n                // decoded[measurement.NAME] = {};\n                // decoded[measurement.NAME][\"data\"] = value;\n                // decoded[measurement.NAME][\"unit\"] = measurement.UNIT;\n                decoded[measurement.NAME] = value;\n            }else\n            {\n                decoded[measurement.NAME] = value;\n            }\n            index = index + size;\n\n        }\n    }catch(error)\n    {\n        decoded[CONFIG_MEASUREMENT.ERROR_NAME] = error.message;\n    }\n    return decoded;\n}\n\nfunction decodeChangeState(bytes)\n{\n    var LENGTH = bytes.length;\n    var decoded = {};\n    var index = 0;\n    var channel = 0;\n    var type = \"\";\n    var size = 0;\n    if(LENGTH == 1)\n    {\n        if(bytes[0] == 0)\n        {\n            decoded[CONFIG_STATE.INFO_NAME] = \"Downlink command succeeded\";\n\n        } else if(bytes[0] == 1)\n        {\n            decoded[CONFIG_STATE.WARNING_NAME] = \"Downlink command failed\";\n        }\n        return decoded;\n    }\n    try\n    {\n        while(index < LENGTH)\n        {\n            channel = bytes[index];\n            index = index + 1;\n            // Type of change of state\n            type = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n            index = index + 1;\n            // No channel checking\n            var state = CONFIG_STATE.TYPES[type];\n            size = state.SIZE;\n            // Decoding\n            var value = 0;\n            if(size != 0)\n            {\n                if(state.VALUES)\n                {\n                    // Decode into STRING (VALUES specified in CONFIG_STATE)\n                    value = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n                    value = state.VALUES[value];\n                }\n                index = index + size;\n            }\n            decoded[state.NAME] = value;\n        }\n    }catch(error)\n    {\n        decoded[CONFIG_STATE.ERROR_NAME] = error.message;\n    }\n\n    return decoded;\n}\n\nfunction decodeEventLogging(bytes)\n{\n    var LENGTH = bytes.length;\n    var decoded = {};\n    var index = 0;\n    var channel = 0;\n    var type = \"\";\n    var size = 0;\n    if(LENGTH == 1)\n    {\n        if(bytes[0] == 0)\n        {\n            decoded[CONFIG_LOGGING.INFO_NAME] = \"Downlink command succeeded\";\n\n        } else if(bytes[0] == 1)\n        {\n            decoded[CONFIG_LOGGING.WARNING_NAME] = \"Downlink command failed\";\n        }\n        return decoded;\n    }\n    try\n    {\n        while(index < LENGTH)\n        {\n            channel = bytes[index];\n            index = index + 1;\n            // Type of change of state\n            type = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n            index = index + 1;\n            // No channel checking\n            var logging = CONFIG_LOGGING.TYPES[type];\n            size = logging.SIZE;\n            // Decoding\n            var value = 0;\n            if(size != 0)\n            {\n                if(logging.VALUES)\n                {\n                    // Decode into STRING (VALUES specified in CONFIG_LOGGING)\n                    value = \"0x\" + toEvenHEX(bytes[index].toString(16).toUpperCase());\n                    value = logging.VALUES[value];\n                }else\n                {\n                    // Decode into DECIMAL format\n                    value = getValueFromBytesBigEndianFormat(bytes, index, size);\n                }\n                index = index + size;\n            }\n            decoded[logging.NAME] = value;\n        }\n    }catch(error)\n    {\n        decoded[CONFIG_LOGGING.ERROR_NAME] = error.message;\n    }\n\n    return decoded;\n}\n\nfunction getStringFromBytesBigEndianFormat(bytes, index, size)\n{\n    var value = \"\";\n    for(var i=0; i<size; i=i+1)\n    {\n        value = value + String.fromCharCode(bytes[index+i]);\n    }\n    return value;\n}\n\nfunction getStringFromBytesLittleEndianFormat(bytes, index, size)\n{\n    var value = \"\";\n    for(var i=(size - 1); i>=0; i=i-1)\n    {\n        value = value + String.fromCharCode(bytes[index+i]);\n    }\n    return value;\n}\n\nfunction getValueFromBytesBigEndianFormat(bytes, index, size)\n{\n    var value = 0;\n    for(var i=0; i<(size-1); i=i+1)\n    {\n        value = (value | bytes[index+i]) << 8; \n    }\n    value = value | bytes[index+size-1]\n    return (value >>> 0); // to unsigned\n}\n\nfunction getValueFromBytesLittleEndianFormat(bytes, index, size)\n{\n    var value = 0;\n    for(var i=(size-1); i>0; i=i-1)\n    {\n        value = (value | bytes[index+i]) << 8; \n    }\n    value = value | bytes[index]\n    return (value >>> 0); // to unsigned\n}\n\nfunction getDigitStringArrayNoFormat(bytes, index, size)\n{\n  var hexString = []\n  for(var i=0; i<size; i=i+1)\n  {\n    hexString.push(bytes[index+i].toString(16));\n  }\n  return hexString\n}\n\nfunction getDigitStringArrayEvenFormat(bytes, index, size)\n{\n  var hexString = []\n  for(var i=0; i<size; i=i+1)\n  {\n    hexString.push(bytes[index+i].toString(16));\n  }\n  return hexString.map(toEvenHEX)\n}\n\nfunction toEvenHEX(hex)\n{\n  if(hex.length == 1)\n  {\n    return \"0\"+hex;\n  }\n  return hex;\n}\n\nfunction getSignedIntegerFromInteger(integer, size) \n{\n    var signMask = 1 << (size * 8 - 1);\n    var dataMask = (1 << (size * 8 - 1)) - 1;\n    if(integer & signMask) \n    {\n        return -(~integer & dataMask) - 1;\n    }else \n    {\n        return integer & dataMask;\n    }\n}\n\n/************************************************************************************************************/\n\n// Decode decodes an array of bytes into an object. (ChirpStack v3)\n//  - fPort contains the LoRaWAN fPort number\n//  - bytes is an array of bytes, e.g. [225, 230, 255, 0]\n//  - variables contains the device variables e.g. {\"calibration\": \"3.5\"} (both the key / value are of type string)\n// The function must return an object, e.g. {\"temperature\": 22.5}\nfunction Decode(fPort, bytes, variables) \n{\n    var decoded = {};\n    if(fPort == 0)\n    {\n        decoded = {mac: \"MAC command received\", fPort: fPort};\n    }\n    else if(fPort == CONFIG_INFO.FPORT)\n    {\n        decoded = decodeBasicInformation(bytes);\n    }else if(fPort >= CONFIG_MEASUREMENT.FPORT_MIN && fPort <= CONFIG_MEASUREMENT.FPORT_MAX)\n    {\n        decoded = decodeDeviceData(bytes);\n    }else if(fPort == CONFIG_STATE.FPORT)\n    {\n        decoded = decodeChangeState(bytes);\n    }else if(fPort == CONFIG_LOGGING.FPORT)\n    {\n        decoded = decodeEventLogging(bytes);\n    }else\n    {\n        decoded = {error: \"Incorrect fPort\", fPort : fPort};\n    }\n    // decoded[VERSION_CONTROL.CODEC.NAME] = VERSION_CONTROL.CODEC.VERSION;\n    // decoded[VERSION_CONTROL.DEVICE.NAME] = VERSION_CONTROL.DEVICE.MODEL;\n    // decoded[VERSION_CONTROL.PRODUCT.NAME] = VERSION_CONTROL.PRODUCT.CODE;\n    // decoded[VERSION_CONTROL.MANUFACTURER.NAME] = VERSION_CONTROL.MANUFACTURER.COMPANY;\n    return decoded;\n}\n\n// Decode uplink function. (ChirpStack v4 , TTN)\n//\n// Input is an object with the following fields:\n// - bytes = Byte array containing the uplink payload, e.g. [255, 230, 255, 0]\n// - fPort = Uplink fPort.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - data = Object representing the decoded payload.\nfunction decodeUplink(input) {\n    return {\n        data: Decode(input.fPort, input.bytes, input.variables)\n    };\n}\n\n/************************************************************************************************************/\n\n// Encode encodes the given object into an array of bytes. (ChirpStack v3)\n//  - fPort contains the LoRaWAN fPort number\n//  - obj is an object, e.g. {\"temperature\": 22.5}\n//  - variables contains the device variables e.g. {\"calibration\": \"3.5\"} (both the key / value are of type string)\n// The function must return an array of bytes, e.g. [225, 230, 255, 0]\nfunction Encode(fPort, obj, variables) {\n    try\n    {\n        if(obj[CONFIG_DOWNLINK.TYPE] == CONFIG_DOWNLINK.CONFIG)\n        {\n            return encodeDeviceConfiguration(obj[CONFIG_DOWNLINK.CONFIG], variables);\n        }\n        else if(obj[CONFIG_DOWNLINK.TYPE] == CONFIG_DOWNLINK.DYNAMIC)\n        {\n            return encodeDynamicLimitControl(obj[CONFIG_DOWNLINK.DYNAMIC], variables);\n        }\n        else if(obj[CONFIG_DOWNLINK.TYPE] == CONFIG_DOWNLINK.RELAY)\n        {\n            return encodeRelayControl(obj[CONFIG_DOWNLINK.RELAY], variables);\n        }\n        else if(obj[CONFIG_DOWNLINK.TYPE] == CONFIG_DOWNLINK.MEASURE)\n        {\n            return encodePeriodicPackage(obj[CONFIG_DOWNLINK.MEASURE], variables);\n        }\n        else if(obj[CONFIG_DOWNLINK.TYPE] == CONFIG_DOWNLINK.REQUEST)\n        {\n            return encodeRequestSettings(obj[CONFIG_DOWNLINK.REQUEST], variables);\n        }\n    }catch(error)\n    {\n\n    }\n    return [];\n}\n\n// Encode downlink function. (ChirpStack v4 , TTN)\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    return {\n        bytes: Encode(null, input.data, input.variables)\n    };\n}\n\n/************************************************************************************************************/\n\n// Constants for device configuration \nvar CONFIG_DEVICE = {\n    FPORT : 50,\n    CHANNEL : parseInt(\"0xFF\", 16),\n    TYPES : {\n        \"restart\" : {TYPE : parseInt(\"0x0B\", 16), SIZE : 1, MIN : 1, MAX : 1,},\n        \"digitalInput\" : {TYPE : parseInt(\"0x47\", 16), SIZE : 1, MIN : 0, MAX : 1, CHANNEL : parseInt(\"0x08\", 16),},\n        \"currentLimitFallback\" : {TYPE : parseInt(\"0x32\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"voltageLimitFallback\" : {TYPE : parseInt(\"0x33\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"powerLimitFallback\" : {TYPE : parseInt(\"0x34\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"deactivationDelayFallback\" : {TYPE : parseInt(\"0x35\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"activationDelayFallback\" : {TYPE : parseInt(\"0x36\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"offsetCurrentFallback\" : {TYPE : parseInt(\"0x37\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"offsetDelayFallback\" : {TYPE : parseInt(\"0x38\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"resetTimeFallback\" : {TYPE : parseInt(\"0x39\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"resetAmountFallback\" : {TYPE : parseInt(\"0x3A\", 16), SIZE : 1, MIN : 0, MAX : 255,}\n    }\n}\n\n// Constants for Dynamic limit control\nvar CONFIG_DYNAMIC = {\n    FPORT : 50,\n    CHANNEL : parseInt(\"0x01\", 16),\n    TYPES : {\n        \"currentLimit\" : {TYPE : parseInt(\"0x32\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"voltageLimit\" : {TYPE : parseInt(\"0x33\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"powerLimit\" : {TYPE : parseInt(\"0x34\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"deactivationDelay\" : {TYPE : parseInt(\"0x35\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"activationDelay\" : {TYPE : parseInt(\"0x36\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"offsetCurrent\" : {TYPE : parseInt(\"0x37\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"offsetDelay\" : {TYPE : parseInt(\"0x38\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"resetTime\" : {TYPE : parseInt(\"0x39\", 16), SIZE : 2, MIN : 0, MAX : 9999,},\n        \"resetAmount\" : {TYPE : parseInt(\"0x3A\", 16), SIZE : 1, MIN : 0, MAX : 255,}\n    }\n}\n\n// Constants for Relay control\nvar CONFIG_RELAY = {\n    FPORT : 50,\n    CHANNEL : parseInt(\"0x07\", 16),\n    TYPES : {\n        \"reset\" : {TYPE : parseInt(\"0x46\", 16), SIZE : 1, MIN : 1, MAX : 1,},\n        \"controlMode\" : {TYPE : parseInt(\"0x47\", 16), SIZE : 1, MIN : 0, MAX : 1,},\n        \"relayCommand\" : {TYPE : parseInt(\"0x48\", 16), SIZE : 1, MIN : 0, MAX : 1,}\n    }\n}\n\n// Constants for device periodic package \nvar CONFIG_PERIODIC = {\n    CHANNEL : parseInt(\"0xFF\", 16),\n    TYPES : {\n        \"Interval\" : {TYPE : parseInt(\"0x14\", 16), SIZE : 1, MIN : 1, MAX : 255,},\n        \"Mode\" : {TYPE : parseInt(\"0x15\", 16), SIZE : 1, MIN : 0, MAX : 1,},\n        \"Status\" : {TYPE : parseInt(\"0x16\", 16), SIZE : 1, MIN : 0, MAX : 1,},\n        \"Measurement\" : {TYPE : parseInt(\"0x17\", 16), SIZE : 1, MIN : 0, MAX : 10,},\n    },\n    MEASUREMENTS : {\n        index : \"0x00\",\n        timestamp : \"0x01\",\n        dataloggerTimestamp : \"0x03\",\n        activeEnergyImportL1T1 : \"0x04\",\n        activeEnergyImportL1T2 : \"0x05\",\n        activeEnergyExportL1T1 : \"0x06\",\n        activeEnergyExportL1T2 : \"0x07\",\n        reactiveEnergyImportL1T1 : \"0x08\",\n        reactiveEnergyImportL1T2 : \"0x09\",\n        reactiveEnergyExportL1T1 : \"0x0A\",\n        reactiveEnergyExportL1T2 : \"0x0B\",\n        voltageL1N : \"0x0C\",\n        currentL1 : \"0x10\",\n        activePowerL1 : \"0x14\",\n        reactivePowerL1 : \"0x17\",\n        apparentPowerL1 : \"0x1A\",\n        powerFactorL1 : \"0x1d\",\n        phaseAngleL1 : \"0x20\",\n        frequency : \"0x23\",\n        totalSystemActivePower : \"0x24\",\n        totalSystemReactivePower : \"0x25\",\n        totalSystemApparentPower : \"0x26\",\n        maximumL1CurrentDemand : \"0x27\",\n        AveragePower : \"0x2A\",\n        midYearOfCertification : \"0x2B\",\n        manufacturedYear : \"0xF0\",\n        firmwareVersion : \"0xF1\",\n        hardwareVersion : \"0xF2\",\n    }\n}\n\n// Constants for request settings\nvar CONFIG_REQUEST = {\n    FPORT: 50,\n    CHANNEL : parseInt(\"0x02\", 16),\n    TYPE : parseInt(\"0x0B\", 16),\n    MIN: 1,\n    MAX: 10,\n    SETTINGS : {\n        currentLimitFallback : \"0x3C\",\n        voltageLimitFallback : \"0x3D\",\n        powerLimitFallback : \"0x3E\",\n        deactivationDelayFallback : \"0x3F\",\n        activationDelayFallback : \"0x40\",\n        offsetCurrentFallback : \"0x41\",\n        offsetDelayFallback : \"0x42\",\n        resetTimeFallback : \"0x43\",\n        resetAmountFallback : \"0x44\",\n        currentLimitDynamic : \"0x50\",\n        voltageLimitDynamic : \"0x51\",\n        powerLimitDynamic : \"0x52\",\n        deactivationDelayDynamic : \"0x53\",\n        activationDelayDynamic : \"0x54\",\n        offsetCurrentDynamic : \"0x55\",\n        offsetDelayDynamic : \"0x56\",\n        resetTimeDynamic : \"0x57\",\n        resetAmountDynamic : \"0x58\",\n    }\n\n}\n\n// Constants for downlink type (Config or Measure)\nvar CONFIG_DOWNLINK = {\n    TYPE    : \"Type\",\n    CONFIG  : \"Config\",\n    DYNAMIC : \"Dynamic\",\n    RELAY   : \"Relay\",\n    MEASURE : \"Measure\",\n    REQUEST : \"RequestSettings\"\n}\n\nfunction encodeDeviceConfiguration(obj, variables)\n{\n    var encoded = []\n    var index = 0;\n    var field = [\"Param\", \"Value\"];\n    try\n    {\n        var config = CONFIG_DEVICE.TYPES[obj[field[0]]];\n        var value = obj[field[1]];\n        if(obj[field[1]] >= config.MIN && obj[field[1]] <= config.MAX)\n        {\n            if(\"CHANNEL\" in config)\n            {\n                encoded[index] = config.CHANNEL;\n            }else\n            {\n                encoded[index] = CONFIG_DEVICE.CHANNEL;\n            }\n            index = index + 1;\n            encoded[index] = config.TYPE;\n            index = index + 1;\n            for(var i=1; i<=config.SIZE; i=i+1)\n            {\n                encoded[index] = (value >> 8*(config.SIZE - i)) % 256;\n                index = index + 1;\n            }\n        }else\n        {\n            // Error\n            return [];\n        }\n    }catch(error)\n    {\n        // Error\n        return [];\n    }\n    return encoded;\n}\n\nfunction encodeDynamicLimitControl(obj, variables)\n{\n    var encoded = []\n    var index = 0;\n    var field = [\"Param\", \"Value\"];\n    try\n    {\n        var config = CONFIG_DYNAMIC.TYPES[obj[field[0]]];\n        var value = obj[field[1]];\n        if(obj[field[1]] >= config.MIN && obj[field[1]] <= config.MAX)\n        {\n            encoded[index] = CONFIG_DYNAMIC.CHANNEL;\n            index = index + 1;\n            encoded[index] = config.TYPE;\n            index = index + 1;\n            for(var i=1; i<=config.SIZE; i=i+1)\n            {\n                encoded[index] = (value >> 8*(config.SIZE - i)) % 256;\n                index = index + 1;\n            }\n        }else\n        {\n            // Error\n            return [];\n        }\n    }catch(error)\n    {\n        // Error\n        return [];\n    }\n    return encoded;\n}\n\nfunction encodeRelayControl(obj, variables)\n{\n    var encoded = []\n    var index = 0;\n    var field = [\"Param\", \"Value\"];\n    try\n    {\n        var config = CONFIG_RELAY.TYPES[obj[field[0]]];\n        var value = obj[field[1]];\n        if(obj[field[1]] >= config.MIN && obj[field[1]] <= config.MAX)\n        {\n            encoded[index] = CONFIG_RELAY.CHANNEL;\n            index = index + 1;\n            encoded[index] = config.TYPE;\n            index = index + 1;\n            for(var i=1; i<=config.SIZE; i=i+1)\n            {\n                encoded[index] = (value >> 8*(config.SIZE - i)) % 256;\n                index = index + 1;\n            }\n        }else\n        {\n            // Error\n            return [];\n        }\n    }catch(error)\n    {\n        // Error\n        return [];\n    }\n    return encoded;\n}\n\nfunction encodePeriodicPackage(obj, variables)\n{\n    var encoded = []\n    var index = 0;\n    var field = [\"Interval\", \"Mode\", \"Status\", \"Measurement\"];\n    try \n    {\n        // Encode Interval, Mode, Status\n        for(var i=0; i<3; i=i+1)\n        {\n            if(field[i] in obj)\n            {\n                var config = CONFIG_PERIODIC.TYPES[field[i]];\n                if(obj[field[i]] >= config.MIN && obj[field[i]] <= config.MAX)\n                {\n                    encoded[index] = CONFIG_PERIODIC.CHANNEL;\n                    index = index + 1;\n                    encoded[index] = config.TYPE;\n                    index = index + 1;\n                    encoded[index] = obj[field[i]];\n                    index = index + 1;\n                }else\n                {\n                    // Error\n                    return [];\n                }\n            }\n        }\n        // Encode Measurement\n        if(field[3] in obj)\n        {\n            var measurements = obj[field[3]];\n            var LENGTH = measurements.length;\n            var config = CONFIG_PERIODIC.TYPES[field[3]];\n            if(LENGTH > config.MAX)\n            {\n                // Error\n                return [];\n            }\n            var measurement = \"\";\n            if(LENGTH > 0)\n            {\n                encoded[index] = CONFIG_PERIODIC.CHANNEL;\n                index = index + 1;\n                encoded[index] = config.TYPE;\n                index = index + 1;\n            }\n            for(var i=0; i<LENGTH; i=i+1)\n            {\n                measurement = measurements[i];\n                if(measurement in CONFIG_PERIODIC.MEASUREMENTS)\n                {\n                    encoded[index] = parseInt(CONFIG_PERIODIC.MEASUREMENTS[measurement], 16);\n                    index = index + 1;\n                }else\n                {\n                    // Error\n                    return [];\n                }\n            }\n        }\n\n    }catch(error)\n    {\n        // Error\n        return [];\n    }\n\n    return encoded;\n}\n\nfunction encodeRequestSettings(obj, variables){\n    var encoded = []\n    var index = 0;\n    var LENGTH = obj.length;\n    try \n    {\n        // Encode each request setting\n        for(var i=0; i<LENGTH; i=i+1)\n        {\n            if(obj[i] in CONFIG_REQUEST.SETTINGS)\n            {\n                encoded[index] = CONFIG_REQUEST.CHANNEL;\n                index = index + 1;\n                encoded[index] = CONFIG_REQUEST.TYPE;\n                index = index + 1;\n                encoded[index] = parseInt(CONFIG_REQUEST.SETTINGS[obj[i]], 16);\n                index = index + 1;\n            }\n        }       \n    }catch(error)\n    {\n        // Error\n        return [];\n    }\n\n    return encoded;\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerProperties",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "project": [
+          "yobiiq@yobiiq_em2101_project"
+        ],
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "controls": {
+                  "aggregation": {
+                    "auto": true,
+                    "period": "1m"
+                  },
+                  "timespan": {
+                    "magnitude": "hour",
+                    "mode": "relative",
+                    "period": "latest",
+                    "value": 24
+                  }
+                },
+                "description": "Rele Varimétrico",
+                "name": "Demo Rele Varimetrico",
+                "placeholders": {
+                  "sources": []
+                },
+                "properties": {
+                  "background_image": "#13234c",
+                  "columns": 24,
+                  "hide_header": false,
+                  "row_height": 20,
+                  "show_template": false
+                },
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Current"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "A",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "currentL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V31",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 0,
+                          "row": 4,
+                          "sizeX": 9,
+                          "sizeY": 15
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "VOLTAGE",
+                          "updateTs": 1760693400000
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\nchart: {\n   background:'#162756',\n    toolbar: {\n      show: true,\n      offsetX: 0,\n      offsetY: 0,\n      tools: {\n        download: true,\n        selection: true,\n        zoom: true,\n        zoomin: true,\n        zoomout: true,\n        pan: true,\n        reset: true | '<img src=\"/static/icons/reset.png\" width=\"20\">',\n        customIcons: []\n      },\n      export: {\n        csv: {\n          filename: undefined,\n          columnDelimiter: ',',\n          headerCategory: 'ts',\n          headerValue: 'value',\n          dateFormatter(timestamp) {\n            return new Date(timestamp).toString()\n          }\n        },\n        svg: {\n          filename: undefined,\n        },\n        png: {\n          filename: undefined,\n        }\n      },\n      autoSelected: 'zoom' \n    },\n zoom: {\n          enabled: true,\n          type: 'x',  \n          autoScaleYaxis: true,  \n          zoomedArea: {\n            fill: {\n              color: '#90CAF9',\n              opacity: 0.7\n            },\n            stroke: {\n              color: '#0D47A1',\n              opacity: 0.4,\n              width: 1\n            }\n          }\n      }\n},\n\n    toolbar: {\n        autoSelected: 'zoom'\n\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 1.7\n    },\n    grid: {\n        row: {\n            colors: ['#233e87', 'transparent'],\n            opacity: 0.3\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n          shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n          colors: '#FFFFFF',\n          useSeriesColors: false\n        }\n        \n    }\n    \n    \n \n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "voltageL1N",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#2E93fA",
+                            "name": "Ph1-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "V2",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#66DA26",
+                            "name": "Ph2-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "V3",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#ff8800",
+                            "name": "Ph3-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 0,
+                          "row": 19,
+                          "sizeX": 9,
+                          "sizeY": 15
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "PHASE-ANGLE",
+                          "updateTs": 1755273607689
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\nchart: {\n   background:'#162756',\n    toolbar: {\n      show: true,\n      offsetX: 0,\n      offsetY: 0,\n      tools: {\n        download: true,\n        selection: true,\n        zoom: true,\n        zoomin: true,\n        zoomout: true,\n        pan: true,\n        reset: true | '<img src=\"/static/icons/reset.png\" width=\"20\">',\n        customIcons: []\n      },\n      export: {\n        csv: {\n          filename: undefined,\n          columnDelimiter: ',',\n          headerCategory: 'ts',\n          headerValue: 'value',\n          dateFormatter(timestamp) {\n            return new Date(timestamp).toString()\n          }\n        },\n        svg: {\n          filename: undefined,\n        },\n        png: {\n          filename: undefined,\n        }\n      },\n      autoSelected: 'zoom' \n    },\n zoom: {\n          enabled: true,\n          type: 'x',  \n          autoScaleYaxis: true,  \n          zoomedArea: {\n            fill: {\n              color: '#90CAF9',\n              opacity: 0.7\n            },\n            stroke: {\n              color: '#0D47A1',\n              opacity: 0.4,\n              width: 1\n            }\n          }\n      }\n},\n\n    toolbar: {\n        autoSelected: 'zoom'\n\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 1.7\n    },\n    grid: {\n        row: {\n            colors: ['#233e87', 'transparent'],\n            opacity: 0.3\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n          shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n          colors: '#FFFFFF',\n          useSeriesColors: false\n        }\n        \n    }\n    \n    \n \n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "phaseAngleL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#2E93fA",
+                            "device_bucket": {},
+                            "name": "Ph1-Ph2",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "V23",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#66DA26",
+                            "name": "Ph2-Ph3",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "V31",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#ff8800",
+                            "name": "Ph3-Ph1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "showTs": false,
+                          "subtitle": "",
+                          "title": "Voltaje"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "V",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "voltageL1N",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "PhaseAngle"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "Hz",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "phaseAngleL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V31",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 12,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "ActiveEnergy L1T1"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "kWh",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "activePowerL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V31",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 15,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Power Factor L1"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "kVA",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "powerFactorL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V31",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 9,
+                          "row": 19,
+                          "sizeX": 15,
+                          "sizeY": 15
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "colors": [],
+                          "currentColor": "#162756",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "showTs": false,
+                          "subtitle": "",
+                          "title": "POWER FACTOR",
+                          "updateTs": 1755273607689
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\nchart: {\n   background:'#162756',\n    toolbar: {\n      show: true,\n      offsetX: 0,\n      offsetY: 0,\n      tools: {\n        download: true,\n        selection: true,\n        zoom: true,\n        zoomin: true,\n        zoomout: true,\n        pan: true,\n        reset: true | '<img src=\"/static/icons/reset.png\" width=\"20\">',\n        customIcons: []\n      },\n      export: {\n        csv: {\n          filename: undefined,\n          columnDelimiter: ',',\n          headerCategory: 'ts',\n          headerValue: 'value',\n          dateFormatter(timestamp) {\n            return new Date(timestamp).toString()\n          }\n        },\n        svg: {\n          filename: undefined,\n        },\n        png: {\n          filename: undefined,\n        }\n      },\n      autoSelected: 'zoom' \n    },\n zoom: {\n          enabled: true,\n          type: 'x',  \n          autoScaleYaxis: true,  \n          zoomedArea: {\n            fill: {\n              color: '#90CAF9',\n              opacity: 0.7\n            },\n            stroke: {\n              color: '#0D47A1',\n              opacity: 0.4,\n              width: 1\n            }\n          }\n      }\n},\n\n    toolbar: {\n        autoSelected: 'zoom'\n\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 1.7\n    },\n    grid: {\n        row: {\n            colors: ['#233e87', 'transparent'],\n            opacity: 0.3\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n          shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n          colors: '#FFFFFF',\n          useSeriesColors: false\n        }\n        \n    }\n    \n    \n \n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "powerFactorL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#2E93fA",
+                            "name": "PF1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "PF2",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#66DA26",
+                            "name": "PF2",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "PF3",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#ff8800",
+                            "name": "PF3",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "PFT",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#fb00ff",
+                            "name": "PFT",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 9,
+                          "row": 4,
+                          "sizeX": 9,
+                          "sizeY": 15
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "colors": [],
+                          "currentColor": "#162756",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "showTs": false,
+                          "subtitle": "",
+                          "title": "AMPS",
+                          "updateTs": 1755273607689
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\nchart: {\n   background:'#162756',\n    toolbar: {\n      show: true,\n      offsetX: 0,\n      offsetY: 0,\n      tools: {\n        download: true,\n        selection: true,\n        zoom: true,\n        zoomin: true,\n        zoomout: true,\n        pan: true,\n        reset: true | '<img src=\"/static/icons/reset.png\" width=\"20\">',\n        customIcons: []\n      },\n      export: {\n        csv: {\n          filename: undefined,\n          columnDelimiter: ',',\n          headerCategory: 'ts',\n          headerValue: 'value',\n          dateFormatter(timestamp) {\n            return new Date(timestamp).toString()\n          }\n        },\n        svg: {\n          filename: undefined,\n        },\n        png: {\n          filename: undefined,\n        }\n      },\n      autoSelected: 'zoom' \n    },\n zoom: {\n          enabled: true,\n          type: 'x',  \n          autoScaleYaxis: true,  \n          zoomedArea: {\n            fill: {\n              color: '#90CAF9',\n              opacity: 0.7\n            },\n            stroke: {\n              color: '#0D47A1',\n              opacity: 0.4,\n              width: 1\n            }\n          }\n      }\n},\n\n    toolbar: {\n        autoSelected: 'zoom'\n\n    },\n    stroke: {\n        curve: 'monotoneCubic',\n        width: 1.7\n    },\n    grid: {\n        row: {\n            colors: ['#233e87', 'transparent'],\n            opacity: 0.3\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n          shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n          colors: '#FFFFFF',\n          useSeriesColors: false\n        }\n        \n    }\n    \n    \n \n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "currentL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#2E93fA",
+                            "device_bucket": {},
+                            "name": "I1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "I2",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#66DA26",
+                            "name": "I2",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "influxdb",
+                              "id": "Dispro_PSP",
+                              "mapping": "I3",
+                              "tags": {
+                                "Day": [],
+                                "Hour": [],
+                                "Slave": [
+                                  "GWMD01HFCB4673B517C_1"
+                                ],
+                                "tag1": [],
+                                "tag2": []
+                              },
+                              "user": "ega"
+                            },
+                            "color": "#ff8800",
+                            "name": "I3",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Frequency"
+                        },
+                        "properties": {
+                          "color": "#ffffff",
+                          "decimal_places": 2,
+                          "icon": "",
+                          "size": "25px",
+                          "unit": "Hz",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "frequency",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              },
+                              "user": "ega"
+                            },
+                            "name": "V31",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 18,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 19
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          }
+                        },
+                        "properties": {
+                          "center": true,
+                          "hideControls": false,
+                          "latitude": 0,
+                          "longitude": 0,
+                          "mapType": "roadmap",
+                          "waypoints": true,
+                          "zoom": 8
+                        },
+                        "sources": [
+                          {
+                            "color": "#1abc9c",
+                            "device_property": {
+                              "device": "yobiiq_em2101_FC48C900000001C5",
+                              "mapping": {
+                                "latitude": "latitude",
+                                "longitude": "longitude"
+                              },
+                              "property": "location"
+                            },
+                            "name": "Source 1",
+                            "source": "device_property",
+                            "timespan": {
+                              "magnitude": "minute",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      }
+                    ]
+                  },
+                  {
+                    "icon": "",
+                    "name": "Energy",
+                    "widgets": [
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Hourly Active Energy KWh",
+                          "updateTs": 1760954400000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "$aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "$timespan": {
+                              "mode": "configurable"
+                            },
+                            "aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_energy_data_bucket",
+                              "mapping": "activeEnergyImportL1T1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#00ff00",
+                            "name": "Hourly kWh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 12,
+                          "row": 0,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Daily Active Energy KWh",
+                          "updateTs": 1760911200000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": "1d",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_energy_data_bucket",
+                              "mapping": "activeEnergyImportL1T1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#00ff00",
+                            "name": "Daily kWh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 0,
+                          "row": 14,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Hourly Inductive Energy (KVARh)",
+                          "updateTs": 1760954400000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "$aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "$timespan": {
+                              "mode": "configurable"
+                            },
+                            "aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_energy_data_bucket",
+                              "mapping": "activeEnergyImportL1T2",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ffff00",
+                            "name": "Hourly KVARh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 12,
+                          "row": 14,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Daily Inductive Energy (KVARh)",
+                          "updateTs": 1760911200000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": "1d",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_energy_data_bucket",
+                              "mapping": "activeEnergyImportL1T2",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ffff00",
+                            "name": "Daily KVARh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 0,
+                          "row": 28,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Hourly Capacitive Energy",
+                          "updateTs": 1760954400000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "$aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "$timespan": {
+                              "mode": "configurable"
+                            },
+                            "aggregation": {
+                              "period": "1h",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "activePowerL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Hourly KVARh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "api": {},
+                        "layout": {
+                          "col": 12,
+                          "row": 28,
+                          "sizeX": 12,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#162756",
+                          "currentColor": "#162756",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "subtitle": "",
+                          "title": "Daily Capacitive Energy",
+                          "updateTs": 1760911200000
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": "1d",
+                              "type": "sum"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "em2101_data_bucket",
+                              "mapping": "activePowerL1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Daily KVARh",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
