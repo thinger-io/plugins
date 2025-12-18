@@ -1,5 +1,5 @@
 {
-  "name": "EM2101",
+  "name": "yobiiq-em2101",
   "version": "1.0.0",
   "description": "The YOBIIQ iQ Electricity EM2101 is a smart electricity meter with LoRaWAN® connectivity",
   "author": "Thinger.io",
