@@ -1,0 +1,604 @@
+{
+  "name": "dragino-lht65n",
+  "version": "1.0.0",
+  "description": "Remote LoRaWAN temperature and humidity sensor",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lht65n"
+  },
+  "metadata": {
+    "name": "Dragino LHT65N",
+    "description": "Remote LoRaWAN temperature and humidity sensor",
+    "category": "devices",
+    "image": ""
+  },
+  "resources": {
+    "products": [
+      {
+        "enabled": true,
+        "name": "Dragino LHT65N",
+        "product": "LHT65N",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {}
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "dragino-lht65n-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "lht65n_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getDataBucket",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "/**\r\n * Thinger.io decoder for Dragino LHT65N\r\n */\r\n\r\nfunction getBAT(payload) {\r\n    return payload.BAT;\r\n}\r\n\r\nfunction getFirmwareVersion(payload) {\r\n    return payload.FIRMWARE_VERSION;\r\n}\r\n\r\nfunction getFrequency_Band(payload) {\r\n    return payload.FREQUENCY_BAND;\r\n}\r\n\r\nfunction getSub_Band(payload) {\r\n    return payload.SUB_BAND;\r\n}\r\n\r\nfunction getSENSOR_MODEL(payload) {\r\n    return payload.SENSOR_MODEL;\r\n}\r\n\r\nfunction decode_Uplink(input) {\r\n  var hexString = input.payload;\r\n  var bytes = [];\r\n \r\n  // Transform hex string to bytes array\r\n  for (var i = 0; i < hexString.length; i += 2) {\r\n    bytes.push(parseInt(hexString.substr(i, 2), 16));\r\n  }\r\n\r\n\r\n  try {\r\n    // If port not exist use port2 as default\r\n    var port = input.fPort || 2;\r\n   \r\n    // Call Dragino decoder\r\n    var decoded = Decoder(bytes, port);\r\n   \r\n    return decoded;\r\n\r\n\r\n  } catch (error) {\r\n    return {\r\n      error: \"Decoding error: \" + error.message,\r\n      raw_payload: hexString,\r\n      bytes_length: bytes.length,\r\n      fPort: input.fPort || 2\r\n    };\r\n  }\r\n}\r\n\r\n\r\nfunction getDataBucket(payload) {\r\n    return payload;\r\n}\r\n\r\n\r\n/** \r\n * Dragino decoder\r\n*/\r\nfunction Str1(str2){\r\n  var str3 =\"\";\r\n  for (var i=0;i<str2.length;i++){\r\n    if (str2[i]<=0x0f){\r\n    str2[i]=\"0\"+str2[i].toString(16)+\"\";\r\n    }\r\n  str3+= str2[i].toString(16)+\"\";}\r\n  return str3;\r\n}\r\nfunction str_pad(byte){\r\n    var zero = '00';\r\n    var hex= byte.toString(16);    \r\n    var tmp  = 2-hex.length;\r\n    return zero.substr(0,tmp) + hex + \" \";\r\n}\r\n\r\nfunction datalog(i,bytes){\r\n  var Ext= bytes[6]&0x0F;\r\n  var bb;\r\n  \tif((Ext=='1')||(Ext=='9'))\r\n{\r\n\tbb=parseFloat(((bytes[0+i]<<24>>16 | bytes[1+i])/100).toFixed(2));\r\n}\r\n  \telse if((Ext=='2')||(Ext=='10'))\r\n{\r\n\tbb=parseFloat(((bytes[0+i]<<24>>16 | bytes[1+i])/100).toFixed(2));\r\n}\r\n\telse if(Ext=='4')\r\n{\r\n\tvar Exti_pin_level=bytes[0+i] ? \"High\":\"Low\";  \r\n    var Exti_status=bytes[1+i] ? \"True\":\"False\";\r\n    bb=Exti_pin_level+Exti_status;\r\n}\r\n\telse if(Ext=='5')\r\n{\r\n\tbb=bytes[0+i]<<8 | bytes[1+i];\r\n}\r\n\telse if(Ext=='6')\r\n{\r\n\tbb=(bytes[0+i]<<8 | bytes[1+i])/1000;\r\n}\r\n\telse if(Ext=='7')\r\n{\r\n\tbb=bytes[0+i]<<8 | bytes[1+i];\r\n}\r\n\telse if((Ext=='8')||(Ext=='14'))\r\n{\r\n\tbb=bytes[0+i]<<8 | bytes[1+i];\r\n}\r\nelse if((Ext=='11')||(Ext=='12'))\r\n{\r\n  bb=parseFloat(((bytes[0+i]<<24>>16 | bytes[1+i])/100).toFixed(2));  \r\n}\r\n  var cc= parseFloat(((bytes[2+i]<<24>>16 | bytes[3+i])/100).toFixed(2));\r\n  var dd= parseFloat((((bytes[4+i]<<8 | bytes[5+i])&0xFFF)/10).toFixed(1));\r\n  var ee= getMyDate((bytes[7+i]<<24 | bytes[8+i]<<16 | bytes[9+i]<<8 | bytes[10+i]).toString(10));\r\n  var string='['+bb+','+cc+','+dd+','+ee+']'+',';  \r\n  \r\n  return string;\r\n}\r\n\r\nfunction getzf(c_num){ \r\n  if(parseInt(c_num) < 10)\r\n    c_num = '0' + c_num; \r\n\r\n  return c_num; \r\n}\r\n\r\nfunction getMyDate(str){ \r\n  var c_Date;\r\n  if(str > 9999999999)\r\n    c_Date = new Date(parseInt(str));\r\n  else \r\n    c_Date = new Date(parseInt(str) * 1000);\r\n  \r\n  var c_Year = c_Date.getFullYear(), \r\n  c_Month = c_Date.getMonth()+1, \r\n  c_Day = c_Date.getDate(),\r\n  c_Hour = c_Date.getHours(), \r\n  c_Min = c_Date.getMinutes(), \r\n  c_Sen = c_Date.getSeconds();\r\n  var c_Time = c_Year +'-'+ getzf(c_Month) +'-'+ getzf(c_Day) +' '+ getzf(c_Hour) +':'+ getzf(c_Min) +':'+getzf(c_Sen); \r\n  \r\n  return c_Time;\r\n}\r\n\r\nfunction Decoder(bytes, port) {\r\nvar Ext= bytes[6];\r\nvar button = bytes[6]&0x10;\r\nvar poll_message_status=((bytes[6]>>6)&0x03);\r\n\r\nvar Connect=(bytes[6]&0x80)>>7;\r\nvar decode = {};\r\nvar data = {};\r\nif((port==3)&&((bytes[2]==0x01)||(bytes[2]==0x02)||(bytes[2]==0x03)||(bytes[2]==0x04))){\r\n\tvar array1=[]\r\n\tvar bytes1=\"0x\"\r\n\tvar str1=Str1(bytes)\r\n\tvar str2=str1.substring(0,6)\r\n\tvar str3=str1.substring(6,)\r\n  var reg=/.{4}/g;\r\n\tvar rs=str3.match(reg);\r\n\trs.push(str3.substring(rs.join('').length));\r\n\trs.pop()\r\n\tvar new_arr = [...rs]\r\n\tvar data1=new_arr\r\n\tdecode.Node_type=\"LHT65N\";\r\n\tdecode.bat=parseInt(bytes1+str2.substring(0,4)& 0x3FFF)\r\n\tif (parseInt(bytes1+str2.substring(4,))==1){\r\n\t\tdecode.sensor=\"ds18b20\"\r\n\t}\r\n\telse if(parseInt(bytes1+str2.substring(4,))==2){\r\n\t  decode.sensor=\"tmp117\"\r\n\t}\r\n\telse if(parseInt(bytes1+str2.substring(4,))==3){\r\n\t\tdecode.sensor=\"gxht30\"\r\n\t}\r\n\telse if(parseInt(bytes1+str2.substring(4,))==4){\r\n\t\tdecode.sensor=\"sht31\"\r\n\t}\t\r\n\tfor (var i=0;i<data1.length;i++){\r\n    var temp=(parseInt(bytes1+data1[i].substring(0,4)))/100\r\n    array1[i]=temp\r\n}\r\n\tdecode.Temp=array1\r\n\t{\r\n    return decode;\r\n  }\r\n}\t\r\nelse if(port==5)\r\n{\r\n  var sub_band;\r\n  var freq_band;\r\n  var sensor;\r\n    \r\n  if(bytes[0]==0x0B)\r\n    sensor= \"LHT65N\";\r\n  else if(bytes[0]==0x1A)\r\n    sensor= \"LHT65N-PIR\";\r\n  \r\n  if(bytes[4]==0xff)\r\n    sub_band=\"NULL\";\r\n  else\r\n    sub_band=bytes[4];\r\n    \r\n  if(bytes[3]==0x01)\r\n    freq_band=\"EU868\";\r\n  else if(bytes[3]==0x02)\r\n    freq_band=\"US915\";\r\n  else if(bytes[3]==0x03)\r\n    freq_band=\"IN865\";\r\n  else if(bytes[3]==0x04)\r\n    freq_band=\"AU915\";\r\n  else if(bytes[3]==0x05)\r\n    freq_band=\"KZ865\";\r\n  else if(bytes[3]==0x06)\r\n    freq_band=\"RU864\";\r\n  else if(bytes[3]==0x07)\r\n    freq_band=\"AS923\";\r\n  else if(bytes[3]==0x08)\r\n    freq_band=\"AS923_1\";\r\n  else if(bytes[3]==0x09)\r\n    freq_band=\"AS923_2\";\r\n  else if(bytes[3]==0x0A)\r\n    freq_band=\"AS923_3\";\r\n  else if(bytes[3]==0x0B)\r\n    freq_band=\"CN470\";\r\n  else if(bytes[3]==0x0C)\r\n    freq_band=\"EU433\";\r\n  else if(bytes[3]==0x0D)\r\n    freq_band=\"KR920\";\r\n  else if(bytes[3]==0x0E)\r\n    freq_band=\"MA869\";\r\n      \r\n  var firm_ver= (bytes[1]&0x0f)+'.'+(bytes[2]>>4&0x0f)+'.'+(bytes[2]&0x0f);\r\n  var bat= (bytes[5]<<8 | bytes[6])/1000;\r\n    \r\n  return {\r\n    SENSOR_MODEL:sensor,\r\n    FIRMWARE_VERSION:firm_ver,\r\n    FREQUENCY_BAND:freq_band,\r\n    SUB_BAND:sub_band,\r\n    BAT:bat,\r\n  };\r\n}\r\n\r\nswitch (poll_message_status) {\t\t\r\ncase 0:\t\r\n{ \r\nif(Ext==0x09)\r\n{\r\n  decode.TempC_DS=parseFloat(((bytes[0]<<24>>16 | bytes[1])/100).toFixed(2));\r\n  decode.Bat_status=bytes[4]>>6;\r\n}\r\nelse if(Ext==0x0A)\r\n{\r\n  decode.TempC_TMP117=parseFloat(((bytes[0]<<24>>16 | bytes[1])/100).toFixed(2));\r\n  decode.Bat_status=bytes[4]>>6;  \r\n}\r\nelse\r\n{\r\n  decode.BatV= ((bytes[0]<<8 | bytes[1]) & 0x3FFF)/1000;\r\n  var Bat_status=bytes[0]>>6;\r\n  if (Bat_status == 3)\r\n  decode.Bat_status=\"Good\"\r\n  else if(Bat_status == 2)\r\n  decode.Bat_status=\"OK\"\r\n  else if(Bat_status == 1)\r\n  decode.Bat_status=\"Low\"\r\n  else if(Bat_status == 0)\r\n  decode.Bat_status=\"Ultra Low\"\r\n}\r\n\r\nif((Ext!=0x0f)&&(Ext!=0x10)&&(Ext!=0x20)&&(Ext!=0x0E))\r\n{\r\n  decode.TempC_SHT=parseFloat(((bytes[2]<<24>>16 | bytes[3])/100).toFixed(2));\r\n  decode.Hum_SHT=parseFloat((((bytes[4]<<8 | bytes[5])&0xFFF)/10).toFixed(1));\r\n}\r\nif(Connect=='1')\r\n{\r\n  decode.No_connect=\"Sensor no connection\";\r\n}\r\n\r\nif(Ext=='0')\r\n{\r\n  decode.Ext_sensor =\"No external sensor\";\r\n}\r\nelse if(Ext=='1')\r\n{\r\n  decode.Ext_sensor =\"Temperature Sensor\";\r\n  decode.TempC_DS=parseFloat(((bytes[7]<<24>>16 | bytes[8])/100).toFixed(2));\r\n}\r\nelse if(Ext=='2')\r\n{\r\n  decode.Ext_sensor =\"Temperature Sensor\";\r\n  decode.TempC_TMP117=parseFloat(((bytes[7]<<24>>16 | bytes[8])/100).toFixed(2));\r\n}\r\nelse if(Ext=='4')\r\n{\r\n  decode.Work_mode=\"Interrupt Sensor send\";\r\n  decode.Exti_pin_level=bytes[7] ? \"High\":\"Low\";  \r\n  decode.Exti_status=bytes[8] ? \"True\":\"False\";\r\n \r\n}\r\nelse if(Ext=='5')\r\n{\r\n  decode.Work_mode=\"Illumination Sensor\";\r\n  decode.ILL_lx=bytes[7]<<8 | bytes[8];\r\n}\r\nelse if(Ext=='6')\r\n{\r\n  decode.Work_mode=\"ADC Sensor\";\r\n  decode.ADC_V=(bytes[7]<<8 | bytes[8])/1000;\r\n}\r\nelse if(Ext=='7')\r\n{\r\n  decode.Work_mode=\"Interrupt Sensor count\";\r\n  decode.Exit_count=bytes[7]<<8 | bytes[8];\r\n}\r\nelse if(Ext=='8')\r\n{\r\n  decode.Work_mode=\"Interrupt Sensor count\";\r\n  decode.Exit_count=bytes[7]<<24 | bytes[8]<<16 | bytes[9]<<8 | bytes[10];\r\n}\r\nelse if(Ext=='9')\r\n{\r\n  decode.Work_mode=\"DS18B20 & timestamp\";\r\n  decode.Systimestamp=(bytes[7]<<24 | bytes[8]<<16 | bytes[9]<<8 | bytes[10] );\r\n}\r\nelse if(Ext==0x0A)\r\n{\r\n  decode.Work_mode=\"TMP117 & timestamp\";\r\n  decode.Systimestamp=(bytes[7]<<24 | bytes[8]<<16 | bytes[9]<<8 | bytes[10] );  \r\n}\r\nelse if(Ext=='11')\r\n{\r\n  decode.Work_mode=\"SHT31 Sensor\";\r\n  decode.Ext_TempC_SHT=parseFloat(((bytes[7]<<24>>16 | bytes[8])/100).toFixed(2));\r\n  decode.Ext_Hum_SHT=parseFloat((((bytes[9]<<8 | bytes[10])&0xFFF)/10).toFixed(1));  \r\n}\r\nelse if(Ext==0x10)\r\n{\r\n  decode.Work_mode=\"SHT31ID\";\r\n  decode.ID=str_pad(bytes[2])+str_pad(bytes[3])+str_pad(bytes[4])+str_pad(bytes[5]);\r\n  decode.Ext_TempC_SHT=parseFloat(((bytes[7]<<24>>16 | bytes[8])/100).toFixed(2));\r\n  decode.Ext_Hum_SHT=parseFloat((((bytes[9]<<8 | bytes[10])&0xFFF)/10).toFixed(1));  \r\n}\r\nelse if(Ext==0x20)\r\n{\r\n  decode.Work_mode=\"NE117ID\";\r\n  decode.ID=str_pad(bytes[2])+str_pad(bytes[3])+str_pad(bytes[4])+str_pad(bytes[5])+str_pad(bytes[9])+str_pad(bytes[10]);\r\n  decode.TempC_TMP117=parseFloat(((bytes[7]<<24>>16 | bytes[8])/100).toFixed(2)); \r\n}\r\nelse if(Ext=='15')\r\n{\r\n  decode.Work_mode=\"DS18B20ID\";\r\n  decode.ID=str_pad(bytes[2])+str_pad(bytes[3])+str_pad(bytes[4])+str_pad(bytes[5])+str_pad(bytes[7])+str_pad(bytes[8])+str_pad(bytes[9])+str_pad(bytes[10]);\r\n}\r\n}\r\n decode.Node_type=\"LHT65N\";\r\n  if((bytes.length==11)||(bytes.length==15))\r\n  {\r\n    return decode;\r\n  }\r\nbreak;\r\n\r\ncase 1:\r\n  {\r\n    for(var i=0;i<bytes.length;i=i+11)\r\n    {\r\n      var da= datalog(i,bytes);\r\n      if(i=='0')\r\n        decode.DATALOG=da;\r\n      else\r\n        decode.DATALOG+=da;\r\n    }\r\ndecode.Node_type=\"LHT65N\";\r\n}\r\n{\r\nreturn decode;\r\n}\r\nbreak;\r\n\r\ncase 2:\r\n  {\r\n    for(var i=0;i<bytes.length;i=i+11)\r\n    {\r\n      var da= datalog(i,bytes);\r\n      if(i=='0')\r\n        data.DATALOG=da;\r\n      else\r\n        data.DATALOG+=da;\r\n    }\r\n\tdata.Node_type=\"LHT65N\";\r\n}\r\n{\r\nreturn{\r\n    data:data,\r\n    retransmission_Status:\"retransmission_Status\",\r\n    };\r\n}\r\nbreak;\r\n\r\n\r\ndefault:\r\n    return {\r\n      errors: [\"unknown\"]\r\n    }\r\n}\r\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "lht65n_decoder_flow": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decode_Uplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "lht65n_bat": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getBAT",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "lht65n_firmware_version": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getFirmwareVersion",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "lht65n_frequency_band": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getFrequency_Band",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "lht65n_sensor_model": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getSENSOR_MODEL",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "lht65n_sub_band": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "getSub_Band",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "description": "Last raw uplink recieved",
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "properties": {
+                  "template": true
+                },
+                "tabs": [
+                  {
+                    "icon": "fas fa-tachometer-alt",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#0000ff",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%Rh"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "External Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "ºC"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_DS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Internal Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "ºC"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last recorded information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Internal Temperature (°C)</th>\r\n        <th>Humidity (%RH)</th>\r\n        <th>External Temperature (°C)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.TempC_SHT || entry.temperature || '—' }}</td>\r\n        <td>{{ entry.Hum_SHT || entry.humidity || '—' }}</td>\r\n        <td>{{ entry.TempC_DS || entry.external_temp || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "internal temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_DS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "external Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Humidity"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Temperature"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Internal Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "TempC_DS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e39f0d",
+                            "name": "External Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#f0e924",
+                          "max": 4,
+                          "min": 3,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "lht65n_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

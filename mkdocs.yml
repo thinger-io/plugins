@@ -169,6 +169,7 @@ nav:
       - Devices:
         - Overview: 'plugins/devices/index.md'
         - Comet Tx: '!include ./_build/plugins/devices/comet-tx5xx-tx6xx/mkdocs.yml'
+        - Dragino LHT65N: '!include ./_build/plugins/devices/dragino-lht65n/mkdocs.yml'
         - Dragino LT-22222-L: '!include ./_build/plugins/devices/dragino-lt22222l/mkdocs.yml'
         - Milesight AM103: '!include ./_build/plugins/devices/milesight-am103/mkdocs.yml'
         - Milesight CT10X: '!include ./_build/plugins/devices/milesight-ct10x/mkdocs.yml'
