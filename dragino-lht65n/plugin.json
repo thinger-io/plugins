@@ -13,7 +13,7 @@
     "name": "Dragino LHT65N",
     "description": "Remote LoRaWAN temperature and humidity sensor",
     "category": "devices",
-    "image": ""
+    "image": "assets/dragino-lht65n.png"
   },
   "resources": {
     "products": [
