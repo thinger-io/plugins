@@ -44,7 +44,7 @@ const server = new McpServer({
 // the plugin operations. It souldnt be used for debugging purposes.
 const userEvents = new UserEvents();
 
-const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18'];                  // MCP Protocol spec
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-03-26', '2025-06-18', '2025-11-25'];                  // MCP Protocol spec
 const REQUIRED_CLIENT_CAPABILITIES: string[] = [];                                        // Client capabilities
 const REQUEST_TIMEOUT_MS = Number(process.env.MCP_REQUEST_TIMEOUT_MS ?? 10000);   // Response timeout (default: 10s)
 
