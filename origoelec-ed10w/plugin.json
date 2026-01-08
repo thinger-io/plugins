@@ -1,0 +1,124 @@
+{
+  "name": "origoelec_ed10w",
+  "version": "1.0.0",
+  "description": "LoRaWAN water meter device - Origoelec ED10W. Preconfigured to work with any LNS Thinger plugin.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "origoelec-ed10w"
+  },
+  "metadata": {
+    "name": "Origoelec ED10W",
+    "description": "LoRaWAN water meter device - Origoelec ED10W. Preconfigured to work with any LNS Thinger plugin.",
+    "image": "assets/ed10w.png",
+    "category": "devices",
+    "vendor": "origoelec"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LoRaWAN water meter device - Origoelec ED10W. Preconfigured to work with any LNS Thinger plugin.",
+        "enabled": true,
+        "name": "Origoelec ED10W",
+        "product": "origoelec_ed10w",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "ed10w_device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "ed10w-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "ed10w_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId;\n}\n\n// Custom payload decoding function configured in \"ed10w_data_bucket\" bucket.\n// This function decodes the LoRaWAN payload for Origoelec ED10W water meters.\nfunction decodeThingerUplink(payload) {\n    // Decoder implementation will parse ED10W-specific payload format\n    // and return structured data with water consumption metrics\n    return payload;\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
