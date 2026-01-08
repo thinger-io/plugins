@@ -1,0 +1,117 @@
+{
+  "name": "origoelec_ed20w",
+  "version": "1.0.0",
+  "description": "LoRaWAN energy meter product for Origoelec ED20W devices. Monitors electrical parameters and energy consumption.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "origoelec-ed10w"
+  },
+  "metadata": {
+    "name": "Origoelec ED20W",
+    "description": "LoRaWAN energy meter product for Origoelec ED20W devices. Monitors electrical parameters and energy consumption.",
+    "image": "assets/ed10w.png",
+    "category": "devices",
+    "vendor": "origoelec"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LoRaWAN energy meter product for Origoelec ED20W devices. Monitors electrical parameters and energy consumption.",
+        "enabled": true,
+        "name": "Origoelec ED20W",
+        "product": "origoelec_ed20w",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "ed20w_device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "ed20w.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "ed20w_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "energy_meter",
+                "telemetry"
+              ]
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId;\n}\n\n// Decoder function for Origoelec ED20W LoRaWAN payloads.\n// This function is referenced in the \"ed20w_data_bucket\" bucket configuration.\nfunction decodeThingerUplink(payload) {\n    // Decode ED20W payload and return structured data\n    // Implementation to be provided based on device specifications\n    return payload;\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
