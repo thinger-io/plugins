@@ -1,0 +1,200 @@
+{
+  "name": "tekzitel_tekzipark",
+  "version": "1.0.0",
+  "description": "LoRaWAN parking occupancy sensor for smart parking management. Monitors parking space occupancy, battery level, and provides real-time status updates.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "tekzitel-tekzipark"
+  },
+  "metadata": {
+    "name": "Tekzitel TekziPark",
+    "description": "LoRaWAN parking occupancy sensor for smart parking management. Monitors parking space occupancy, battery level, and provides real-time status updates.",
+    "image": "assets/tekzipark.png",
+    "category": "devices",
+    "vendor": "tekzitel"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LoRaWAN parking occupancy sensor for smart parking management. Monitors parking space occupancy, battery level, and provides real-time status updates.",
+        "enabled": true,
+        "name": "Tekzitel TekziPark",
+        "product": "tekzitel_tekzipark",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "tekzipark_device_pattern": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "tekzipark-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "tekzipark_diagnostics": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "diagnostics",
+                "battery",
+                "signal"
+              ]
+            },
+            "tekzipark_parking_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 6,
+                "unit": "months"
+              },
+              "tags": [
+                "parking",
+                "occupancy",
+                "telemetry"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            // PEQUEÑA MEJORA: TTN v3 suele devolver { data: {...}, warnings: [] }\n            // Si quieres devolver solo los datos \"limpios\" a Thinger, descomenta la siguiente línea:\n            // if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar directions = ['N', 'E', 'S', 'W'];\nvar colors = ['red', 'green'];\n\nfunction decodeUplink(input) {\n  var data = {};\n  var beacons = [];\n\n  switch (input.fPort) {\n    case 1:  \n      var index = 0;    \n      data.occupied = (input.bytes[0] & 0x80) >> 7;\n      data.keepAlive = input.bytes[0] & 0x01;\n      data.reset = (input.bytes[0] & 0x02) >> 1;\n      data.No_Beacon = (input.bytes[0] & 0x04) >> 2;\n      data.Radar = (input.bytes[0] & 0x08) >> 3;\n      data.Obstruction = (input.bytes[0] & 0x10) >> 4;\n      data.Good_Battery = (input.bytes[0] & 0x20) >> 5;\n      data.Temperature = (input.bytes[1] > 0x7F) ? input.bytes[1] - 0x100 : input.bytes[1];\n      data.Parking_ID = input.bytes[2];\n      if (input.bytes.length > 3) {\n        data.Beacon_RSSI = (input.bytes[3] > 0x7F) ? input.bytes[3] - 0x100 : input.bytes[3];\n        beaconcount = (input.bytes.length - 4) / 2;        \n        for (index = 4; index < input.bytes.length; index++) {\n          beacons = beacons.concat((input.bytes[index] << 8) | input.bytes[index + 1]);\n          index++;\n        }\n        data.Beacons = beacons;\n      }\n      break;\n    case 2:\n      data.occupied = (input.bytes[0] & 0x80) >> 7;\n      data.keepAlive = input.bytes[0] & 0x01;\n      data.reset = (input.bytes[0] & 0x02) >> 1;\n      data.No_Beacon = (input.bytes[0] & 0x04) >> 2;\n      data.Radar = (input.bytes[0] & 0x08) >> 3;\n      data.Obstruction = (input.bytes[0] & 0x10) >> 4;\n      data.Good_Battery = (input.bytes[0] & 0x20) >> 5;\n      data.Temperature = (input.bytes[1] > 0x7F) ? input.bytes[1] - 0x100 : input.bytes[1];\n      data.Parking_ID = input.bytes[2];\n      data.Deflection_X = (input.bytes[3] > 0x7F) ? input.bytes[3] - 0x100 : input.bytes[3];\n      data.Deflection_Y = (input.bytes[4] > 0x7F) ? input.bytes[4] - 0x100 : input.bytes[4];\n      data.Deflection_Z = (input.bytes[5] > 0x7F) ? input.bytes[5] - 0x100 : input.bytes[5];\n      data.Baseline_X = (input.bytes[6] > 0x7F) ? input.bytes[6] - 0x100 : input.bytes[6];\n      data.Baseline_Y = (input.bytes[7] > 0x7F) ? input.bytes[7] - 0x100 : input.bytes[7];\n      data.Baseline_Z = (input.bytes[8] > 0x7F) ? input.bytes[8] - 0x100 : input.bytes[8];\n      data.Fault_Code = input.bytes[9];\n      data.Obstruction = input.bytes[10];\n      data.D_Reflection = input.bytes[11];\n      break;\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n\n  return {\n    data: data\n  };\n}\n\nfunction encodeDownlink(input) {\n  var ret = [];\n\n  var byte0 = (input.data.suppress_baseline_offset << 7) | (input.data.radar_start_range << 4) | input.data.fluctuations_count;\n  var byte1 = (input.data.downlink_frequency << 7) | (input.data.axis_deflection << 5) | (input.data.debug_mode << 4) | input.data.deflection_threshold_mag;\n  var byte2 = (input.data.zero_neg_drop << 7) | (input.data.oversampling << 5) | (input.data.hw_acc_samples_no << 3) | input.data.fluctuation_threshold_XY;\n  var byte3 = (input.data.sleep_time << 5) | (input.data.reset_control << 4) | (input.data.mag_reboot << 3) | input.data.fluctuation_delay_time;\n  var byte4 = (input.data.axis_fluctuations << 6) | (input.data.fluctuation_threshold_Z << 3) | (input.data.self_heal << 2) | input.data.keepalive_period;\n  var byte5 = (input.data.radar_scan_count << 4) | (input.data.obstruction_check << 3) | input.data.reflection_threshold_radar;\n  var byte6 = (input.data.OI << 7) | (input.data.send_rssi << 6) | (input.data.beacons_scan_no << 3) | input.data.ble_scan_window;\n  var byte7 = input.data.ble_scan_rssi;\n\n  ret = ret.concat(byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7);\n  return {\n    // LoRaWAN FPort used for the downlink message\n    fPort: 3,\n    // Encoded bytes\n    bytes: ret\n  };\n}\n\nfunction decodeDownlink(input) {\n  var downlinkdata = {};\n  switch (input.fPort) {\n    case 3:\n      \n      downlinkdata.fluctuations_count = input.bytes[0] & 0x0F;\n      downlinkdata.radar_start_range = (input.bytes[0] & 0x70) >> 4;\n      downlinkdata.suppress_baseline_offset = (input.bytes[0] & 0x80) >> 7;\n\n      downlinkdata.deflection_threshold_mag = input.bytes[1] & 0x0F;\n      downlinkdata.debug_mode = (input.bytes[1] & 0x10) >> 4;\n      downlinkdata.axis_deflection = (input.bytes[1] & 0x60) >> 5;\n      downlinkdata.downlink_frequency = (input.bytes[1] & 0x80) >> 7;\n\n      downlinkdata.fluctuation_threshold_XY = input.bytes[2] & 0x07;\n      downlinkdata.hw_acc_samples_no = (input.bytes[2] & 0x18) >> 3;\n      downlinkdata.oversampling = (input.bytes[2] & 0x60) >> 5;\n      downlinkdata.zero_neg_drop = (input.bytes[2] & 0x80) >> 7;\n\n      downlinkdata.fluctuation_delay_time = input.bytes[3] & 0x07;\n      downlinkdata.mag_reboot = (input.bytes[3] & 0x08) >> 3;\n      downlinkdata.reset_control = (input.bytes[3] & 0x10) >> 4;\n      downlinkdata.sleep_time = (input.bytes[3] & 0xE0) >> 5;\n\n      downlinkdata.keepalive_period = input.bytes[4] & 0x03;\n      downlinkdata.self_heal = (input.bytes[4] & 0x04) >> 2;\n      downlinkdata.fluctuation_threshold_Z = (input.bytes[4] & 0x38) >> 3;\n      downlinkdata.axis_fluctuations = (input.bytes[4] & 0xC0) >> 6;\n\n      downlinkdata.reflection_threshold_radar = input.bytes[5] & 0x07;\n      downlinkdata.obstruction_check = (input.bytes[5] & 0x08) >> 3;\n      downlinkdata.radar_scan_count = (input.bytes[5] & 0xF0) >> 4;\n\n      downlinkdata.ble_scan_window = input.bytes[6] & 0x07;\n      downlinkdata.beacons_scan_no = (input.bytes[6] & 0x38) >> 3;\n      downlinkdata.send_rssi = (input.bytes[6] & 0x40) >> 6;\n      downlinkdata.OI = (input.bytes[6] & 0x80) >> 7;\n\n      downlinkdata.ble_scan_rssi = input.bytes[7] & 0xFF;\n      \n      return {\n        // Decoded downlink (must be symmetric with encodeDownlink)\n        data: downlinkdata,\n      };\n    default:\n      return {\n        errors: ['invalid FPort'],\n      };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "tekzipark_occupancy_alert": {
+              "data": {
+                "event": "device_property_update",
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "source": "event"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "target": "topic",
+                "topic": "alerts/{{device}}/occupancy"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "tekzipark_battery_level": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "battery": 100
+              },
+              "enabled": true
+            },
+            "tekzipark_last_detection": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "timestamp": 0
+              },
+              "enabled": true
+            },
+            "tekzipark_occupancy_status": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "occupied": false
+              },
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
