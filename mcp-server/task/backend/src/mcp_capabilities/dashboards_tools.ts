@@ -3,12 +3,16 @@ import { z } from 'zod';
 import { ProductsApi , ApiException, PropertyCreate, PropertyUpdate } from '@thinger-io/thinger-node';
 import { Log } from '../lib/log.js';
 import {apexChartWidgetSchema} from '../schemas.js';
+import { registerLoggedTool } from './register_logged_tools.js';
+import type { UserEvents } from '../lib/user-events.js';
+import { loadDashboardExample, getAvailableCategories, type DashboardCategory } from './dashboard_examples';
 
 export function registerDashboardsTools(opts: {
   server: McpServer;
   productsApi: ProductsApi;
+  userEvents: UserEvents;
 }) {
-  const { server, productsApi } = opts;
+  const { server, productsApi, userEvents } = opts;
   const thingerUser = process.env.THINGER_USER ?? 'unknown';
 
   async function isDashBoardPropertyCreated(product: string): Promise<boolean> {
@@ -478,7 +482,7 @@ export function registerDashboardsTools(opts: {
         "- Use appropriate chart types in options (line, area, bar, etc.) based on data nature"
       ].join("\n"),
       inputSchema: {
-        product: z.string().min(1).describe("ID of the Product Property Tool"),
+        product: z.string().min(1).describe("ID of the Product"),
         tab: z.number().min(0).describe("Index of the dashboard tab to add the widget to"),
         widget: apexChartWidgetSchema
       }
@@ -527,4 +531,145 @@ export function registerDashboardsTools(opts: {
       }
     }
   );
+
+  // Register tool to get dashboard examples by category
+  registerLoggedTool({
+    server,
+    userEvents,
+    name: "Get-Dashboard-Example-By-Category",
+    title: "Get Dashboard Example by Category",
+    description: [
+      "This MCP tool provides pre-configured dashboard widget examples based on different IoT use cases.",
+      "These examples serve as templates that LLM clients can use to understand dashboard structures",
+      "and generate appropriate dashboard configurations for different scenarios.",
+      "",
+      "## Purpose",
+      "This tool helps LLM clients by providing real-world dashboard examples that demonstrate:",
+      "- Proper widget structure and configuration",
+      "- ApexCharts options formatting",
+      "- Data source configurations",
+      "- Layout and styling best practices",
+      "- Multi-series visualization setups",
+      "",
+      "## Available Categories",
+      "",
+      "### 1. temperature_and_humidity_dashboard",
+      "Example for monitoring temperature and humidity sensors.",
+      "Features:",
+      "- Dual Y-axis configuration (temperature and humidity)",
+      "- 24-hour time range",
+      "- MongoDB bucket sources",
+      "- Smooth curve visualization",
+      "",
+      "### 2. power_monitoring_dashboard",
+      "Example for three-phase voltage monitoring in electrical systems.",
+      "Features:",
+      "- Three voltage phase series (Ph1-N, Ph2-N, Ph3-N)",
+      "- Grid visualization with custom colors",
+      "- Mixed backend sources (MongoDB and InfluxDB examples)",
+      "- Advanced toolbar with zoom and pan controls",
+      "",
+      "### 3. energy_consumption_dashboard",
+      "Example for tracking energy consumption over time.",
+      "Features:",
+      "- Area chart with gradient fill",
+      "- 7-day time range",
+      "- Energy units formatting (kWh)",
+      "- Real-time monitoring setup",
+      "",
+      "### 4. water_quality_dashboard",
+      "Example for water quality monitoring (pH, TDS, Turbidity).",
+      "Features:",
+      "- Triple Y-axis configuration",
+      "- Multiple water quality parameters",
+      "- Custom value ranges (pH: 0-14)",
+      "- Color-coded series for different metrics",
+      "",
+      "## Usage",
+      "Provide the category name to receive a complete, ready-to-use dashboard widget example.",
+      "The returned JSON can be used directly with the 'Add-Thinger-Product-Dashboard-ApexChart-Widget' tool",
+      "after customizing the product name, bucket IDs, and user-specific values.",
+      "",
+      "## Input Parameters",
+      "- **category** (string, required): One of the available dashboard categories listed above",
+      "",
+      "## Output",
+      "Returns a complete dashboard widget configuration in JSON format including:",
+      "- Product identifier",
+      "- Tab index",
+      "- Complete widget object with layout, panel, properties, and sources",
+      "",
+      "## Example Usage",
+      "```json",
+      "{",
+      "  \"category\": \"temperature_and_humidity_dashboard\"",
+      "}",
+      "```",
+      "",
+      "This will return a complete dashboard example that can be adapted to specific use cases.",
+      "",
+      "## Notes",
+      "- Remember to update the 'user' field in bucket sources with the actual Thinger.io username",
+      "- Modify bucket IDs to match your actual data buckets",
+      "- Adjust the 'product' field to your target product identifier",
+      "- Customize colors, titles, and labels as needed",
+      "- Update timestamps (updateTs) to current values when using the examples"
+    ].join("\n"),
+    inputSchema: {
+      category: z.enum([
+        'temperature_and_humidity_dashboard',
+        'power_monitoring_dashboard',
+        'energy_consumption_dashboard',
+        'water_quality_dashboard'
+      ]).describe("The category of dashboard example to retrieve. Available categories: " + getAvailableCategories().join(', '))
+    },
+    handler: async ({ category }) => {
+      try {
+        Log.log(`Loading dashboard example for category='${category}'`);
+        const example = await loadDashboardExample(category as DashboardCategory);
+
+        const responseText = [
+          `# Dashboard Example: ${category}`,
+          "",
+          "Below is a complete dashboard widget example for this category.",
+          "You can use this as a template with the 'Add-Thinger-Product-Dashboard-ApexChart-Widget' tool.",
+          "",
+          "**Important**: Remember to customize the following fields before using:",
+          "- `product`: Set to your actual product identifier",
+          "- `user`: Update in all bucket sources to your Thinger.io username",
+          "- Bucket IDs: Update to match your actual data buckets",
+          "- `mapping`: Adjust field names to match your data structure",
+          "- `updateTs`: Update to current timestamp",
+          "",
+          "```json",
+          JSON.stringify(example, null, 2),
+          "```"
+        ].join("\n");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: responseText
+            }
+          ]
+        };
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error
+          ? `Error loading dashboard example: ${err.message}`
+          : `Unexpected error: ${String(err)}`;
+        Log.error(errorMessage);
+
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: errorMessage
+            }
+          ]
+        };
+      }
+    }
+  });
 }

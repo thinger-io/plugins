@@ -1,0 +1,84 @@
+{
+  "product": "temperature_and_humidity_sensors",
+  "tab": 0,
+  "widget": {
+    "api": {},
+    "layout": {
+      "col": 0,
+      "row": 0,
+      "sizeX": 12,
+      "sizeY": 10
+    },
+    "panel": {
+      "color": "#1976D2",
+      "currentColor": "#1976D2",
+      "showFullscreen": true,
+      "showOffline": {
+        "type": "last_sample"
+      },
+      "subtitle": "Last 24 Hours - Temperature and Humidity Monitoring",
+      "title": "Temperature & Humidity",
+      "updateTs": 1730000000000
+    },
+    "properties": {
+      "options": "var options = {\n    series: series,\n    chart: {\n        background: '#1976D2',\n        toolbar: {\n            show: true,\n            tools: {\n                download: true,\n                selection: true,\n                zoom: true,\n                zoomin: true,\n                zoomout: true,\n                pan: true,\n                reset: true\n            },\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    grid: {\n        row: {\n            colors: ['#1E88E5', 'transparent'],\n            opacity: 0.3\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: [\n        {\n            seriesName: 'Temperature',\n            title: { text: 'Temperature (°C)', style: { color: '#FF5722' } },\n            labels: {\n                formatter: function(val) { return val.toFixed(1) + '°C'; },\n                style: { colors: '#FFFFFF' }\n            }\n        },\n        {\n            opposite: true,\n            seriesName: 'Humidity',\n            title: { text: 'Humidity (%)', style: { color: '#4CAF50' } },\n            labels: {\n                formatter: function(val) { return val.toFixed(1) + '%'; },\n                style: { colors: '#FFFFFF' }\n            }\n        }\n    ],\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: { colors: '#FFFFFF' }\n    }\n};"
+    },
+    "sources": [
+      {
+        "$timespan": {
+          "magnitude": "day",
+          "mode": "configurable",
+          "period": "latest",
+          "value": 1
+        },
+        "bucket": {
+          "backend": "mongodb",
+          "id": "environmental_data",
+          "mapping": "temperature",
+          "tags": {
+            "device": [],
+            "group": []
+          },
+          "user": "myusername"
+        },
+        "color": "#FF5722",
+        "name": "Temperature",
+        "source": "bucket",
+        "timespan": {
+          "magnitude": "hour",
+          "mode": "relative",
+          "period": "latest",
+          "value": 24
+        }
+      },
+      {
+        "$timespan": {
+          "magnitude": "day",
+          "mode": "configurable",
+          "period": "latest",
+          "value": 1
+        },
+        "bucket": {
+          "backend": "mongodb",
+          "id": "environmental_data",
+          "mapping": "humidity",
+          "tags": {
+            "device": [],
+            "group": []
+          },
+          "user": "myusername"
+        },
+        "color": "#4CAF50",
+        "name": "Humidity",
+        "source": "bucket",
+        "timespan": {
+          "magnitude": "hour",
+          "mode": "relative",
+          "period": "latest",
+          "value": 24
+        }
+      }
+    ],
+    "type": "apex_charts"
+  }
+}

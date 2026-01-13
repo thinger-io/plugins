@@ -146,7 +146,7 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
 registerProductTools({server, productsApi, userEvents});
 registerProductResources({server, productsApi});
 registerDevicesTools({server, devicesApi, userEvents});
-registerDashboardsTools({server, productsApi});
+registerDashboardsTools({server, productsApi, userEvents});
 registerSimulationTools({server, productsApi, userEvents});
 
 const app = express();
