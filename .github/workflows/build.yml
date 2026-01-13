@@ -161,6 +161,7 @@ jobs:
           jq -n \
             --arg plugin "${{ matrix.plugin }}" \
             --arg version "${{ env.version }}" \
+            --arg branch "${{ env.branch }}" \
             --arg commit "${{ github.sha }}" \
             --arg repository "${{ github.repository }}" \
             --arg server_url "${{ github.server_url }}" \
@@ -168,6 +169,7 @@ jobs:
             '{
               plugin: $plugin,
               version: $version,
+              branch: $branch,
               commit: $commit,
               repository: $repository,
               server_url: $server_url,
