@@ -1,84 +1,401 @@
 {
-  "product": "temperature_and_humidity_sensors",
-  "tab": 0,
-  "widget": {
-    "api": {},
-    "layout": {
-      "col": 0,
-      "row": 0,
-      "sizeX": 12,
-      "sizeY": 10
-    },
-    "panel": {
-      "color": "#1976D2",
-      "currentColor": "#1976D2",
-      "showFullscreen": true,
-      "showOffline": {
-        "type": "last_sample"
-      },
-      "subtitle": "Last 24 Hours - Temperature and Humidity Monitoring",
-      "title": "Temperature & Humidity",
-      "updateTs": 1730000000000
-    },
+  "property": "dashboard",
+  "value": {
     "properties": {
-      "options": "var options = {\n    series: series,\n    chart: {\n        background: '#1976D2',\n        toolbar: {\n            show: true,\n            tools: {\n                download: true,\n                selection: true,\n                zoom: true,\n                zoomin: true,\n                zoomout: true,\n                pan: true,\n                reset: true\n            },\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    grid: {\n        row: {\n            colors: ['#1E88E5', 'transparent'],\n            opacity: 0.3\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: [\n        {\n            seriesName: 'Temperature',\n            title: { text: 'Temperature (°C)', style: { color: '#FF5722' } },\n            labels: {\n                formatter: function(val) { return val.toFixed(1) + '°C'; },\n                style: { colors: '#FFFFFF' }\n            }\n        },\n        {\n            opposite: true,\n            seriesName: 'Humidity',\n            title: { text: 'Humidity (%)', style: { color: '#4CAF50' } },\n            labels: {\n                formatter: function(val) { return val.toFixed(1) + '%'; },\n                style: { colors: '#FFFFFF' }\n            }\n        }\n    ],\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: { colors: '#FFFFFF' }\n    }\n};"
+      "template": true
     },
-    "sources": [
+    "tabs": [
       {
-        "$timespan": {
-          "magnitude": "day",
-          "mode": "configurable",
-          "period": "latest",
-          "value": 1
-        },
-        "bucket": {
-          "backend": "mongodb",
-          "id": "environmental_data",
-          "mapping": "temperature",
-          "tags": {
-            "device": [],
-            "group": []
+        "icon": "fas fa-tachometer-alt",
+        "widgets": [
+          {
+            "layout": {
+              "col": 3,
+              "row": 12,
+              "sizeX": 1,
+              "sizeY": 6
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Humidity"
+            },
+            "properties": {
+              "color": "#0000ff",
+              "max": 100,
+              "min": 0,
+              "unit": "%Rh"
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "Hum_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#1abc9c",
+                "name": "Source 1",
+                "source": "bucket",
+                "timespan": {
+                  "mode": "latest"
+                }
+              }
+            ],
+            "type": "donutchart"
           },
-          "user": "myusername"
-        },
-        "color": "#FF5722",
-        "name": "Temperature",
-        "source": "bucket",
-        "timespan": {
-          "magnitude": "hour",
-          "mode": "relative",
-          "period": "latest",
-          "value": 24
-        }
-      },
-      {
-        "$timespan": {
-          "magnitude": "day",
-          "mode": "configurable",
-          "period": "latest",
-          "value": 1
-        },
-        "bucket": {
-          "backend": "mongodb",
-          "id": "environmental_data",
-          "mapping": "humidity",
-          "tags": {
-            "device": [],
-            "group": []
+          {
+            "layout": {
+              "col": 3,
+              "row": 6,
+              "sizeX": 1,
+              "sizeY": 6
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "External Temperature"
+            },
+            "properties": {
+              "color": "#ff0000",
+              "max": 100,
+              "min": 0,
+              "unit": "ºC"
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_DS",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#1abc9c",
+                "name": "Source 1",
+                "source": "bucket",
+                "timespan": {
+                  "mode": "latest"
+                }
+              }
+            ],
+            "type": "donutchart"
           },
-          "user": "myusername"
-        },
-        "color": "#4CAF50",
-        "name": "Humidity",
-        "source": "bucket",
-        "timespan": {
-          "magnitude": "hour",
-          "mode": "relative",
-          "period": "latest",
-          "value": 24
-        }
+          {
+            "layout": {
+              "col": 3,
+              "row": 0,
+              "sizeX": 1,
+              "sizeY": 6
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Internal Temperature"
+            },
+            "properties": {
+              "color": "#ff0000",
+              "max": 100,
+              "min": 0,
+              "unit": "ºC"
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#1abc9c",
+                "name": "Source 1",
+                "source": "bucket",
+                "timespan": {
+                  "mode": "latest"
+                }
+              }
+            ],
+            "type": "donutchart"
+          },
+          {
+            "layout": {
+              "col": 4,
+              "row": 0,
+              "sizeX": 2,
+              "sizeY": 12
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Last recorded information"
+            },
+            "properties": {
+              "source": "code",
+              "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Internal Temperature (°C)</th>\r\n        <th>Humidity (%RH)</th>\r\n        <th>External Temperature (°C)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.TempC_SHT || entry.temperature || '—' }}</td>\r\n        <td>{{ entry.Hum_SHT || entry.humidity || '—' }}</td>\r\n        <td>{{ entry.TempC_DS || entry.external_temp || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+            },
+            "sources": [
+              {
+                "aggregation": {},
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "ts",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#1abc9c",
+                "name": "ts",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              },
+              {
+                "aggregation": {},
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#ff0000",
+                "name": "internal temperature",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              },
+              {
+                "aggregation": {},
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "Hum_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#3498db",
+                "name": "humidity",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              },
+              {
+                "aggregation": {},
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_DS",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#9b59b6",
+                "name": "external Temperature",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              }
+            ],
+            "type": "html_time"
+          },
+          {
+            "layout": {
+              "col": 0,
+              "row": 12,
+              "sizeX": 3,
+              "sizeY": 6
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Historic Humidity"
+            },
+            "properties": {
+              "axis": true,
+              "fill": false,
+              "legend": true,
+              "multiple_axes": true
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "Hum_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#0000ff",
+                "name": "Humidity",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              }
+            ],
+            "type": "chart"
+          },
+          {
+            "layout": {
+              "col": 0,
+              "row": 0,
+              "sizeX": 3,
+              "sizeY": 12
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Historic Temperature"
+            },
+            "properties": {
+              "axis": true,
+              "fill": false,
+              "legend": true,
+              "multiple_axes": true
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_SHT",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#ff0000",
+                "name": "Internal Temperature",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              },
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "TempC_DS",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#e39f0d",
+                "name": "External Temperature",
+                "source": "bucket",
+                "timespan": {
+                  "magnitude": "hour",
+                  "mode": "relative",
+                  "period": "latest",
+                  "value": 24
+                }
+              }
+            ],
+            "type": "chart"
+          },
+          {
+            "layout": {
+              "col": 4,
+              "row": 12,
+              "sizeX": 2,
+              "sizeY": 6
+            },
+            "panel": {
+              "color": "#ffffff",
+              "currentColor": "#ffffff",
+              "showOffline": {
+                "type": "none"
+              },
+              "title": "Battery"
+            },
+            "properties": {
+              "color": "#f0e924",
+              "max": 4,
+              "min": 3,
+              "unit": "V"
+            },
+            "sources": [
+              {
+                "bucket": {
+                  "backend": "mongodb",
+                  "id": "lht65n_data",
+                  "mapping": "BatV",
+                  "tags": {
+                    "device": [],
+                    "group": []
+                  }
+                },
+                "color": "#1abc9c",
+                "name": "Source 1",
+                "source": "bucket",
+                "timespan": {
+                  "mode": "latest"
+                }
+              }
+            ],
+            "type": "donutchart"
+          }
+        ]
       }
-    ],
-    "type": "apex_charts"
+    ]
   }
 }
+

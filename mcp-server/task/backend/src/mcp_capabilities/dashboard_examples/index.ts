@@ -13,9 +13,6 @@ export interface DashboardExample {
 
 export const DASHBOARD_CATEGORIES = {
   'temperature_and_humidity_dashboard': 'temperature_and_humidity_dashboard.json',
-  'power_monitoring_dashboard': 'power_monitoring_dashboard.json',
-  'energy_consumption_dashboard': 'energy_consumption_dashboard.json',
-  'water_quality_dashboard': 'water_quality_dashboard.json'
 } as const;
 
 export type DashboardCategory = keyof typeof DASHBOARD_CATEGORIES;
