@@ -5,10 +5,26 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+export interface DashboardWidget {
+  type: string;  // 'donutchart', 'chart', 'html_time', 'apex_charts', etc.
+  layout: {
+    col: number;
+    row: number;
+    sizeX: number;
+    sizeY: number;
+  };
+  panel: any;
+  properties: any;
+  sources: any[];
+}
+
+export interface DashboardTab {
+  name: string;
+  widgets: DashboardWidget[];
+}
+
 export interface DashboardExample {
-  product: string;
-  tab: number;
-  widget: any;
+  tabs: DashboardTab[];
 }
 
 export const DASHBOARD_CATEGORIES = {

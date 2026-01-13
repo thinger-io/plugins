@@ -5,7 +5,15 @@ import { Log } from '../lib/log.js';
 import {apexChartWidgetSchema} from '../schemas.js';
 import { registerLoggedTool } from './register_logged_tools.js';
 import type { UserEvents } from '../lib/user-events.js';
-import { loadDashboardExample, getAvailableCategories, type DashboardCategory } from './dashboard_examples';
+import {
+  loadDashboardExample,
+  getAvailableCategories,
+  type DashboardCategory,
+  type DashboardExample
+} from './dashboard_examples';
+
+// Interface for complete dashboard structure
+type CompleteDashboard = DashboardExample;
 
 export function registerDashboardsTools(opts: {
   server: McpServer;
@@ -554,50 +562,38 @@ export function registerDashboardsTools(opts: {
       "## Available Categories",
       "",
       "### 1. temperature_and_humidity_dashboard",
-      "Example for monitoring temperature and humidity sensors.",
+      "Real-world example for monitoring temperature and humidity sensors.",
       "Features:",
-      "- Dual Y-axis configuration (temperature and humidity)",
-      "- 24-hour time range",
+      "- Multiple widget types: donutchart, chart, html_time",
+      "- 7 different widgets showing current and historical data",
+      "- Custom HTML table with time-series data",
       "- MongoDB bucket sources",
-      "- Smooth curve visualization",
-      "",
-      "### 2. power_monitoring_dashboard",
-      "Example for three-phase voltage monitoring in electrical systems.",
-      "Features:",
-      "- Three voltage phase series (Ph1-N, Ph2-N, Ph3-N)",
-      "- Grid visualization with custom colors",
-      "- Mixed backend sources (MongoDB and InfluxDB examples)",
-      "- Advanced toolbar with zoom and pan controls",
-      "",
-      "### 3. energy_consumption_dashboard",
-      "Example for tracking energy consumption over time.",
-      "Features:",
-      "- Area chart with gradient fill",
-      "- 7-day time range",
-      "- Energy units formatting (kWh)",
-      "- Real-time monitoring setup",
-      "",
-      "### 4. water_quality_dashboard",
-      "Example for water quality monitoring (pH, TDS, Turbidity).",
-      "Features:",
-      "- Triple Y-axis configuration",
-      "- Multiple water quality parameters",
-      "- Custom value ranges (pH: 0-14)",
-      "- Color-coded series for different metrics",
+      "- 24-hour time range for historical charts",
       "",
       "## Usage",
-      "Provide the category name to receive a complete, ready-to-use dashboard widget example.",
-      "The returned JSON can be used directly with the 'Add-Thinger-Product-Dashboard-ApexChart-Widget' tool",
-      "after customizing the product name, bucket IDs, and user-specific values.",
+      "Provide the category name to receive a complete, ready-to-use dashboard example.",
+      "The returned JSON includes the full dashboard structure with all tabs and widgets.",
+      "You should customize the bucket IDs ('id' field in bucket sources), user names ('user' field),",
+      "and data mappings ('mapping' field) to match your actual Thinger.io setup, then use",
+      "'Create-Or-Update-Product-Dashboard' to apply it to a product.",
       "",
       "## Input Parameters",
       "- **category** (string, required): One of the available dashboard categories listed above",
       "",
       "## Output",
-      "Returns a complete dashboard widget configuration in JSON format including:",
-      "- Product identifier",
-      "- Tab index",
-      "- Complete widget object with layout, panel, properties, and sources",
+      "Returns a complete dashboard configuration in JSON format following the Thinger.io structure:",
+      "```json",
+      "{",
+      "  \"tabs\": [",
+      "    {",
+      "      \"name\": \"Main\",",
+      "      \"widgets\": [...]",
+      "    }",
+      "  ]",
+      "}",
+      "```",
+      "This structure can be used directly with 'Create-Or-Update-Product-Dashboard' after",
+      "customizing bucket IDs, user names, and data mappings.",
       "",
       "## Example Usage",
       "```json",
@@ -608,19 +604,20 @@ export function registerDashboardsTools(opts: {
       "",
       "This will return a complete dashboard example that can be adapted to specific use cases.",
       "",
-      "## Notes",
-      "- Remember to update the 'user' field in bucket sources with the actual Thinger.io username",
-      "- Modify bucket IDs to match your actual data buckets",
-      "- Adjust the 'product' field to your target product identifier",
-      "- Customize colors, titles, and labels as needed",
-      "- Update timestamps (updateTs) to current values when using the examples"
+      "## Important Customization Notes",
+      "When using the examples, you MUST update these fields:",
+      "1. **bucket.id**: Change to your actual bucket identifier (e.g., 'lht65n_data' → 'your_bucket_id')",
+      "2. **bucket.mapping**: Update field names to match your device data structure",
+      "3. **panel.title**: Customize widget titles to match your use case",
+      "4. **properties**: Adjust min/max values, units, colors as needed",
+      "",
+      "**CRITICAL**: DO NOT modify the widget structure itself (layout, type, overall schema).",
+      "Only change data references and visual customizations. The examples show the exact",
+      "structure that Thinger.io expects - deviation from this structure may cause errors."
     ].join("\n"),
     inputSchema: {
       category: z.enum([
-        'temperature_and_humidity_dashboard',
-        'power_monitoring_dashboard',
-        'energy_consumption_dashboard',
-        'water_quality_dashboard'
+        'temperature_and_humidity_dashboard'
       ]).describe("The category of dashboard example to retrieve. Available categories: " + getAvailableCategories().join(', '))
     },
     handler: async ({ category }) => {
@@ -631,15 +628,23 @@ export function registerDashboardsTools(opts: {
         const responseText = [
           `# Dashboard Example: ${category}`,
           "",
-          "Below is a complete dashboard widget example for this category.",
-          "You can use this as a template with the 'Add-Thinger-Product-Dashboard-ApexChart-Widget' tool.",
+          "Below is a complete dashboard configuration example with all tabs and widgets.",
+          "This structure follows the exact format required by Thinger.io.",
           "",
-          "**Important**: Remember to customize the following fields before using:",
-          "- `product`: Set to your actual product identifier",
-          "- `user`: Update in all bucket sources to your Thinger.io username",
-          "- Bucket IDs: Update to match your actual data buckets",
-          "- `mapping`: Adjust field names to match your data structure",
-          "- `updateTs`: Update to current timestamp",
+          "## How to Use This Example:",
+          "",
+          "1. Copy the JSON structure below",
+          "2. Customize the data references:",
+          "   - **bucket.id**: Change 'lht65n_data' to your actual bucket identifier",
+          "   - **bucket.mapping**: Update field names (e.g., 'TempC_SHT', 'Hum_SHT') to match your data",
+          "   - **panel.title**: Adjust widget titles to your preference",
+          "   - **properties**: Modify min/max values, units, colors as needed",
+          "3. Use 'Create-Or-Update-Product-Dashboard' tool with:",
+          "   - product: your product ID",
+          "   - dashboard: the customized JSON below",
+          "",
+          "**CRITICAL**: DO NOT change the widget structure, types, or schema.",
+          "Only modify data references and visual properties.",
           "",
           "```json",
           JSON.stringify(example, null, 2),
@@ -658,6 +663,326 @@ export function registerDashboardsTools(opts: {
         const errorMessage = err instanceof Error
           ? `Error loading dashboard example: ${err.message}`
           : `Unexpected error: ${String(err)}`;
+        Log.error(errorMessage);
+
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: errorMessage
+            }
+          ]
+        };
+      }
+    }
+  });
+
+  // Register tool to create/update complete dashboard for a product
+  registerLoggedTool({
+    server,
+    userEvents,
+    name: "Create-Or-Update-Product-Dashboard",
+    title: "Create or Update Complete Product Dashboard",
+    description: [
+      "This MCP tool allows you to create or update a complete dashboard configuration for a Thinger.io product.",
+      "Unlike the widget-by-widget approach, this tool sets the entire dashboard structure at once,",
+      "making it ideal for AI-generated dashboards based on device characteristics.",
+      "",
+      "## When to Use This Tool",
+      "",
+      "Use this tool when you want to:",
+      "- Create a complete dashboard from scratch based on device data structure",
+      "- Replace an existing dashboard with a new AI-generated configuration",
+      "- Set up a dashboard with multiple tabs and widgets in a single operation",
+      "",
+      "## Dashboard Examples Available",
+      "",
+      "**IMPORTANT**: Before generating a custom dashboard, you should check if there are pre-configured",
+      "examples that match the device type you're working with. Use the 'Get-Dashboard-Example-By-Category'",
+      "tool to retrieve ready-to-use dashboard templates for common IoT device types:",
+      "",
+      "### Available Dashboard Categories:",
+      "- **temperature_and_humidity_dashboard**: For environmental sensors monitoring temperature and humidity",
+      "  (includes donutchart, chart, and html_time widgets)",
+      "",
+      "### Decision Guide for Dashboard Creation:",
+      "",
+      "1. **Device matches a category**: Use 'Get-Dashboard-Example-By-Category' to retrieve the example,",
+      "   customize it with actual product/bucket/user values, then use this tool to apply it.",
+      "",
+      "2. **Device is similar to a category**: Retrieve the closest example, adapt the widget configuration",
+      "   (change mappings, colors, titles, etc.), then use this tool to apply the modified dashboard.",
+      "",
+      "3. **Device doesn't match any category**: You have two options:",
+      "   - **Option A (Recommended)**: Skip dashboard creation. It's perfectly valid and acceptable to NOT create",
+      "     a dashboard if the device type doesn't warrant visualization or doesn't fit standard patterns.",
+      "   - **Option B**: Generate a custom generic dashboard based on the device's data structure, ensuring",
+      "     proper ApexCharts configuration and data source setup.",
+      "",
+      "**NOTE**: Not every device needs a dashboard. Simple devices, actuators, configuration-only devices,",
+      "or devices with non-visual data may not benefit from dashboard visualization.",
+      "",
+      "## Dashboard Structure",
+      "",
+      "The dashboard object must contain:",
+      "",
+      "### tabs (array, required)",
+      "Array of tab objects. Each tab represents a separate view in the dashboard.",
+      "Each tab object must have:",
+      "- **name** (string): Display name of the tab (e.g., 'Main', 'Details', 'History')",
+      "- **widgets** (array): Array of widget objects to display in this tab",
+      "",
+      "### Widget Structure",
+      "Each widget in the widgets array can be of ANY widget type supported by Thinger.io.",
+      "The structure and required fields vary depending on the widget type.",
+      "",
+      "**Common Widget Types:**",
+      "- **chart**: Basic line/area chart for time-series data",
+      "- **donutchart**: Circular gauge showing current value with min/max",
+      "- **html_time**: Custom HTML template with time-series data",
+      "- **apex_charts**: Advanced ApexCharts visualizations",
+      "- **text**: Simple text display",
+      "- **map**: Geographical map visualization",
+      "- and many more...",
+      "",
+      "**Common Widget Fields:**",
+      "- **type** (string): Widget type identifier (e.g., 'chart', 'donutchart', 'html_time')",
+      "- **layout** (object): Position and size in grid",
+      "  - col (number): Starting column (0-based)",
+      "  - row (number): Starting row (0-based)",
+      "  - sizeX (number): Width in grid units (max 12)",
+      "  - sizeY (number): Height in grid units",
+      "- **panel** (object): Visual configuration",
+      "  - color (string): Background color (hex)",
+      "  - currentColor (string): Current color",
+      "  - showOffline (object): Offline device handling",
+      "  - title (string): Widget title",
+      "- **properties** (object): Widget-specific configuration (varies by type)",
+      "- **sources** (array): Data sources for the widget",
+      "  - Each source defines where data comes from (bucket, device, etc.)",
+      "",
+      "**IMPORTANT**: The exact structure depends on the widget type. Always refer to the dashboard",
+      "examples to see the correct structure for each widget type. DO NOT invent or modify the",
+      "structure - copy it from the examples and only change data references (bucket IDs, mappings, etc.).",
+      "",
+      "## Input Parameters",
+      "",
+      "### 1. product (string, required)",
+      "Unique identifier of the Thinger.io product where the dashboard will be created/updated.",
+      "Example: 'temperature_sensors', 'smart_meters', 'water_quality_monitors'",
+      "",
+      "### 2. dashboard (object, required)",
+      "Complete dashboard configuration object containing tabs and widgets.",
+      "This will completely replace any existing dashboard for the product.",
+      "",
+      "## Behavior",
+      "",
+      "1. If the dashboard property doesn't exist for the product, it will be created automatically",
+      "2. If a dashboard already exists, it will be completely replaced with the new configuration",
+      "3. All tabs and widgets from the provided dashboard object will be set",
+      "",
+      "## Example Usage",
+      "",
+      "### Example 1: Simple Single-Tab Dashboard",
+      "```json",
+      "{",
+      "  \"product\": \"my_temperature_sensors\",",
+      "  \"dashboard\": {",
+      "    \"tabs\": [",
+      "      {",
+      "        \"name\": \"Main\",",
+      "        \"widgets\": [",
+      "          {",
+      "            \"api\": {},",
+      "            \"layout\": {",
+      "              \"col\": 0,",
+      "              \"row\": 0,",
+      "              \"sizeX\": 12,",
+      "              \"sizeY\": 8",
+      "            },",
+      "            \"panel\": {",
+      "              \"color\": \"#1976D2\",",
+      "              \"currentColor\": \"#1976D2\",",
+      "              \"showFullscreen\": true,",
+      "              \"showOffline\": { \"type\": \"last_sample\" },",
+      "              \"subtitle\": \"Last 24 Hours\",",
+      "              \"title\": \"Temperature Monitoring\",",
+      "              \"updateTs\": 1736784000000",
+      "            },",
+      "            \"properties\": {",
+      "              \"options\": \"var options = {\\n  series: series,\\n  chart: { background: '#1976D2', toolbar: { show: true } },\\n  xaxis: { type: 'datetime' }\\n};\"",
+      "            },",
+      "            \"sources\": [",
+      "              {",
+      "                \"bucket\": {",
+      "                  \"backend\": \"mongodb\",",
+      "                  \"id\": \"temp_data\",",
+      "                  \"mapping\": \"temperature\",",
+      "                  \"tags\": { \"device\": [], \"group\": [] },",
+      "                  \"user\": \"myuser\"",
+      "                },",
+      "                \"color\": \"#FF5722\",",
+      "                \"name\": \"Temperature\",",
+      "                \"source\": \"bucket\",",
+      "                \"timespan\": {",
+      "                  \"magnitude\": \"hour\",",
+      "                  \"mode\": \"relative\",",
+      "                  \"period\": \"latest\",",
+      "                  \"value\": 24",
+      "                }",
+      "              }",
+      "            ],",
+      "            \"type\": \"apex_charts\"",
+      "          }",
+      "        ]",
+      "      }",
+      "    ]",
+      "  }",
+      "}",
+      "```",
+      "",
+      "### Example 2: Multi-Tab Dashboard",
+      "```json",
+      "{",
+      "  \"product\": \"my_smart_sensors\",",
+      "  \"dashboard\": {",
+      "    \"tabs\": [",
+      "      {",
+      "        \"name\": \"Overview\",",
+      "        \"widgets\": [",
+      "          // ... widget configuration ...",
+      "        ]",
+      "      },",
+      "      {",
+      "        \"name\": \"Detailed Metrics\",",
+      "        \"widgets\": [",
+      "          // ... widget configuration ...",
+      "        ]",
+      "      },",
+      "      {",
+      "        \"name\": \"Historical Analysis\",",
+      "        \"widgets\": [",
+      "          // ... widget configuration ...",
+      "        ]",
+      "      }",
+      "    ]",
+      "  }",
+      "}",
+      "```",
+      "",
+      "## Workflow Recommendation",
+      "",
+      "### For Devices Matching Example Categories:",
+      "1. Use 'Get-Dashboard-Example-By-Category' to retrieve the template",
+      "2. Customize the returned JSON:",
+      "   - Update 'product' field",
+      "   - Update 'user' fields in all sources",
+      "   - Update bucket IDs to match actual buckets",
+      "   - Update field mappings to match device data structure",
+      "   - Update colors, titles, and labels as needed",
+      "3. Use this tool ('Create-Or-Update-Product-Dashboard') to apply the dashboard",
+      "",
+      "### For Custom/Generic Devices:",
+      "1. Analyze the device data structure",
+      "2. Decide if a dashboard is necessary",
+      "3. If yes, generate appropriate dashboard configuration",
+      "4. Use this tool to apply the dashboard",
+      "",
+      "## Important Notes",
+      "",
+      "- This tool completely replaces any existing dashboard - use with caution",
+      "- Ensure all widget configurations are valid before applying",
+      "- The 'options' field in properties must be valid JavaScript code as a string",
+      "- All timestamps should be in milliseconds (use current timestamp)",
+      "- Grid layout has 12 columns maximum width",
+      "- Ensure bucket IDs, user names, and mappings match your actual Thinger.io setup",
+      "- **Remember**: It's perfectly acceptable to NOT create a dashboard if it doesn't add value",
+      "",
+      "## Best Practices",
+      "",
+      "1. **Reuse examples when possible**: Don't reinvent the wheel - adapt existing examples",
+      "2. **Validate data structure**: Ensure mappings match actual device data fields",
+      "3. **Use appropriate timespans**: Match time ranges to data update frequency",
+      "4. **Choose readable colors**: Ensure good contrast and distinct series colors",
+      "5. **Keep it simple**: Don't over-complicate dashboards - focus on key metrics",
+      "6. **Consider user experience**: Organize widgets logically, use clear titles",
+      "7. **Test incrementally**: When in doubt, start with a simple single-widget dashboard"
+    ].join("\n"),
+    inputSchema: {
+      product: z.string().min(1).describe("ID of the Product where the dashboard will be created/updated"),
+      dashboard: z.object({
+        tabs: z.array(z.object({
+          name: z.string().describe("Name of the tab (e.g., 'Main', 'Overview', 'History')"),
+          widgets: z.array(z.any()).describe("Array of widgets in this tab - can be any widget type (donutchart, chart, html_time, apex_charts, etc.)")
+        })).min(1).describe("Array of dashboard tabs")
+      }).describe("Complete dashboard configuration with tabs and widgets. Structure must match Thinger.io dashboard format exactly as shown in the examples.")
+    },
+    handler: async ({ product, dashboard }: { product: string; dashboard: CompleteDashboard }) => {
+      try {
+        // Check if dashboard property exists, if not create it first
+        const dashboardExists = await isDashBoardPropertyCreated(product);
+
+        if (!dashboardExists) {
+          Log.log(`Dashboard property does not exist for product='${product}', creating it now`);
+          // We'll create the property with the full dashboard directly
+          const property = new PropertyCreate();
+          property.property = "dashboard";
+          property.name = "dashboard";
+          property.value = dashboard;
+
+          await productsApi.createProperty(thingerUser, product, property);
+          Log.log(`Successfully created complete dashboard for user='${thingerUser}' product='${product}'`);
+
+          const summaryText = [
+            `# Dashboard Created Successfully`,
+            "",
+            `Created a new dashboard for product '${product}'.`,
+            "",
+            "The dashboard is now active and ready to visualize data from your devices."
+          ].join("\n");
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: summaryText
+              }
+            ]
+          };
+        } else {
+          // Dashboard exists, update it completely
+          Log.log(`Updating complete dashboard for product='${product}'`);
+
+          const propertyUpdate = new PropertyUpdate();
+          propertyUpdate.name = "dashboard";
+          propertyUpdate.property = "dashboard";
+          propertyUpdate.value = dashboard;
+
+          await productsApi.updateProperty(thingerUser, product, "dashboard", propertyUpdate);
+          Log.log(`Successfully updated complete dashboard for product='${product}'`);
+
+          const summaryText = [
+            `# Dashboard Updated Successfully`,
+            "",
+            `Updated the dashboard for product '${product}'.`,
+            "",
+            "The previous dashboard configuration has been completely replaced with the new one."
+          ].join("\n");
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: summaryText
+              }
+            ]
+          };
+        }
+      } catch (err: unknown) {
+        const errorMessage = err instanceof ApiException
+          ? `Thinger.io API Error: ${err.body ?? err.message}`
+          : `Unexpected error: ${err instanceof Error ? err.message : String(err)}`;
         Log.error(errorMessage);
 
         return {
