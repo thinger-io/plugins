@@ -10,7 +10,7 @@ import {
   getAvailableCategories,
   type DashboardCategory,
   type DashboardExample
-} from './dashboard_examples';
+} from './dashboard_examples/index.js';
 
 // Interface for complete dashboard structure
 type CompleteDashboard = DashboardExample;
