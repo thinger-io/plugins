@@ -1,0 +1,490 @@
+{
+  "name": "milesight_am102",
+  "version": "1.0.0",
+  "description": "Milesight AM102 2-in-1 IAQ Sensor for temperature and humidity monitoring with E-ink display",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "milesight-iot-am102"
+  },
+  "metadata": {
+    "name": "Milesight AM102",
+    "description": "Milesight AM102 2-in-1 IAQ Sensor for temperature and humidity monitoring with E-ink display",
+    "image": "assets/am102.png",
+    "category": "devices",
+    "vendor": "milesight-iot"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Milesight AM102 2-in-1 IAQ Sensor for temperature and humidity monitoring with E-ink display",
+        "enabled": true,
+        "name": "Milesight AM102",
+        "product": "milesight_am102",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "am102-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "milesight_am102_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "temperature",
+                "humidity",
+                "telemetry"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n\nfunction decodeUplink(input) {\n  var res = Decoder(input.bytes, input.fPort);\n  if (res.error) {\n    return {\n      errors: [res.error],\n    };\n  }\n  return {\n    data: res,\n  };\n}\n/**\n * Payload Decoder\n *\n * Copyright 2025 Milesight IoT\n *\n * @product AM102\n */\nvar RAW_VALUE = 0x00;\n\n/* eslint no-redeclare: \"off\" */\n/* eslint-disable */\n\n\n// The Things Network\nfunction Decoder(bytes, port) {\n    return milesightDeviceDecode(bytes);\n}\n/* eslint-enable */\n\nfunction milesightDeviceDecode(bytes) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length; ) {\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n\n        // IPSO VERSION\n        if (channel_id === 0xff && channel_type === 0x01) {\n            decoded.ipso_version = readProtocolVersion(bytes[i]);\n            i += 1;\n        }\n        // HARDWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x09) {\n            decoded.hardware_version = readHardwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // FIRMWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x0a) {\n            decoded.firmware_version = readFirmwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // TSL VERSION\n        else if (channel_id === 0xff && channel_type === 0xff) {\n            decoded.tsl_version = readTslVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // SERIAL NUMBER\n        else if (channel_id === 0xff && channel_type === 0x16) {\n            decoded.sn = readSerialNumber(bytes.slice(i, i + 8));\n            i += 8;\n        }\n        // LORAWAN CLASS TYPE\n        else if (channel_id === 0xff && channel_type === 0x0f) {\n            decoded.lorawan_class = readLoRaWANClass(bytes[i]);\n            i += 1;\n        }\n        // RESET EVENT\n        else if (channel_id === 0xff && channel_type === 0xfe) {\n            decoded.reset_event = readResetEvent(1);\n            i += 1;\n        }\n        // DEVICE STATUS\n        else if (channel_id === 0xff && channel_type === 0x0b) {\n            decoded.device_status = readDeviceStatus(1);\n            i += 1;\n        }\n\n        // BATTERY\n        else if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = readUInt8(bytes[i]);\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            // °C\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        }\n        // HUMIDITY\n        else if (channel_id === 0x04 && channel_type === 0x68) {\n            decoded.humidity = readUInt8(bytes[i]) / 2;\n            i += 1;\n        }\n        // HISTORY DATA\n        else if (channel_id === 0x20 && channel_type === 0xce) {\n            var data = {};\n            data.timestamp = readUInt32LE(bytes.slice(i, i + 4));\n            data.temperature = readInt16LE(bytes.slice(i + 4, i + 6)) / 10;\n            data.humidity = readUInt8(bytes[i + 6]) / 2;\n            i += 7;\n            decoded.history = decoded.history || [];\n            decoded.history.push(data);\n        }\n        // SENSOR ENABLE\n        else if (channel_id === 0xff && channel_type === 0x18) {\n            // skip 1 byte\n            var data = readUInt8(bytes[i + 1]);\n            var sensor_bit_offset = { temperature: 0, humidity: 1 };\n            decoded.sensor_enable = {};\n            for (var key in sensor_bit_offset) {\n                decoded.sensor_enable[key] = readEnableStatus((data >> sensor_bit_offset[key]) & 0x01);\n            }\n            i += 2;\n        }\n        // DOWNLINK RESPONSE\n        else if (channel_id === 0xfe || channel_id === 0xff) {\n            var result = handle_downlink_response(channel_type, bytes, i);\n            decoded = Object.assign(decoded, result.data);\n            i = result.offset;\n        } else {\n            break;\n        }\n    }\n\n    return decoded;\n}\n\nfunction handle_downlink_response(channel_type, bytes, offset) {\n    var decoded = {};\n\n    switch (channel_type) {\n        case 0x03:\n            decoded.report_interval = readUInt16LE(bytes.slice(offset, offset + 2));\n            offset += 2;\n            break;\n        case 0x06:\n            decoded.temperature_alarm_config = {};\n            var condition = readUInt8(bytes[offset]);\n            decoded.temperature_alarm_config.condition = readMathCondition(condition & 0x07);\n            decoded.temperature_alarm_config.threshold_min = readInt16LE(bytes.slice(offset + 1, offset + 3)) / 10;\n            decoded.temperature_alarm_config.threshold_max = readInt16LE(bytes.slice(offset + 3, offset + 5)) / 10;\n            // skip 4 bytes\n            offset += 9;\n            break;\n        case 0x10:\n            decoded.reboot = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x11:\n            decoded.timestamp = readUInt32LE(bytes.slice(offset, offset + 4));\n            offset += 4;\n            break;\n        case 0x17:\n            decoded.time_zone = readTimeZone(readInt16LE(bytes.slice(offset, offset + 2)));\n            offset += 2;\n            break;\n        case 0x27:\n            decoded.clear_history = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x2d:\n            decoded.screen_display_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x2f:\n            decoded.led_indicator_mode = readLedIndicatorStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x3a:\n            var num = readUInt8(bytes[offset]);\n            offset += 1;\n            for (var i = 0; i < num; i++) {\n                var report_schedule_config = {};\n                report_schedule_config.start_time = readUInt8(bytes[offset]) / 10;\n                report_schedule_config.end_time = readUInt8(bytes[offset + 1]) / 10;\n                report_schedule_config.report_interval = readUInt16LE(bytes.slice(offset + 2, offset + 4));\n                // skip 1 byte\n                report_schedule_config.collection_interval = readUInt8(bytes[offset + 5]);\n                offset += 6;\n                decoded.report_schedule_config = decoded.report_schedule_config || [];\n                decoded.report_schedule_config.push(report_schedule_config);\n            }\n            break;\n        case 0x3b:\n            decoded.time_sync_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x56:\n            decoded.screen_intelligent_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x57:\n            decoded.clear_report_schedule = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x59:\n            decoded.reset_battery = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x5a:\n            decoded.screen_refresh_interval = readUInt16LE(bytes.slice(offset, offset + 2));\n            offset += 2;\n            break;\n        case 0x68:\n            decoded.history_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x69:\n            decoded.retransmit_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x6a:\n            var interval_type = readUInt8(bytes[offset]);\n            if (interval_type === 0) {\n                decoded.retransmit_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            } else if (interval_type === 1) {\n                decoded.resend_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            }\n            offset += 3;\n            break;\n        case 0x75:\n            decoded.hibernate_config = {};\n            decoded.hibernate_config.enable = readEnableStatus(bytes[offset]);\n            decoded.hibernate_config.lora_uplink_enable = readEnableStatus(bytes[offset + 1]);\n            decoded.hibernate_config.start_time = readUInt16LE(bytes.slice(offset + 2, offset + 4));\n            decoded.hibernate_config.end_time = readUInt16LE(bytes.slice(offset + 4, offset + 6));\n            decoded.hibernate_config.weekdays = {};\n            var data = readUInt8(bytes[offset + 6]);\n            var weekday_bit_offset = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };\n            for (var key in weekday_bit_offset) {\n                decoded.hibernate_config.weekdays[key] = readEnableStatus((data >> weekday_bit_offset[key]) & 0x01);\n            }\n            offset += 7;\n            break;\n        case 0x85:\n            decoded.screen_display_time_enable = readEnableStatus(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x86:\n            decoded.screen_last_refresh_interval = readUInt8(bytes[offset]);\n            offset += 1;\n            break;\n        default:\n            throw new Error(\"unknown downlink response\");\n    }\n\n    return { data: decoded, offset: offset };\n}\n\nfunction readProtocolVersion(bytes) {\n    var major = (bytes & 0xf0) >> 4;\n    var minor = bytes & 0x0f;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readHardwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff) >> 4;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readFirmwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff).toString(16);\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readTslVersion(bytes) {\n    var major = bytes[0] & 0xff;\n    var minor = bytes[1] & 0xff;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readSerialNumber(bytes) {\n    var temp = [];\n    for (var idx = 0; idx < bytes.length; idx++) {\n        temp.push((\"0\" + (bytes[idx] & 0xff).toString(16)).slice(-2));\n    }\n    return temp.join(\"\");\n}\n\nfunction readLoRaWANClass(type) {\n    var class_map = {\n        0: \"Class A\",\n        1: \"Class B\",\n        2: \"Class C\",\n        3: \"Class CtoB\",\n    };\n    return getValue(class_map, type);\n}\n\nfunction readResetEvent(status) {\n    var status_map = { 0: \"normal\", 1: \"reset\" };\n    return getValue(status_map, status);\n}\n\nfunction readDeviceStatus(status) {\n    var status_map = { 0: \"off\", 1: \"on\" };\n    return getValue(status_map, status);\n}\n\nfunction readYesNoStatus(status) {\n    var status_map = { 0: \"no\", 1: \"yes\" };\n    return getValue(status_map, status);\n}\n\nfunction readEnableStatus(status) {\n    var status_map = { 0: \"disable\", 1: \"enable\" };\n    return getValue(status_map, status);\n}\n\nfunction readTimeZone(time_zone) {\n    var timezone_map = { \"-120\": \"UTC-12\", \"-110\": \"UTC-11\", \"-100\": \"UTC-10\", \"-95\": \"UTC-9:30\", \"-90\": \"UTC-9\", \"-80\": \"UTC-8\", \"-70\": \"UTC-7\", \"-60\": \"UTC-6\", \"-50\": \"UTC-5\", \"-40\": \"UTC-4\", \"-35\": \"UTC-3:30\", \"-30\": \"UTC-3\", \"-20\": \"UTC-2\", \"-10\": \"UTC-1\", 0: \"UTC\", 10: \"UTC+1\", 20: \"UTC+2\", 30: \"UTC+3\", 35: \"UTC+3:30\", 40: \"UTC+4\", 45: \"UTC+4:30\", 50: \"UTC+5\", 55: \"UTC+5:30\", 57: \"UTC+5:45\", 60: \"UTC+6\", 65: \"UTC+6:30\", 70: \"UTC+7\", 80: \"UTC+8\", 90: \"UTC+9\", 95: \"UTC+9:30\", 100: \"UTC+10\", 105: \"UTC+10:30\", 110: \"UTC+11\", 120: \"UTC+12\", 127: \"UTC+12:45\", 130: \"UTC+13\", 140: \"UTC+14\" };\n    return getValue(timezone_map, time_zone);\n}\n\nfunction readLedIndicatorStatus(status) {\n    var status_map = { 0: \"off\", 2: \"blink\" };\n    return getValue(status_map, status);\n}\n\nfunction readMathCondition(type) {\n    var condition_map = { 0: \"disable\", 1: \"below\", 2: \"above\", 3: \"between\", 4: \"outside\" };\n    return getValue(condition_map, type);\n}\n\n/* eslint-disable */\nfunction readUInt8(bytes) {\n    return bytes & 0xff;\n}\n\nfunction readInt8(bytes) {\n    var ref = readUInt8(bytes);\n    return ref > 0x7f ? ref - 0x100 : ref;\n}\n\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}\n\nfunction readUInt32LE(bytes) {\n    var value = (bytes[3] << 24) + (bytes[2] << 16) + (bytes[1] << 8) + bytes[0];\n    return (value & 0xffffffff) >>> 0;\n}\n\nfunction readInt32LE(bytes) {\n    var ref = readUInt32LE(bytes);\n    return ref > 0x7fffffff ? ref - 0x100000000 : ref;\n}\n\nfunction getValue(map, key) {\n    if (RAW_VALUE) return key;\n\n    var value = map[key];\n    if (!value) value = \"unknown\";\n    return value;\n}\n\n//if (!Object.assign) {\n    Object.defineProperty(Object, \"assign\", {\n        enumerable: false,\n        configurable: true,\n        writable: true,\n        value: function (target) {\n            \"use strict\";\n            if (target == null) {\n                throw new TypeError(\"Cannot convert first argument to object\");\n            }\n\n            var to = Object(target);\n            for (var i = 1; i < arguments.length; i++) {\n                var nextSource = arguments[i];\n                if (nextSource == null) {\n                    continue;\n                }\n                nextSource = Object(nextSource);\n\n                var keysArray = Object.keys(Object(nextSource));\n                for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {\n                    var nextKey = keysArray[nextIndex];\n                    var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);\n                    if (desc !== undefined && desc.enumerable) {\n                        // concat array\n                        if (Array.isArray(to[nextKey]) && Array.isArray(nextSource[nextKey])) {\n                            to[nextKey] = to[nextKey].concat(nextSource[nextKey]);\n                        } else {\n                            to[nextKey] = nextSource[nextKey];\n                        }\n                    }\n                }\n            }\n            return to;\n        },\n    });\n//}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "milesight_am102_battery": {
+              "data": {
+                "payload": "{{payload.metadata.battery}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "milesight_am102_humidity": {
+              "data": {
+                "payload": "{{payload.decodedPayload.humidity}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "milesight_am102_temperature": {
+              "data": {
+                "payload": "{{payload.decodedPayload.temperature}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 50,
+                          "min": -10,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#0000ff",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%RH"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#f0e924",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f0e924",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 9
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Temperature"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 9,
+                          "sizeX": 3,
+                          "sizeY": 9
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Humidity"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Recorded Information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Temperature (°C)</th>\r\n        <th>Humidity (%RH)</th>\r\n        <th>Battery</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.temperature || '—' }}</td>\r\n        <td>{{ entry.humidity || '—' }}</td>\r\n        <td>{{ entry.battery || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_am102_data_bucket",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f0e924",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
