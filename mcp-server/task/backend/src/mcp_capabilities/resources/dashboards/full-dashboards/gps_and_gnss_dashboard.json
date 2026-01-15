@@ -1,0 +1,494 @@
+{
+  "tabs": [
+    {
+      "icon": "fas fa-tachometer-alt",
+      "widgets": [
+        {
+          "layout": {
+            "col": 0,
+            "row": 0,
+            "sizeX": 6,
+            "sizeY": 12
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Location"
+          },
+          "properties": {
+            "center": true,
+            "hideControls": false,
+            "latitude": 0,
+            "longitude": 0,
+            "mapType": "roadmap",
+            "waypoints": true,
+            "zoom": 8
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": {
+                  "latitude": "lat",
+                  "longitude": "lng"
+                },
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Location",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "latest",
+                "period": "latest",
+                "value": 6
+              }
+            }
+          ],
+          "type": "map"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 12,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Latidude"
+          },
+          "properties": {
+            "decimalPlaces": 2,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#1E313E",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#1E313E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#1E313E",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-bold",
+            "unit": "º",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "lat",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 2,
+            "row": 12,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Longitude"
+          },
+          "properties": {
+            "decimalPlaces": 2,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#1E313E",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#1E313E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#1E313E",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-bold",
+            "unit": "º",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "lng",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 4,
+            "row": 12,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Altitude"
+          },
+          "properties": {
+            "decimalPlaces": 2,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#1E313E",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#1E313E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#1E313E",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-bold",
+            "unit": "m",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "alt",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 4,
+            "row": 18,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Movement Speed"
+          },
+          "properties": {
+            "color": "#1E313E",
+            "gradient": true,
+            "max": 200,
+            "min": 0,
+            "unit": "km/h"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "speed",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "gauge"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 18,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Direction"
+          },
+          "properties": {
+            "color": "#00aa00",
+            "gradient": true,
+            "majorTicks": 20,
+            "max": 360,
+            "min": 0,
+            "plateColor": "#ffffff",
+            "showValue": true,
+            "size": "75px",
+            "textColor": "#1E313E",
+            "tickColor": "#000000",
+            "unit": "º"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "heading",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "tachometer"
+        },
+        {
+          "layout": {
+            "col": 2,
+            "row": 24,
+            "sizeX": 2,
+            "sizeY": 5
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Movement"
+          },
+          "properties": {
+            "color": "#00aa00",
+            "colors": [
+              {
+                "blink": false,
+                "color": "#ff0000",
+                "max": 0,
+                "min": 0
+              },
+              {
+                "blink": false,
+                "color": "#00ff00",
+                "max": 10,
+                "min": 1
+              }
+            ],
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#1E313E",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#1E313E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "size": "75px",
+            "textAlign": "center",
+            "textColor": "#000000",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-light",
+            "unit": "",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "activity",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "device_property": {
+                "device": "gps_24E127749E227069",
+                "property_pattern": "true"
+              },
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "led"
+        },
+        {
+          "layout": {
+            "col": 2,
+            "row": 18,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#ffffff",
+            "currentColor": "#ffffff",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Battery"
+          },
+          "properties": {
+            "color": "#29d134",
+            "gradient": false,
+            "icon": "",
+            "iconSize": "",
+            "max": 100,
+            "min": 0,
+            "unit": "%"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "gps",
+                "mapping": "battery",
+                "tags": {
+                  "device": [
+                    "gps_24E127749E227069"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1abc9c",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              }
+            }
+          ],
+          "type": "gauge"
+        }
+      ]
+    }
+  ]
+}

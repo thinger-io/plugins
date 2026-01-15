@@ -28,6 +28,11 @@ const RESOURCES: Record<string, ResourceMetadata> = {
     path: 'dashboards/full-dashboards/temperature_and_humidity_dashboard.json',
     description: 'Complete dashboard example for temperature and humidity monitoring'
   },
+  'dashboard-gps-gnss-examples': {
+    uri: 'thinger://examples/dashboards/gps-gnss',
+    path: 'dashboards/full-dashboards/gps_and_gnss_dashboard.json',
+    description: 'Complete dashboard example for GPS and GNSS tracking with location, speed, and direction'
+  },
 
   // Product examples
   'property-examples': {
@@ -77,6 +82,7 @@ export const EXAMPLE_CATEGORIES = {
 
   // Dashboard examples
   'dashboard-full-temperature-humidity': 'dashboards/full-dashboards/temperature_and_humidity_dashboard.json',
+  'dashboard-full-gps-gnss': 'dashboards/full-dashboards/gps_and_gnss_dashboard.json',
   'dashboard-apex-widgets': 'dashboards/widgets/apex-chart-examples.json',
 } as const;
 
