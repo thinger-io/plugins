@@ -1,0 +1,472 @@
+{
+  "name": "restotracker_scd18",
+  "version": "1.0.0",
+  "description": "Ultra-low power consumption, indoor&outdoor (BLE&WIFI&GPS) LoRaWAN Tracker - SCD18 model",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "restotracker-scd18"
+  },
+  "metadata": {
+    "name": "RestoTracker SCD18",
+    "description": "Ultra-low power consumption, indoor&outdoor (BLE&WIFI&GPS) LoRaWAN Tracker - SCD18 model",
+    "image": "assets/scd18.jpeg",
+    "category": "devices",
+    "vendor": "restotracker"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Ultra-low power consumption, indoor&outdoor (BLE&WIFI&GPS) LoRaWAN Tracker - SCD18 model",
+        "enabled": true,
+        "name": "RestoTracker SCD18",
+        "product": "restotracker_scd18",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "restotracker_scd18_autoprovision": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "scd18-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "restotracker_scd18_location_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 6,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar packet_type = [\"heart\",\"fix_success\",\"fix_false\",\"sys_close_info\",\"shake_info\",\"idle_info\",\"demolish_alarm\",\"event\",\"battery_consume\",\"config\",\"store_data\",\"limit_gps_data\"];\nvar dev_mode = [\"standby mode\",\"period mode\",\"timing mode\",\"motion mode\"];\nvar dev_fix_type = [\"work_mode_fix\",\"down_request_fix\"];\nfunction substringBytes(bytes, start, len)\n{\n\tvar char = [];\n\tfor(var i = 0; i < len; i++)\n\t{\n\t\tchar.push(\"0x\"+ bytes[start+i].toString(16) < 0X10 ? (\"0\"+bytes[start+i].toString(16)) : bytes[start+i].toString(16) );\n\t}\n\treturn char.join(\"\");\n}\nfunction BytestoInt(bytes,start) {\n    var value = ((bytes[start] << 24) | (bytes[start+1] << 16) | (bytes[start+2] << 8) | (bytes[start+3]));\n    return value;\n}\nfunction Decoder(bytes, port)\n{\n\tvar dev_info = {};\n\tdev_info.pack_type = packet_type[port-1];\n\t//common frame head\n\tif(port<=10)\n\t{\n\t\tdev_info.work_mode = dev_mode[bytes[0]&0x03];\n\t\tdev_info.low_power_state = (bytes[0]>>2)&0x01;\n\t\tdev_info.demolish_state = (bytes[0]>>3)&0x01;\n\t\tdev_info.idle_state = (bytes[0]>>4)&0x01;\n\t\tdev_info.motion_state = (bytes[0]>>5)&0x01;\n\t\tif(port==2 || port ==3)\n\t\t{\n\t\t\tdev_info.fix_type = dev_fix_type[(bytes[0]>>6)&0x01];\n\t\t}\n\t\t\n\t\tif(bytes[1]>0x80)\n\t\t{\n\t\t\tdev_info.ic_temperature = bytes[1] - 0x100 + \"°C\";\n\t\t}\n\t\telse\n\t\t{\n\t\t\tdev_info.ic_temperature = bytes[1] + \"°C\";\n\t\t}\n\n\t\tdev_info.lorawan_downlink_count = bytes[2]&0x0f;\n\t\tdev_info.battery_voltage = (22+((bytes[2]>>4)&0x0f))/10 + \"V\";\n\t}\n\tif(port == 1)\n\t{\n\t\tvar restart_reason = [\"power_restart\",\"ble_cmd_restart\",\"lorawan_cmd_restart\",\"switch_off_mode_restart\"];\n\t\tdev_info.last_restart_reason = restart_reason[bytes[3]];\n\n\t\t\n\t\tver_major = (bytes[4]>>6)&0x03;\n\t\tver_mijor = (bytes[4]>>4)&0x03;\n\t\tver_patch = bytes[4]&0x0f;\n\t\tdev_info.firmware_ver = \"V\" + ver_major+\".\"+ver_mijor+\".\"+ver_patch;\n\n\t\tdev_info.motion_count = BytestoInt(bytes,5);\n\t}\n\telse if(port == 2)\n\t{\n\t\tvar  fix_tech = [\"wifi\",\"ble\",\"gps\"];\n\t\tvar parse_len = 3; // common head is 3 byte\n\t\tvar datas = [];\n\t\ttech = bytes[parse_len++];\n\t\tdev_info.fix_tech = fix_tech[tech];\n\n\t\tyear = bytes[parse_len]*256 + bytes[parse_len+1];\n\t\tparse_len += 2;\n\t\tmon = bytes[parse_len++];\n\t\tdays = bytes[parse_len++];\n\t\thour = bytes[parse_len++];\n\t\tminute = bytes[parse_len++];\n\t\tsec = bytes[parse_len++];\n\t\ttimezone = bytes[parse_len++];\n\n\t\tif(timezone>0x80)\n\t\t{\n\t\t\tdev_info.utc_time =  year + \"-\" + mon + \"-\" + days + \" \" + hour + \":\" + minute + \":\" + sec + \"  TZ:\" +  (timezone-0x100);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tdev_info.utc_time =  year + \"-\" + mon + \"-\" + days + \" \" + hour + \":\" + minute + \":\" + sec + \"  TZ:\" + timezone;\n\t\t}\n\t\tdatalen =  bytes[parse_len++];\n\n\t\tif(tech==0 || tech ==1)\n\t\t{\n\t\t\tfor(var i=0 ; i<(datalen/7) ; i++)\n\t\t\t{\n\t\t\t  var data = {};\n\t\t\t\tdata.mac = substringBytes(bytes, parse_len, 6);\n\t\t\t\tparse_len += 6;\n\t\t\t\tdata.rssi = bytes[parse_len++]-256 +\"dBm\";\n\t\t\t\tdatas.push(data);\n\t\t\t}\n\t\t\tdev_info.mac_data = datas;\n\t\t}\n\t\telse\n\t\t{\n\t\t\tlat =BytestoInt(bytes,parse_len);\n\t\t\tparse_len += 4;\n\t\t\tlon =BytestoInt(bytes,parse_len);\n\t\t\tparse_len += 4;\n\n\t\t\tif(lat>0x80000000)\n\t\t\t\tlat = lat-0x100000000;\n\t\t\tif(lon>0x80000000)\n\t\t\t\tlon = lon-0x100000000;\n\n\t\t\tdev_info.lat = lat/10000000;\n\t\t\tdev_info.lon = lon/10000000;\n\t\t\tdev_info.pdop = bytes[parse_len] /10;\n\t\t}\n\t}\n\telse if(port == 3)\n\t{\n\n\t\tvar fix_false_reason = [\"wifi_fix_time_timeout\",\"wifi_fix_tech_timeout\",\"wifi_module_nofind\",\"ble_fix_time_timeout\",\"ble_fix_tech_timeout\",\"ble_adv\",\"gps_no_budget\",\"gps_coarse_acc_timeout\",\"gps_fine_acc_timeout\",\"gps_fix_timeout\",\"gps_assistnow_timeout\",\"gps_cold_start_timeout\",\"down_request_fix_interrupt\",\"motion_start_fix_false_by_motion_end\",\"motion_end_fix_false_by_motion_start\"];\n\t\tvar parse_len = 3; \n\t\tvar datas = [];\n\t\treason = bytes[parse_len++];\n\t\tdev_info.fix_false_reason = fix_false_reason[reason];\n\t\tdatalen =  bytes[parse_len++];\n\t\tif(reason<=5) //wifi and ble reason\n\t\t{\n\t\t  if(datalen)\n\t\t  {\n  \t\t\tfor(var i=0 ; i<(datalen/7) ; i++)\n  \t\t\t{\n  \t\t\t  var data = {};\n  \t\t\t\tdata.mac = substringBytes(bytes, parse_len, 6);\n  \t\t\t\tparse_len += 6;\n  \t\t\t\tdata.rssi = bytes[parse_len++]-256 +\"dBm\";\n  \t\t\t\tdatas.push(data);\n  \t\t\t}\n  \t\t\tdev_info.mac_data = datas;\n\t\t  }\n\t\t}\n\t\telse if(reason<=11) //gps reason\n\t\t{\t\n\t\t\tpdop = bytes[parse_len++];\n\t\t\tif(pdop!=0xff)\n\t\t\t\tdev_info.pdop = pdop/10\n\t\t\telse\n\t\t\t\tdev_info.pdop = \"unknow\";\n\t\t\tdev_info.gps_satellite_cn = bytes[parse_len] +\"-\" + bytes[parse_len+1] +\"-\" + bytes[parse_len+2] +\"-\" + bytes[parse_len+3] ;\n\t\t}\n\t}\n\telse if(port == 4)\n\t{\n\t\tvar sys_close_reason = [\"ble_cmd_close\",\"lorawan_cmd_close\",\"reed_switch_close\"];\n\t\tdev_info.sys_close_reason = sys_close_reason[bytes[3]];\n\t}\n\telse if(port == 5)\n\t{\n\t\tdev_info.shake_num = bytes[3]*256+ bytes[4];\n\t}\n\telse if(port == 6)\n\t{\n\t\tdev_info.idle_time = bytes[3]*256+ bytes[4];\n\t}\n\telse if(port == 7)\n\t{\n\t\tvar parse_len = 3; // common head is 3 byte\n\t\tyear = bytes[parse_len]*256 + bytes[parse_len+1];\n\t\tparse_len += 2;\n\t\tmon = bytes[parse_len++];\n\t\tdays = bytes[parse_len++];\n\t\thour = bytes[parse_len++];\n\t\tminute = bytes[parse_len++];\n\t\tsec = bytes[parse_len++];\n\t\ttimezone = bytes[parse_len++];\n\n\t\tif(timezone>0x80)\n\t\t{\n\t\t\tdev_info.alarm_time =  year + \"-\" + mon + \"-\" + days + \" \" + hour + \":\" + minute + \":\" + sec + \"  TZ:\" +  (timezone-0x100);\n\t\t}\n\t\telse\n\t\t{\n\t\t\tdev_info.alarm_time =  year + \"-\" + mon + \"-\" + days + \" \" + hour + \":\" + minute + \":\" + sec + \"  TZ:\" + timezone;\n\t\t}\n\t}\n\telse if(port == 8)\n\t{\n\t\tvar event = [\"motion start\",\"moving fix start\",\"motion end\",\"lorawan downlink trigger uplink\"];\n\t\tdev_info.event_info = event[bytes[3]];\n\t}\n\telse if(port == 9)\n\t{\n\t\tvar parse_len = 3;\n\t\tdev_info.gps_work_time = BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t\tdev_info.wifi_work_time = BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t\tdev_info.ble_scan_work_time = BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t\tdev_info.ble_adv_work_time = BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t\tdev_info.lorawan_work_time = BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t}\n\telse if(port == 10)\n\t{\n\t\t//\n\t}\n\telse if(port == 11)\n\t{\n\t\t//\n\t}\n\telse if(port == 12)\n\t{\n\n\t\tdev_info.work_mode = dev_mode[bytes[0]&0x03];\n\t\tdev_info.low_power_state = bytes[0]&0x04;\n\t\tdev_info.demolish_state = bytes[0]&0x08;\n\t\tdev_info.idle_state = bytes[0]&0x10;\n\t\tdev_info.motion_state = bytes[0]&0x20;\n\t\tdev_info.fix_type = dev_fix_type[(bytes[0]>>6)&0x01];\n\n\t\tdev_info.lorawan_downlink_count = bytes[1]&0x0f;\n\t\tdev_info.battery_voltage = (22+((bytes[2]>>4)&0x0f))/10 + \"V\";\n\n\t\tvar parse_len = 2;\n\t\tlat =BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\t\tlon =BytestoInt(bytes,parse_len);\n\t\tparse_len += 4;\n\n\t\tif(lat>0x80000000)\n\t\t\tlat = lat-0x100000000;\n\t\tif(lon>0x80000000)\n\t\t\tlon = lon-0x100000000;\n\n\t\tdev_info.lat = lat/10000000 ;\n\t\tdev_info.lon = lon/10000000;\n\t\tdev_info.pdop = bytes[parse_len]/10;\n\t}\n\treturn dev_info;\n} \n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "restotracker_scd18_battery": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "voltage": 0
+              },
+              "enabled": true
+            },
+            "restotracker_scd18_last_location": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "altitude": 0,
+                "latitude": 0,
+                "longitude": 0,
+                "mode": "unknown"
+              },
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Tracker Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#1976D2",
+                          "currentColor": "#1976D2",
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "title": "Device Location Map"
+                        },
+                        "properties": {
+                          "center": [
+                            0,
+                            0
+                          ],
+                          "mode": "geojson",
+                          "zoom": 15
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "location",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "Current Position",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Status"
+                        },
+                        "properties": {
+                          "color": "#4CAF50",
+                          "max": 4.2,
+                          "min": 2.8,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Positioning Mode"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px;\">\r\n  <div style=\"font-size: 48px; margin-bottom: 10px;\">\r\n    <i ng-if=\"value.mode === 'GPS'\" class=\"fa fa-satellite\" style=\"color: #2E93fA;\"></i>\r\n    <i ng-if=\"value.mode === 'BLE'\" class=\"fa fa-bluetooth\" style=\"color: #66DA26;\"></i>\r\n    <i ng-if=\"value.mode === 'WIFI'\" class=\"fa fa-wifi\" style=\"color: #ff8800;\"></i>\r\n    <i ng-if=\"!value.mode || value.mode === 'unknown'\" class=\"fa fa-question-circle\" style=\"color: #999;\"></i>\r\n  </div>\r\n  <div style=\"font-size: 20px; font-weight: bold;\">\r\n    {{ value.mode || 'Unknown' }}\r\n  </div>\r\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "device_property": {
+                              "device": "{{device}}",
+                              "property": "restotracker_scd18_last_location"
+                            },
+                            "name": "Mode",
+                            "source": "device_property",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Location History"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Timestamp</th>\r\n        <th>Latitude</th>\r\n        <th>Longitude</th>\r\n        <th>Altitude</th>\r\n        <th>Mode</th>\r\n        <th>Battery</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.latitude || entry.lat || '—' }}</td>\r\n        <td>{{ entry.longitude || entry.lon || '—' }}</td>\r\n        <td>{{ entry.altitude || entry.alt || '—' }} m</td>\r\n        <td>\r\n          <span ng-if=\"entry.mode === 'GPS'\" style=\"color: #2E93fA;\">GPS</span>\r\n          <span ng-if=\"entry.mode === 'BLE'\" style=\"color: #66DA26;\">BLE</span>\r\n          <span ng-if=\"entry.mode === 'WIFI'\" style=\"color: #ff8800;\">WIFI</span>\r\n          <span ng-if=\"!entry.mode\">—</span>\r\n        </td>\r\n        <td>{{ entry.battery || entry.bat || '—' }} V</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "latitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#66DA26",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "altitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff8800",
+                            "name": "altitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Battery Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
