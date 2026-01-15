@@ -35,6 +35,10 @@ COPY ./backend/src/ ./src/
 
 RUN npm run build
 
+# copy static resources (examples)
+COPY ./backend/src/mcp_capabilities/resources \
+     ./dist/mcp_capabilities/resources
+
 FROM node:22-alpine AS production
 
 # app directory
