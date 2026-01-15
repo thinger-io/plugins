@@ -33,6 +33,11 @@ const RESOURCES: Record<string, ResourceMetadata> = {
     path: 'dashboards/full-dashboards/gps_and_gnss_dashboard.json',
     description: 'Complete dashboard example for GPS and GNSS tracking with location, speed, and direction'
   },
+  'dashboard-co2-air-quality-examples': {
+    uri: 'thinger://examples/dashboards/co2-air-quality',
+    path: 'dashboards/full-dashboards/co2_and_air_quality_dashboard.json',
+    description: 'Complete dashboard example for CO2 and air quality monitoring'
+  },
 
   // Product examples
   'property-examples': {

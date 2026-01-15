@@ -1,0 +1,676 @@
+{
+  "tabs": [
+    {
+      "icon": "fas fa-tachometer-alt",
+      "widgets": [
+        {
+          "layout": {
+            "col": 4,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Temperature"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "ºC",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "temperature",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 20
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 5,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Humidity"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "%",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "value",
+              "value": 40
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "C02"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "ppm",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "co2",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 900
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 1,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "VOCs"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "vocs",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 12
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 4,
+            "sizeX": 4,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "C02"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": false,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "co2",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "C02",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 900
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 5,
+            "row": 10,
+            "sizeX": 1,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Humidity"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": false,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "color": "#2980B9",
+              "name": "Humidity",
+              "source": "value",
+              "value": 40
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 10,
+            "sizeX": 4,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "VOCs"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": false,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "vocs",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1ABC9C",
+              "device": {
+                "id": "calidadaire_24E124746E227068"
+              },
+              "name": "VOCs",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 12
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 4,
+            "row": 10,
+            "sizeX": 1,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Temperature"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": false,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "temperature",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Temperature",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 20
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 3,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "PM10"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "µg/m³",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "pm25",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 9
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 2,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "PM2.5"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#7F8C8D",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "",
+            "iconColor": "#34495E",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "before-value",
+            "iconSize": "75px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#2980B9",
+            "textColorConditions": [],
+            "textSize": "75px",
+            "textWeight": "font-normal",
+            "unit": "µg/m³",
+            "unitSize": "20px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "pm25",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "Source 1",
+              "source": "bucket",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 8
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 4,
+            "row": 4,
+            "sizeX": 2,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#FFFFFF",
+            "currentColor": "#FFFFFF",
+            "showOffline": {
+              "type": "none"
+            },
+            "showTs": false,
+            "title": "Particulate Matter"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": true,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            },
+            "yaxis": {
+              "min": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "pm25",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#3498DB",
+              "name": "PM2.5",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 8.5
+            },
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "pm10",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#1ABC9C",
+              "name": "PM10",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 9
+            }
+          ],
+          "type": "chart"
+        }
+      ]
+    }
+  ]
+}
