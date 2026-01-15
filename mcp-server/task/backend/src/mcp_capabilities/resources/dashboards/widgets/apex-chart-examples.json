@@ -1,0 +1,298 @@
+{
+  "examples": [
+    {
+      "title": "Three-Phase Voltage Monitor (Multi-Source, Mixed Backends)",
+      "description": "Real-world example monitoring 3-phase voltage from both MongoDB and InfluxDB buckets. Demonstrates multiple data sources with different backends and backend-specific tags.",
+      "use_case": "Industrial power monitoring, electrical substations, energy management systems",
+      "complexity": "advanced",
+      "tool_call": {
+        "product": "power_monitors",
+        "tab": 0,
+        "widget": {
+          "api": {},
+          "layout": {
+            "col": 0,
+            "row": 4,
+            "sizeX": 9,
+            "sizeY": 15
+          },
+          "panel": {
+            "color": "#162756",
+            "currentColor": "#162756",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "subtitle": "",
+            "title": "VOLTAGE",
+            "updateTs": 1730000000000
+          },
+          "properties": {
+            "options": "var options = {\n    series: series,\nchart: {\n   background:'#162756',\n    toolbar: {\n      show: true,\n      tools: {\n        download: true,\n        selection: true,\n        zoom: true,\n        zoomin: true,\n        zoomout: true,\n        pan: true,\n        reset: true\n      },\n      autoSelected: 'zoom' \n    },\n zoom: {\n          enabled: true,\n          type: 'x',  \n          autoScaleYaxis: true\n      }\n},\n    stroke: {\n        curve: 'smooth',\n        width: 1.7\n    },\n    grid: {\n        row: {\n            colors: ['#233e87', 'transparent'],\n            opacity: 0.3\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n          colors: '#FFFFFF'\n        }\n    }\n};"
+          },
+          "sources": [
+            {
+              "$timespan": {
+                "magnitude": "day",
+                "mode": "configurable",
+                "period": "latest",
+                "value": 1
+              },
+              "bucket": {
+                "backend": "mongodb",
+                "id": "em2101_data_bucket",
+                "mapping": "voltageL1N",
+                "tags": {
+                  "device": [],
+                  "group": []
+                },
+                "user": "myusername"
+              },
+              "color": "#2E93fA",
+              "name": "Ph1-N",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 24
+              }
+            },
+            {
+              "$timespan": {
+                "magnitude": "day",
+                "mode": "configurable",
+                "period": "latest",
+                "value": 1
+              },
+              "bucket": {
+                "backend": "influxdb",
+                "id": "Dispro_PSP",
+                "mapping": "V2",
+                "tags": {
+                  "Day": [],
+                  "Hour": [],
+                  "Slave": ["GWMD01HFCB4673B517C_1"],
+                  "tag1": [],
+                  "tag2": []
+                },
+                "user": "myusername"
+              },
+              "color": "#66DA26",
+              "name": "Ph2-N",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 24
+              }
+            },
+            {
+              "$timespan": {
+                "magnitude": "day",
+                "mode": "configurable",
+                "period": "latest",
+                "value": 1
+              },
+              "bucket": {
+                "backend": "influxdb",
+                "id": "Dispro_PSP",
+                "mapping": "V3",
+                "tags": {
+                  "Day": [],
+                  "Hour": [],
+                  "Slave": ["GWMD01HFCB4673B517C_1"],
+                  "tag1": [],
+                  "tag2": []
+                },
+                "user": "myusername"
+              },
+              "color": "#ff8800",
+              "name": "Ph3-N",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 24
+              }
+            }
+          ],
+          "type": "apex_charts"
+        }
+      },
+      "customization_notes": [
+        "Replace 'power_monitors' with your product ID",
+        "Update 'em2101_data_bucket' and 'Dispro_PSP' with your bucket IDs",
+        "Change 'voltageL1N', 'V2', 'V3' mappings to your field names",
+        "Adjust colors (#2E93fA, #66DA26, #ff8800) for visual distinction",
+        "Modify backend from 'mongodb'/'influxdb' based on your setup",
+        "Update 'user' field with actual username",
+        "Adapt tags structure to match your backend configuration",
+        "For InfluxDB: adjust custom tags (Day, Hour, Slave, tag1, tag2)",
+        "For MongoDB: use device and group tags",
+        "Adjust timespan values (24 hours) based on monitoring needs",
+        "Change layout position (col, row) and size (sizeX, sizeY) as needed"
+      ]
+    },
+    {
+      "title": "Simple Temperature Chart (Single Source)",
+      "description": "Basic temperature monitoring chart with single data source from MongoDB bucket. Ideal for getting started with dashboard widgets.",
+      "use_case": "Environmental monitoring, HVAC systems, cold chain logistics, building automation",
+      "complexity": "beginner",
+      "tool_call": {
+        "product": "temperature_sensors",
+        "tab": 0,
+        "widget": {
+          "api": {},
+          "layout": {
+            "col": 0,
+            "row": 0,
+            "sizeX": 12,
+            "sizeY": 8
+          },
+          "panel": {
+            "color": "#1976D2",
+            "currentColor": "#1976D2",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "last_sample"
+            },
+            "subtitle": "Last 24 Hours",
+            "title": "Temperature Monitoring",
+            "updateTs": 1730000000000
+          },
+          "properties": {
+            "options": "var options = {\n    series: series,\n    chart: {\n        background: '#1976D2',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { formatter: function(val) { return val.toFixed(1) + '°C'; } }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};"
+          },
+          "sources": [
+            {
+              "$timespan": {
+                "magnitude": "day",
+                "mode": "configurable",
+                "period": "latest",
+                "value": 1
+              },
+              "bucket": {
+                "backend": "mongodb",
+                "id": "temperature_bucket",
+                "mapping": "temp",
+                "tags": {
+                  "device": [],
+                  "group": []
+                },
+                "user": "myusername"
+              },
+              "color": "#FF5722",
+              "name": "Temperature",
+              "source": "bucket",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 24
+              }
+            }
+          ],
+          "type": "apex_charts"
+        }
+      },
+      "customization_notes": [
+        "Replace 'temperature_sensors' with your product ID",
+        "Update 'temperature_bucket' with your actual bucket ID",
+        "Change 'temp' mapping to match your data field name",
+        "Adjust color (#FF5722) to match your dashboard theme",
+        "Update 'user' field with your username",
+        "Modify timespan value (24) to show different time ranges",
+        "Change panel colors (#1976D2) for different visual styles",
+        "Adjust sizeX (12 = full width) and sizeY (8) for widget sizing",
+        "Update title and subtitle to match your use case",
+        "Change yaxis formatter to match your units (°C, °F, etc.)"
+      ]
+    },
+    {
+      "title": "Real-Time Device Resource (Live Data Stream)",
+      "description": "Real-time chart displaying live device resource data. Shows power consumption updated in real-time from a device resource endpoint.",
+      "use_case": "Real-time monitoring, live dashboards, instant alerts, streaming analytics",
+      "complexity": "intermediate",
+      "tool_call": {
+        "product": "smart_meters",
+        "tab": 0,
+        "widget": {
+          "api": {},
+          "layout": {
+            "col": 0,
+            "row": 0,
+            "sizeX": 6,
+            "sizeY": 6
+          },
+          "panel": {
+            "color": "#424242",
+            "currentColor": "#424242",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "subtitle": "Real-time monitoring",
+            "title": "Power Consumption",
+            "updateTs": 1730000000000
+          },
+          "properties": {
+            "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#424242',\n        toolbar: { show: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.3 } },\n    xaxis: { type: 'datetime' },\n    yaxis: { labels: { formatter: function(val) { return val.toFixed(2) + ' kW'; } } },\n    tooltip: { x: { format: 'HH:mm:ss' } },\n    legend: { position: 'top', labels: { colors: '#FFFFFF' } }\n};"
+          },
+          "sources": [
+            {
+              "color": "#FFC107",
+              "device": {
+                "id": "meter_001",
+                "mapping": "power",
+                "resource": "power_consumption"
+              },
+              "name": "Power (kW)",
+              "source": "device",
+              "timespan": {
+                "magnitude": "minute",
+                "mode": "relative",
+                "period": "latest",
+                "value": 30
+              }
+            }
+          ],
+          "type": "apex_charts"
+        }
+      },
+      "customization_notes": [
+        "Replace 'smart_meters' with your product ID",
+        "Update 'meter_001' with your device ID",
+        "Change 'power_consumption' to your device resource name",
+        "Adjust 'power' mapping to match your resource output field",
+        "Modify color (#FFC107) for series visualization",
+        "Change timespan value (30 minutes) for different time windows",
+        "Update panel colors (#424242) to match dashboard theme",
+        "Adjust sizeX (6 = half width) and sizeY (6) for compact layout",
+        "Change chart type from 'area' to 'line' or 'bar' in options",
+        "Modify yaxis formatter to match your measurement units",
+        "Update title and subtitle for your specific use case",
+        "Note: Device must be connected and resource must exist"
+      ]
+    }
+  ],
+  "general_notes": {
+    "colors": "Use hexadecimal color codes (#RRGGBB) for consistent styling",
+    "options_field": "Must be JavaScript code string (not JSON). Escape newlines as \\n, quotes as \\'",
+    "timestamps": "Use Date.now() or current timestamp in milliseconds for updateTs",
+    "backend_types": "Supported: 'mongodb', 'influxdb', 'dynamodb'",
+    "tags_structure": "MongoDB uses 'device' and 'group'. InfluxDB may have custom tags like 'Day', 'Hour', 'Slave', etc.",
+    "timespan_requirement": "Include both 'timespan' and '$timespan' objects for compatibility",
+    "grid_layout": "Standard grid is 12 columns wide. sizeX=6 is half width, sizeX=12 is full width",
+    "user_field": "Must include username who owns the bucket/device",
+    "automatic_dashboard": "Tool creates dashboard automatically if it doesn't exist"
+  },
+  "source_types_summary": {
+    "bucket": "Historical data from product-level data buckets (most common)",
+    "device_bucket": "Historical data from device-specific buckets",
+    "device": "Real-time data from device resource endpoints",
+    "device_property": "Data from device properties"
+  }
+}

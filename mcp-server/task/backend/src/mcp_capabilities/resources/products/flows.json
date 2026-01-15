@@ -1,0 +1,103 @@
+{
+  "description": "Node-RED flow examples with data sources and sinks for automation workflows",
+  "examples": [
+    {
+      "name": "Event to Resource Stream - Downlink Routing",
+      "description": "Route property updates to a resource stream for downlink commands",
+      "config": {
+        "enabled": true,
+        "split_data": false,
+        "data": {
+          "source": "event",
+          "event": "device_property_update",
+          "filter": { "property": "downlink_command" },
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        },
+        "sink": {
+          "target": "resource_stream",
+          "resource_stream": "downlink",
+          "payload": "{{payload}}",
+          "payload_function": ""
+        }
+      }
+    },
+    {
+      "name": "Topic to Endpoint - Webhook Integration",
+      "description": "Send MQTT alerts to an HTTP webhook",
+      "config": {
+        "enabled": true,
+        "split_data": false,
+        "data": {
+          "source": "topic",
+          "topic": "sensors/{{device}}/alert",
+          "payload": "{{payload}}",
+          "payload_type": "source_payload"
+        },
+        "sink": {
+          "target": "endpoint_call",
+          "endpoint": "alert_webhook",
+          "payload": "{{payload}}",
+          "payload_type": "source_payload"
+        }
+      }
+    },
+    {
+      "name": "Resource Stream to Topic - Data Broadcasting",
+      "description": "Broadcast resource stream data to MQTT topic",
+      "config": {
+        "enabled": true,
+        "split_data": false,
+        "data": {
+          "target": "resource_stream",
+          "resource_stream": "telemetry",
+          "payload": "{{payload}}",
+          "payload_function": ""
+        },
+        "sink": {
+          "target": "topic",
+          "topic": "broadcast/{{device}}/data",
+          "payload": "{{payload}}",
+          "payload_function": ""
+        }
+      }
+    },
+    {
+      "name": "Resource to Endpoint - Analytics Pipeline",
+      "description": "Send resource changes to analytics endpoint",
+      "config": {
+        "enabled": true,
+        "split_data": true,
+        "data": {
+          "source": "resource",
+          "resource": "uplink",
+          "update": "events",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        },
+        "sink": {
+          "target": "endpoint_call",
+          "endpoint": "analytics_processor",
+          "payload": "{{payload}}",
+          "payload_type": "source_payload"
+        }
+      }
+    }
+  ],
+  "data_source_types": {
+    "event": "Triggered by device events (device_property_update, device_state_change, etc.)",
+    "topic": "Triggered by MQTT topic messages",
+    "resource_stream": "Triggered when data is sent to a resource stream",
+    "resource": "Triggered by device resource changes"
+  },
+  "sink_types": {
+    "endpoint_call": "Send data to an HTTP endpoint",
+    "resource_stream": "Send data to a device resource stream",
+    "topic": "Publish data to an MQTT topic"
+  },
+  "notes": {
+    "split_data": "When true, if the source returns an array, each element triggers the sink independently"
+  }
+}

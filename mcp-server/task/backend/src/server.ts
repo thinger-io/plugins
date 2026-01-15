@@ -18,6 +18,7 @@ import {registerProductResources} from "./mcp_capabilities/product_resources.js"
 import {registerDevicesTools} from "./mcp_capabilities/devices_tools.js";
 import {registerDashboardsTools} from "./mcp_capabilities/dashboards_tools.js";
 import {registerSimulationTools} from "./mcp_capabilities/simulation_tools.js";
+import {registerExampleTools} from "./mcp_capabilities/example_tools.js";
 
 // Initialize thinger API
 const productsApi = new ProductsApi(thingerApiConfig);
@@ -148,6 +149,7 @@ registerProductResources({server, productsApi});
 registerDevicesTools({server, devicesApi, userEvents});
 registerDashboardsTools({server, productsApi, userEvents});
 registerSimulationTools({server, productsApi, userEvents});
+registerExampleTools({server, userEvents});
 
 const app = express();
 

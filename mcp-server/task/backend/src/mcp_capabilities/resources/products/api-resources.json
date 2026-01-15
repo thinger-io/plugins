@@ -1,0 +1,104 @@
+{
+  "description": "API resource configuration examples with request/response handling and various target types",
+  "examples": [
+    {
+      "name": "Uplink Receiver",
+      "description": "Receive data from external system and route to device resource stream with acknowledgment",
+      "config": {
+        "enabled": true,
+        "handle_connectivity": true,
+        "device_id_resolver": "extract_device_id",
+        "request": {
+          "data": {
+            "target": "resource_stream",
+            "resource_stream": "uplink",
+            "payload": "{{payload}}",
+            "payload_function": "",
+            "payload_type": "source_payload"
+          }
+        },
+        "response": {
+          "data": {
+            "target": "topic",
+            "topic": "ack/{{device}}",
+            "payload": "{\"status\": \"received\"}",
+            "payload_type": "source_payload"
+          }
+        }
+      }
+    },
+    {
+      "name": "Downlink Sender",
+      "description": "Process downlink commands through an endpoint with response handling",
+      "config": {
+        "enabled": true,
+        "handle_connectivity": false,
+        "request": {
+          "data": {
+            "target": "endpoint_call",
+            "endpoint": "downlink_processor",
+            "payload": "{\n  \"data\": \"{{payload.data}}\",\n  \"port\": {{payload.port=85}},\n  \"confirmed\": {{payload.confirmed=false}}\n}",
+            "payload_function": "",
+            "payload_type": "source_payload"
+          }
+        },
+        "response": {
+          "data": {
+            "target": "resource_stream",
+            "resource_stream": "downlink_response",
+            "payload": "{{payload}}",
+            "payload_type": "source_payload"
+          }
+        }
+      }
+    },
+    {
+      "name": "Simple Webhook Receiver",
+      "description": "Receive webhook data and publish to MQTT topic",
+      "config": {
+        "enabled": true,
+        "request": {
+          "data": {
+            "target": "topic",
+            "topic": "webhooks/{{device}}/data",
+            "payload": "{{payload}}",
+            "payload_function": ""
+          }
+        }
+      }
+    },
+    {
+      "name": "Resource Stream Forwarder",
+      "description": "Forward incoming requests directly to a resource stream",
+      "config": {
+        "enabled": true,
+        "request": {
+          "data": {
+            "target": "resource_stream",
+            "resource_stream": "telemetry",
+            "payload": "{{payload}}",
+            "payload_function": "",
+            "payload_type": "source_payload"
+          }
+        }
+      }
+    }
+  ],
+  "request_target_types": {
+    "endpoint_call": "Route to a Thinger.io HTTP endpoint",
+    "resource_stream": "Send to a device resource stream",
+    "topic": "Publish to an MQTT topic"
+  },
+  "special_fields": {
+    "handle_connectivity": "When true, automatically manages device connection state",
+    "device_id_resolver": "Function name to extract device ID from incoming request payload"
+  },
+  "template_variables": {
+    "{{device}}": "Device identifier",
+    "{{payload}}": "Incoming request payload",
+    "{{payload.field}}": "Access specific fields from payload",
+    "{{payload.field=default}}": "Access field with default value if not present",
+    "{{property.name}}": "Access device properties"
+  },
+  "url_structure": "https://api.thinger.io/v3/users/{user}/devices/{device}/resources/{resource_id}"
+}

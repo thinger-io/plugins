@@ -1,0 +1,95 @@
+{
+  "description": "Device auto-provisioning configuration examples for automatic device assignment",
+  "examples": [
+    {
+      "name": "Production Sensors by Location",
+      "description": "Match sensors in Madrid location",
+      "config": {
+        "config": {
+          "mode": "pattern",
+          "pattern": "madrid-sensor-.*"
+        },
+        "enabled": true
+      }
+    },
+    {
+      "name": "LoRaWAN Devices by DevEUI",
+      "description": "Match LoRaWAN devices with 16 hex character DevEUI",
+      "config": {
+        "config": {
+          "mode": "pattern",
+          "pattern": "lora-[0-9A-F]{16}"
+        },
+        "enabled": true
+      }
+    },
+    {
+      "name": "Test Devices (Disabled)",
+      "description": "Match test devices with specific numbering, disabled for production",
+      "config": {
+        "config": {
+          "mode": "pattern",
+          "pattern": "test-device-[0-9]{3}"
+        },
+        "enabled": false
+      }
+    },
+    {
+      "name": "Devices with MAC Address Suffix",
+      "description": "Match sensors ending with 6 hex MAC address digits",
+      "config": {
+        "config": {
+          "mode": "pattern",
+          "pattern": "sensor-[0-9A-F]{6}$"
+        },
+        "enabled": true
+      }
+    },
+    {
+      "name": "Multiple Device Types",
+      "description": "Match sensors, gateways, or actuators using OR operator",
+      "config": {
+        "config": {
+          "mode": "pattern",
+          "pattern": "(sensor|gateway|actuator)-.*"
+        },
+        "enabled": true
+      }
+    }
+  ],
+  "regex_patterns": {
+    "any_suffix": "prefix-.*",
+    "exact_digits": "device-[0-9]{2}",
+    "hex_characters": "[0-9A-F]{16}",
+    "or_operator": "(option1|option2)-.*",
+    "anchored_pattern": "^dev-[A-Z]{3}-[0-9]{4}$"
+  },
+  "regex_special_characters": {
+    ".": "Matches any single character",
+    ".*": "Matches any sequence of characters (zero or more)",
+    ".+": "Matches any sequence of characters (one or more)",
+    "[0-9]": "Matches any digit",
+    "[A-F]": "Matches uppercase letters A through F",
+    "[a-z]": "Matches lowercase letters",
+    "{n}": "Matches exactly n repetitions",
+    "{n,m}": "Matches between n and m repetitions",
+    "^": "Start of string anchor",
+    "$": "End of string anchor",
+    "|": "OR operator",
+    "()": "Grouping"
+  },
+  "use_cases": [
+    "Automatic assignment of new devices based on naming conventions",
+    "Separate test and production devices using different patterns",
+    "Geographic device organization (e.g., 'madrid-.*', 'barcelona-.*')",
+    "Device type categorization with strict format validation",
+    "LoRaWAN/IoT devices with EUI or MAC-based identifiers"
+  ],
+  "best_practices": [
+    "Use anchors (^ and $) to ensure exact matching when needed",
+    "Test your regex patterns before deploying to production",
+    "Use specific patterns to avoid unintended matches",
+    "Avoid overlapping patterns between different products",
+    "Use 'enabled: false' to temporarily disable rules during testing"
+  ]
+}

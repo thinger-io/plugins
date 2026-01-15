@@ -1,0 +1,82 @@
+{
+  "description": "Data bucket configuration examples with different data source patterns and storage configurations",
+  "examples": [
+    {
+      "name": "Event Source - MongoDB Storage",
+      "description": "Store device property updates in MongoDB with 30-day retention",
+      "config": {
+        "enabled": true,
+        "backend": "mongodb",
+        "retention": { "period": 30, "unit": "days" },
+        "tags": ["uplink", "debug"],
+        "data": {
+          "source": "event",
+          "event": "device_property_update",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    },
+    {
+      "name": "Topic Source - InfluxDB Storage",
+      "description": "Store MQTT data in InfluxDB for time-series analysis",
+      "config": {
+        "enabled": true,
+        "backend": "influxdb",
+        "retention": { "period": 12, "unit": "months" },
+        "tags": ["telemetry"],
+        "data": {
+          "source": "topic",
+          "topic": "devices/{{device}}/uplink",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    },
+    {
+      "name": "Resource Stream Target",
+      "description": "Store data sent to a resource stream",
+      "config": {
+        "enabled": true,
+        "backend": "mongodb",
+        "retention": { "period": 90, "unit": "days" },
+        "tags": ["sensor_data"],
+        "data": {
+          "target": "resource_stream",
+          "resource_stream": "telemetry",
+          "payload": "{{payload}}",
+          "payload_function": ""
+        }
+      }
+    },
+    {
+      "name": "Resource Source - High Frequency Measurements",
+      "description": "Store resource changes in InfluxDB for measurements",
+      "config": {
+        "enabled": true,
+        "backend": "influxdb",
+        "retention": { "period": 6, "unit": "months" },
+        "tags": ["measurements"],
+        "data": {
+          "source": "resource",
+          "resource": "uplink",
+          "update": "events",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    }
+  ],
+  "backend_selection": {
+    "mongodb": "Good for general-purpose storage, flexible schema",
+    "influxdb": "Optimized for time-series data, better for high-frequency telemetry"
+  },
+  "retention_examples": {
+    "short_term_debugging": { "period": 7, "unit": "days" },
+    "medium_term_analytics": { "period": 3, "unit": "months" },
+    "long_term_archival": { "period": 5, "unit": "years" }
+  }
+}

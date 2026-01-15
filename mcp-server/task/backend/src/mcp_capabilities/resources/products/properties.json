@@ -1,0 +1,78 @@
+{
+  "description": "Product property configuration examples for all data source types",
+  "examples": [
+    {
+      "name": "Event Source - Device Property Update",
+      "description": "Listen to device property update events",
+      "config": {
+        "enabled": true,
+        "default": { "value": "initial_value" },
+        "data": {
+          "source": "event",
+          "event": "device_property_update",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    },
+    {
+      "name": "Topic Source - MQTT Temperature",
+      "description": "Listen to MQTT topic for temperature data",
+      "config": {
+        "enabled": true,
+        "data": {
+          "source": "topic",
+          "topic": "devices/{{device}}/data/temperature",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    },
+    {
+      "name": "Resource Stream Target",
+      "description": "Send data to a device resource stream",
+      "config": {
+        "enabled": true,
+        "data": {
+          "target": "resource_stream",
+          "resource_stream": "telemetry",
+          "payload": "{{payload}}",
+          "payload_function": ""
+        }
+      }
+    },
+    {
+      "name": "Resource Source - Uplink Events",
+      "description": "Listen to device resource changes on events",
+      "config": {
+        "enabled": true,
+        "default": { "source": "value" },
+        "data": {
+          "source": "resource",
+          "resource": "uplink",
+          "update": "events",
+          "payload": "{{payload}}",
+          "payload_function": "",
+          "payload_type": "source_payload"
+        }
+      }
+    }
+  ],
+  "available_events": [
+    "device_callback_call",
+    "device_property_create",
+    "device_property_update",
+    "device_resource_request_failed",
+    "device_state_change",
+    "device_stats_data",
+    "device_topic_subscribe",
+    "device_topic_unsubscribe"
+  ],
+  "template_variables": {
+    "{{device}}": "Device identifier",
+    "{{payload}}": "Incoming payload data",
+    "payload_function": "Optional JavaScript function to transform the payload"
+  }
+}

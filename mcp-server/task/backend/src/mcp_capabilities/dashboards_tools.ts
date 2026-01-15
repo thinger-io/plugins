@@ -5,15 +5,44 @@ import { Log } from '../lib/log.js';
 import {apexChartWidgetSchema} from '../schemas.js';
 import { registerLoggedTool } from './register_logged_tools.js';
 import type { UserEvents } from '../lib/user-events.js';
-import {
-  loadDashboardExample,
-  getAvailableCategories,
-  type DashboardCategory,
-  type DashboardExample
-} from './dashboard_examples/index.js';
+import { loadExample } from './resources/index.js';
 
-// Interface for complete dashboard structure
+// Dashboard example categories
+const DASHBOARD_CATEGORIES = ['temperature_and_humidity_dashboard'] as const;
+type DashboardCategory = typeof DASHBOARD_CATEGORIES[number];
+
+// Map old category names to new example categories
+const CATEGORY_MAP: Record<DashboardCategory, 'dashboard-full-temperature-humidity'> = {
+  'temperature_and_humidity_dashboard': 'dashboard-full-temperature-humidity'
+};
+
+interface DashboardWidget {
+  type: string;
+  layout: { col: number; row: number; sizeX: number; sizeY: number };
+  panel: any;
+  properties: any;
+  sources: any[];
+}
+
+interface DashboardTab {
+  name: string;
+  widgets: DashboardWidget[];
+}
+
+interface DashboardExample {
+  tabs: DashboardTab[];
+}
+
 type CompleteDashboard = DashboardExample;
+
+function getAvailableCategories(): string[] {
+  return [...DASHBOARD_CATEGORIES];
+}
+
+async function loadDashboardExample(category: DashboardCategory): Promise<DashboardExample> {
+  const newCategory = CATEGORY_MAP[category];
+  return loadExample<DashboardExample>(newCategory);
+}
 
 export function registerDashboardsTools(opts: {
   server: McpServer;

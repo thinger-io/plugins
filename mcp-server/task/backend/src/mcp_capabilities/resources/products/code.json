@@ -1,0 +1,61 @@
+{
+  "description": "Custom JavaScript code examples for product-level logic and data transformations",
+  "examples": [
+    {
+      "name": "Device ID Resolver",
+      "description": "Extract device ID from various sources in incoming requests",
+      "use_case": "Used in API resources with 'device_id_resolver' field",
+      "code": "function get_device_id({ device, headers, payload }) {\n  // Try multiple sources for device identification\n  if (device?.id) return device.id;\n  if (headers?.['x-device-id']) return headers['x-device-id'];\n  if (payload?.deviceId) return payload.deviceId;\n  if (payload?.dev_eui) return payload.dev_eui;\n  return 'unknown_device';\n}"
+    },
+    {
+      "name": "Payload Transformation",
+      "description": "Normalize and transform data between components",
+      "use_case": "Used in properties, buckets, flows, API resources with 'payload_function'",
+      "code": "function normalize_payload(input) {\n  try {\n    const obj = typeof input === 'string' ? JSON.parse(input) : input;\n    return JSON.stringify({\n      timestamp: Date.now(),\n      data: obj?.data ?? obj,\n      source: 'normalized'\n    });\n  } catch (error) {\n    return JSON.stringify({\n      timestamp: Date.now(),\n      data: input,\n      error: 'parse_failed'\n    });\n  }\n}"
+    },
+    {
+      "name": "Data Validation",
+      "description": "Validate and filter incoming sensor data",
+      "use_case": "Validate required fields and ranges before processing",
+      "code": "function validate_sensor_data(payload) {\n  const data = typeof payload === 'string' ? JSON.parse(payload) : payload;\n  \n  // Validate required fields\n  if (!data.temperature || !data.humidity) {\n    throw new Error('Missing required sensor fields');\n  }\n  \n  // Validate ranges\n  if (data.temperature < -40 || data.temperature > 85) {\n    throw new Error('Temperature out of range');\n  }\n  \n  return JSON.stringify(data);\n}"
+    },
+    {
+      "name": "LoRaWAN Decoder",
+      "description": "Decode LoRaWAN hex payloads into structured data",
+      "use_case": "Transform raw LoRaWAN bytes into readable sensor values",
+      "code": "function decode_lorawan(payload) {\n  const bytes = Buffer.from(payload, 'hex');\n  \n  // Example: decode temperature and humidity from 4-byte payload\n  const temperature = (bytes[0] << 8 | bytes[1]) / 100;\n  const humidity = (bytes[2] << 8 | bytes[3]) / 100;\n  \n  return JSON.stringify({ temperature, humidity });\n}"
+    },
+    {
+      "name": "Priority Selector",
+      "description": "Calculate dynamic priorities based on payload content",
+      "use_case": "Prioritize alerts and warnings over normal data",
+      "code": "function calculate_priority({ payload }) {\n  const data = typeof payload === 'string' ? JSON.parse(payload) : payload;\n  \n  // High priority for alerts\n  if (data.alert || data.alarm) return 5;\n  \n  // Medium priority for warnings\n  if (data.warning) return 3;\n  \n  // Low priority for normal data\n  return 1;\n}"
+    },
+    {
+      "name": "Data Enrichment",
+      "description": "Add metadata and context to payloads",
+      "use_case": "Enrich data with device and property information",
+      "code": "function enrich_payload({ payload, device, properties }) {\n  const data = typeof payload === 'string' ? JSON.parse(payload) : payload;\n  \n  return JSON.stringify({\n    ...data,\n    device_id: device?.id,\n    location: properties?.location,\n    firmware: properties?.firmware_version,\n    enriched_at: Date.now()\n  });\n}"
+    }
+  ],
+  "complete_config_example": {
+    "code": "function get_device_id({ device, headers, payload }) {\n  return device?.id || headers?.['x-device-id'] || 'unknown';\n}\n\nfunction normalize_payload(input) {\n  try {\n    const obj = typeof input === 'string' ? JSON.parse(input) : input;\n    return JSON.stringify({ timestamp: Date.now(), data: obj?.data ?? obj });\n  } catch (e) {\n    return JSON.stringify({ timestamp: Date.now(), data: input, error: 'parse_failed' });\n  }\n}",
+    "environment": "javascript",
+    "storage": "",
+    "version": "1.0"
+  },
+  "function_context": {
+    "device_id_resolver": "{ device, headers, payload }",
+    "payload_function": "{ payload, device, properties, headers }"
+  },
+  "best_practices": [
+    "Always handle errors gracefully with try-catch blocks",
+    "Validate input types before processing",
+    "Return JSON strings when expected by the configuration",
+    "Document complex logic with comments",
+    "Use descriptive function names that indicate their purpose",
+    "Test functions with sample data before deploying",
+    "Keep functions focused on a single responsibility",
+    "Consider performance for functions called frequently"
+  ]
+}
