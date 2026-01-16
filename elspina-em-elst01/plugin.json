@@ -1,0 +1,422 @@
+{
+  "name": "elspina_em_elst01",
+  "version": "1.0.0",
+  "description": "LoRaWAN accelerometer and switch sensor for state change detection",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "elspina-em-elst01"
+  },
+  "metadata": {
+    "name": "elspina_em-elst01",
+    "description": "LoRaWAN accelerometer and switch sensor for state change detection",
+    "image": "assets/em-elst01-e.jpg",
+    "category": "devices",
+    "vendor": "elspina"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LoRaWAN accelerometer and switch sensor for state change detection",
+        "enabled": true,
+        "name": "elspina_em-elst01",
+        "product": "elspina_em_elst01",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "em-elst01-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "elspina_em_elst01_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n    // Decode an uplink message from a buffer\n    // (array) of bytes to an object of fields.\n    var port = input.fPort;\n    var bytes = input.bytes;\n    var switch_status = (bytes[0]>>4)&0xFF;\n    var value=(bytes[0]<<8 | bytes[1]) & 0x0FFF;\n    var batV=value/1000;//Battery,units:V\n    \n    if(bytes.length == 4)\n    {\n      var tnomd = (bytes[2]<<8 | bytes[3]) & 0xFFFF;\n      return {\n        status:switch_status,\n        Bat:batV ,\n        TNOMD:tnomd,\n      };\n    }\n    else if(bytes.length == 9)\n    {\n      var tode = (bytes[2]<<16 | bytes[3]<<8 | bytes[4]) & 0xFFFFFF;\n      var ldod = (bytes[5]<<16 | bytes[6]<<8 | bytes[7]) & 0xFFFFFF;\n      var alarm = bytes[8];\n      return {\n        status:switch_status,\n        Bat:batV ,\n        TODE:tode,\n        LDOD:ldod,\n        ALARM:alarm,\n      };\n    }\n    else if(bytes.length == 19)\n    {\n      var tode1 = (bytes[2]<<16 | bytes[3]<<8 | bytes[4]) & 0xFFFFFF;\n      var ldod1 = (bytes[5]<<16 | bytes[6]<<8 | bytes[7]) & 0xFFFFFF;\n      var alarm1 = bytes[8];\n      var tnomd1 = (bytes[9]<<8 | bytes[10]) & 0xFFFF;\n      \n      value=bytes[11]<<8 | bytes[12];\n      var X = 0;\n      if(bytes[11]>>4 == 0x0F)\n        X=((value-0xFFFF)/100).toFixed(2);\n      else\n        X=(value/100).toFixed(2);\n    \n      value=bytes[13]<<8 | bytes[14];\n      var Y=0;\n      if(bytes[13]>>4 == 0x0F)\n        Y=((value-0xFFFF)/100).toFixed(2);\n      else\n        Y=(value/100).toFixed(2);\n    \n      value=bytes[15]<<8 | bytes[16];\n      var Z=0;\n      if(bytes[15]>>4 == 0x0F)\n        Z=((value-0xFFFF)/100).toFixed(2);\n      else\n        Z=(value/100).toFixed(2);\n      \n      value=bytes[17]<<8 | bytes[18];\n      var temp_DS18B20=0;//DS18B20,temperature,units:°C\n      if(bytes[17]>>4 == 0x0F)\n        temp_DS18B20=((value-0xFFFF)/10).toFixed(1);\n      else\n        temp_DS18B20=(value/10).toFixed(1);\n      return {\n        data:{\n          status:switch_status,\n          Bat:batV ,\n          TODE:tode1,\n          LDOD:ldod1,\n          ALARM:alarm1,\n          TNOMD:tnomd1,\n          X:X,\n          Y:Y,\n          Z:Z,\n          temp_ds:temp_DS18B20\n        },\n      };\n    }\n  }",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "elspina_em_elst01_battery_level": {
+              "data": {
+                "payload": "{{payload.battery}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "elspina_em_elst01_switch_state": {
+              "data": {
+                "payload": "{{payload.switch_state}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#1976D2",
+                          "currentColor": "#1976D2",
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "title": "Switch State"
+                        },
+                        "properties": {
+                          "color": "#4CAF50",
+                          "max": 1,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "switch_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Switch",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#F57C00",
+                          "currentColor": "#F57C00",
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "color": "#FFC107",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FFC107",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#424242",
+                          "currentColor": "#424242",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "State Change Events - Last 24 Hours"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#424242',\n        toolbar: {\n            show: true,\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 2\n    },\n    markers: {\n        size: 4,\n        strokeWidth: 0,\n        hover: {\n            size: 6\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false,\n            style: {\n                colors: '#FFFFFF'\n            }\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function(val) {\n                return val === 1 ? 'ON' : 'OFF';\n            },\n            style: {\n                colors: '#FFFFFF'\n            }\n        },\n        min: 0,\n        max: 1\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n            colors: '#FFFFFF'\n        }\n    },\n    grid: {\n        borderColor: '#555',\n        row: {\n            colors: ['#333', 'transparent'],\n            opacity: 0.5\n        }\n    }\n};",
+                          "realTimeUpdate": false
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "switch_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Switch State",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "accelerometer_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2196F3",
+                            "name": "Accelerometer State",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Event History - Last 50 Events"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Switch State</th>\n        <th>Accelerometer</th>\n        <th>Battery (%)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value | limitTo:50\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>\n          <span ng-if=\"entry.switch_state === 1\" class=\"label label-success\">ON</span>\n          <span ng-if=\"entry.switch_state === 0\" class=\"label label-default\">OFF</span>\n          <span ng-if=\"entry.switch_state === undefined || entry.switch_state === null\">—</span>\n        </td>\n        <td>{{ entry.accelerometer_state || '—' }}</td>\n        <td>{{ entry.battery || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#555",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "switch_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "switch_state",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "accelerometer_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2196F3",
+                            "name": "accelerometer_state",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "elspina_em_elst01_data_bucket",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FFC107",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
