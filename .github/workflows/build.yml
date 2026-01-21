@@ -82,11 +82,12 @@ jobs:
       - name: Extract branch name
         run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
 
-      - name: Get image version
+      - name: Get plugin name and version
         run: |
+          echo plugin_name=`jq -r '.name' ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
           if [[ "${{ env.branch }}" == "main" ]]; then
-            echo docker_version=`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
-            echo version=v`jq '.version' ./${{ matrix.plugin }}/plugin.json | tr -d \"` >> $GITHUB_ENV
+            echo docker_version=`jq -r '.version' ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
+            echo version=v`jq -r '.version' ./${{ matrix.plugin }}/plugin.json` >> $GITHUB_ENV
           else
             echo docker_version=develop >> $GITHUB_ENV
             echo version=develop >> $GITHUB_ENV
@@ -159,7 +160,7 @@ jobs:
       - name: Create body file
         run: |
           jq -n \
-            --arg plugin "${{ matrix.plugin }}" \
+            --arg plugin "${{ env.plugin_name }}" \
             --arg version "${{ env.version }}" \
             --arg branch "${{ env.branch }}" \
             --arg commit "${{ github.sha }}" \
@@ -179,7 +180,7 @@ jobs:
       - name: Post tag to DB
         uses: fjogeleit/http-request-action@v1
         with:
-          url: "https://cloud.thinger.io/plugins/${{ matrix.plugin }}/tags/${{ env.version }}"
+          url: "https://cloud.thinger.io/plugins/${{ env.plugin_name }}/tags/${{ env.version }}"
           method: 'PUT'
           username: ${{ secrets.LAMBDA_USER }}
           password: ${{ secrets.LAMBDA_PASSWORD }}
