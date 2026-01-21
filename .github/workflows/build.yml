@@ -145,7 +145,7 @@ jobs:
         if: ${{ startsWith(env.branch, 'develop') }}
         uses: dev-drprasad/delete-tag-and-release@v1.1
         with:
-          tag_name: ${{ matrix.plugin }}/${{ env.version }}
+          tag_name: ${{ env.plugin_name }}/${{ env.version }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           delete_release: false
 
@@ -154,7 +154,7 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ matrix.plugin }}/${{ env.version }}
+          custom_tag: ${{ env.plugin_name }}/${{ env.version }}
           tag_prefix: ''
 
       - name: Create body file
