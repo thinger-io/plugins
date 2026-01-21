@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Milesight AM102",
     "description": "Milesight AM102 2-in-1 IAQ Sensor for temperature and humidity monitoring with E-ink display",
-    "image": "assets/am102.png",
+    "image": "assets/milesight-iot-am102.png",
     "category": "devices",
     "vendor": "milesight-iot"
   },
