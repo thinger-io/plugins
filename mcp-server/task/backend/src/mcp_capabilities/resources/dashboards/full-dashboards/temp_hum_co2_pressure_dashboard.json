@@ -1,0 +1,460 @@
+{
+  "tabs": [
+    {
+      "icon": "fas fa-leaf",
+      "name": "Environmental Monitoring",
+      "widgets": [
+        {
+          "layout": {
+            "col": 0,
+            "row": 0,
+            "sizeX": 2,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "currentColor": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "CO2"
+          },
+          "properties": {
+            "decimalPlaces": 0,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#51cf66",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "fas fa-wind",
+            "iconColor": "#51cf66",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "above-value",
+            "iconSize": "40px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#51cf66",
+            "textColorConditions": [],
+            "textSize": "52px",
+            "textWeight": "font-bold",
+            "unit": "ppm",
+            "unitSize": "16px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "co2",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#51cf66",
+              "name": "CO2",
+              "source": "value",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 900
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 2,
+            "row": 0,
+            "sizeX": 2,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "currentColor": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Barometric Pressure"
+          },
+          "properties": {
+            "decimalPlaces": 1,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#845ef7",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "20px",
+            "extraTextWeight": "font-light",
+            "icon": "fas fa-gauge",
+            "iconColor": "#845ef7",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "above-value",
+            "iconSize": "40px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#845ef7",
+            "textColorConditions": [],
+            "textSize": "52px",
+            "textWeight": "font-bold",
+            "unit": "hPa",
+            "unitSize": "16px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "pm25",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#845ef7",
+              "name": "Pressure",
+              "source": "value",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 1013
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 4,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "currentColor": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Air Temperature"
+          },
+          "properties": {
+            "decimalPlaces": 1,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#ff922b",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "18px",
+            "extraTextWeight": "font-light",
+            "icon": "fas fa-thermometer-half",
+            "iconColor": "#ff922b",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "above-value",
+            "iconSize": "40px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#ff922b",
+            "textColorConditions": [],
+            "textSize": "52px",
+            "textWeight": "font-bold",
+            "unit": "°C",
+            "unitSize": "16px"
+          },
+          "sources": [
+            {
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "temperature",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#ff922b",
+              "name": "Temperature",
+              "source": "value",
+              "timespan": {
+                "mode": "latest"
+              },
+              "value": 20
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 5,
+            "row": 0,
+            "sizeX": 1,
+            "sizeY": 4
+          },
+          "panel": {
+            "color": "linear-gradient(135deg, #1a2332 0%, #2d3748 100%)",
+            "currentColor": "#1a2332",
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Relative Humidity"
+          },
+          "properties": {
+            "decimalPlaces": 1,
+            "enableExtraTextColor": false,
+            "enableIconColor": false,
+            "enableIconSize": false,
+            "extraText": "",
+            "extraTextColor": "#4dabf7",
+            "extraTextColorConditions": [],
+            "extraTextConditions": [],
+            "extraTextPosition": "above-value",
+            "extraTextSize": "18px",
+            "extraTextWeight": "font-light",
+            "icon": "fas fa-droplet",
+            "iconColor": "#4dabf7",
+            "iconColorConditions": [],
+            "iconConditions": [],
+            "iconGap": "8px",
+            "iconPosition": "above-value",
+            "iconSize": "40px",
+            "iconVerticalOffset": "0px",
+            "link": "",
+            "textAlign": "center",
+            "textColor": "#4dabf7",
+            "textColorConditions": [],
+            "textSize": "52px",
+            "textWeight": "font-bold",
+            "unit": "%",
+            "unitSize": "16px"
+          },
+          "sources": [
+            {
+              "color": "#4dabf7",
+              "name": "Humidity",
+              "source": "value",
+              "value": 40
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 4,
+            "sizeX": 3,
+            "sizeY": 7
+          },
+          "panel": {
+            "color": "#1a2332",
+            "currentColor": "#1a2332",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "CO2 Evolution"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": true,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "co2",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#51cf66",
+              "name": "CO2 Levels",
+              "source": "value",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 900
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 3,
+            "row": 4,
+            "sizeX": 3,
+            "sizeY": 7
+          },
+          "panel": {
+            "color": "#1a2332",
+            "currentColor": "#1a2332",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Temperature Trend"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": true,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "temperature",
+                "tags": {
+                  "device": [
+                    "calidadaire_24E124746E227068"
+                  ],
+                  "group": []
+                }
+              },
+              "color": "#ff922b",
+              "name": "Temperature",
+              "source": "value",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 32
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 0,
+            "row": 11,
+            "sizeX": 3,
+            "sizeY": 8
+          },
+          "panel": {
+            "color": "#1a2332",
+            "currentColor": "#1a2332",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Pressure Behavior"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": true,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "aggregation": {},
+              "bucket": {
+                "backend": "mongodb",
+                "id": "CalidadAire",
+                "mapping": "vocs",
+                "tags": {
+                  "device": [],
+                  "group": []
+                }
+              },
+              "color": "#845ef7",
+              "name": "Pressure",
+              "source": "value",
+              "timespan": {
+                "magnitude": "hour",
+                "mode": "relative",
+                "period": "latest",
+                "value": 6
+              },
+              "value": 1013
+            }
+          ],
+          "type": "chart"
+        },
+        {
+          "layout": {
+            "col": 3,
+            "row": 11,
+            "sizeX": 3,
+            "sizeY": 8
+          },
+          "panel": {
+            "color": "#1a2332",
+            "currentColor": "#1a2332",
+            "showFullscreen": true,
+            "showOffline": {
+              "type": "none"
+            },
+            "title": "Humidity Pattern"
+          },
+          "properties": {
+            "axis": true,
+            "fill": true,
+            "legend": true,
+            "multiple_axes": false,
+            "xaxis": {
+              "ticks": 1
+            }
+          },
+          "sources": [
+            {
+              "color": "#4dabf7",
+              "name": "Humidity",
+              "source": "value",
+              "value": 40
+            }
+          ],
+          "type": "chart"
+        }
+      ]
+    }
+  ]
+}

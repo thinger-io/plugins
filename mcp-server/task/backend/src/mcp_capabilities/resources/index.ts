@@ -38,6 +38,11 @@ const RESOURCES: Record<string, ResourceMetadata> = {
     path: 'dashboards/full-dashboards/co2_and_air_quality_dashboard.json',
     description: 'Complete dashboard example for CO2 and air quality monitoring'
   },
+  'dashboard-temp-hum-co2-pressure-examples': {
+    uri: 'thinger://examples/dashboards/temp-hum-co2-pressure',
+    path: 'dashboards/full-dashboards/temp_hum_co2_pressure_dashboard.json',
+    description: 'Complete dashboard example for temperature, humidity, CO2, and pressure monitoring'
+  },
 
   // Product examples
   'property-examples': {
@@ -88,6 +93,8 @@ export const EXAMPLE_CATEGORIES = {
   // Dashboard examples
   'dashboard-full-temperature-humidity': 'dashboards/full-dashboards/temperature_and_humidity_dashboard.json',
   'dashboard-full-gps-gnss': 'dashboards/full-dashboards/gps_and_gnss_dashboard.json',
+  'dashboard-full-co2-air-quality': 'dashboards/full-dashboards/co2_and_air_quality_dashboard.json',
+  'dashboard-full-temp-hum-co2-pressure': 'dashboards/full-dashboards/temp_hum_co2_pressure_dashboard.json',
   'dashboard-apex-widgets': 'dashboards/widgets/apex-chart-examples.json',
 } as const;
 
