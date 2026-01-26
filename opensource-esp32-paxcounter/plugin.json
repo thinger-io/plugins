@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Opensource ESP32-PAXCOUNTER",
     "description": "The ESP32-Paxcounter has sensors for battery, GPS, altitude, temperature, humidity, barometer, pm2.5, and pm10. It is an ESP32 MCU-based device for metering passenger flows in real-time. It counts how many mobile devices are around by scanning WiFi and Bl",
-    "image": "assets/paxcounter.png",
+    "image": "assets/opensource-esp32-paxcounter.png",
     "category": "devices",
     "vendor": "opensource"
   },
