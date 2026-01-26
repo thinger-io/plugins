@@ -1,6 +1,3 @@
-Now I have enough information to create the README.md document. Let me compile it based on the template structure and the verified technical information gathered.
-
-```markdown
 # ESP32-Paxcounter
 
 The ESP32-Paxcounter is an ESP32 MCU-based device for metering passenger flows in real-time. It counts how many mobile devices are around by scanning WiFi and Bluetooth signals in the air, providing an estimation of how many people are present. The device is designed with privacy in mind—it does not persistently store MAC addresses or perform any fingerprinting on scanned devices. The captured data is transmitted over a public or private LoRaWAN® radio network.
@@ -74,4 +71,3 @@ ESP32-Paxcounter resources can be found at:
 - [Hardware Configuration](https://cyberman54.github.io/ESP32-Paxcounter/hardware/)
 - [The Things Network Device Repository](https://www.thethingsnetwork.org/device-repository/devices/opensource/esp32-paxcounter/)
 - [Thinger.io Documentation](https://docs.thinger.io)
-```
