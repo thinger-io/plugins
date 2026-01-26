@@ -1,0 +1,833 @@
+{
+  "name": "opensource_esp32_paxcounter",
+  "version": "1.0.0",
+  "description": "The ESP32-Paxcounter has sensors for battery, GPS, altitude, temperature, humidity, barometer, pm2.5, and pm10. It is an ESP32 MCU-based device for metering passenger flows in real-time. It counts how many mobile devices are around by scanning WiFi and Bl",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "opensource-esp32-paxcounter"
+  },
+  "metadata": {
+    "name": "Opensource ESP32-PAXCOUNTER",
+    "description": "The ESP32-Paxcounter has sensors for battery, GPS, altitude, temperature, humidity, barometer, pm2.5, and pm10. It is an ESP32 MCU-based device for metering passenger flows in real-time. It counts how many mobile devices are around by scanning WiFi and Bl",
+    "image": "assets/paxcounter.png",
+    "category": "devices",
+    "vendor": "opensource"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The ESP32-Paxcounter has sensors for battery, GPS, altitude, temperature, humidity, barometer, pm2.5, and pm10. It is an ESP32 MCU-based device for metering passenger flows in real-time. It counts how many mobile devices are around by scanning WiFi and Bl",
+        "enabled": true,
+        "name": "Opensource ESP32-PAXCOUNTER",
+        "product": "opensource_esp32_paxcounter",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "paxcounter-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "opensource_esp32_paxcounter_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId;\n}\n\nfunction decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n// Decoder for device payload encoder \"PACKED\"\n// copy&paste to TTN Console V3 -> Applications -> Payload formatters -> Uplink -> Javascript\n// modified for The Things Stack V3 by Caspar Armster, dasdigidings e.V.\n\nfunction decodeUplink(input) {\n    var data = {};\n\n    if (input.fPort === 1) {\n        // only wifi counter data, no gps\n        if (input.bytes.length === 2) {\n            data = decode(input.bytes, [uint16], ['wifi']);\n        }\n        // wifi + ble counter data, no gps\n        if (input.bytes.length === 4) {\n            data = decode(input.bytes, [uint16, uint16], ['wifi', 'ble']);\n        }\n        // combined wifi + ble + SDS011\n        if (input.bytes.length === 8) {\n            data = decode(input.bytes, [uint16, uint16, uint16, uint16], ['wifi', 'ble', 'PM10', 'PM25']);\n        }\n        // combined wifi counter and gps data, used by https://opensensemap.org\n        if (input.bytes.length === 10) {\n            data = decode(input.bytes, [latLng, latLng, uint16], ['latitude', 'longitude', 'wifi']);\n        }\n        // combined wifi + ble counter and gps data, used by https://opensensemap.org\n        if (input.bytes.length === 12) {\n            data = decode(input.bytes, [latLng, latLng, uint16, uint16], ['latitude', 'longitude', 'wifi', 'ble']);\n        }\n        // combined wifi counter and gps data\n        if (input.bytes.length === 15) {\n            data = decode(input.bytes, [uint16, latLng, latLng, uint8, hdop, altitude], ['wifi', 'latitude', 'longitude', 'sats', 'hdop', 'altitude']);\n        }\n        // combined wifi + ble counter and gps data\n        if (input.bytes.length === 17) {\n            data = decode(input.bytes, [uint16, uint16, latLng, latLng, uint8, hdop, altitude], ['wifi', 'ble', 'latitude', 'longitude', 'sats', 'hdop', 'altitude']);\n        }\n        \n        data.pax = 0;\n        if ('wifi' in data) {\n            data.pax += data.wifi;\n        }\n        if ('ble' in data) {\n            data.pax += data.ble;\n        } \n    }\n\n    if (input.fPort === 2) {\n        // device status data\n        if (input.bytes.length === 20) {\n            data = decode(input.bytes, [uint16, uptime, uint8, uint32, uint8, uint32], ['voltage', 'uptime', 'cputemp', 'memory', 'reset0', 'restarts']);\n        }\n    }\n\n    if (input.fPort === 3) {\n        // device config data      \n        data = decode(input.bytes, [uint8, uint8, int16, uint8, uint8, uint8, uint16, bitmap1, bitmap2, version], ['loradr', 'txpower', 'rssilimit', 'sendcycle', 'wifichancycle', 'blescantime', 'sleepcycle', 'flags', 'payloadmask', 'version']);\n    }\n\n    if (input.fPort === 4) {\n        // gps data      \n        if (input.bytes.length === 8) {\n            data = decode(input.bytes, [latLng, latLng], ['latitude', 'longitude']);\n        } else {\n            data = decode(input.bytes, [latLng, latLng, uint8, hdop, altitude], ['latitude', 'longitude', 'sats', 'hdop', 'altitude']);\n        }\n    }\n\n    if (input.fPort === 5) {\n        // button pressed      \n        data = decode(input.bytes, [uint8], ['button']);\n    }\n\n    if (input.fPort === 7) {\n        // BME680 sensor data     \n        data = decode(input.bytes, [float, pressure, ufloat, ufloat], ['temperature', 'pressure', 'humidity', 'air']);\n    }\n\n    if (input.fPort === 8) {\n        // battery voltage      \n        data = decode(input.bytes, [uint16], ['voltage']);\n    }\n\n    if (input.fPort === 9) {\n        // timesync request\n        if (input.bytes.length === 1) {\n            data.timesync_seqno = input.bytes[0];\n        }\n        // epoch time answer\n        if (input.bytes.length === 5) {\n            data = decode(input.bytes, [uint32, uint8], ['time', 'timestatus']);\n        }\n    }\n\n    if (input.fPort === 10) {\n        // ENS count      \n        data = decode(input.bytes, [uint16], ['ens']);\n    }\n    \n    data.bytes = input.bytes; // comment out if you do not want to include the original payload\n    data.port = input.fPort; // comment out if you do not want to inlude the port\n\n    return {\n        data: data,\n        warnings: [],\n        errors: []\n    };\n}\n\nfunction encodeDownlink(input) {\n  return {\n    data: {\n      bytes: input.bytes\n    },\n    warnings: [\"Encoding of downlink is not supported by the JS decoder.\"],\n    errors: []\n  }\n}\n\nfunction decodeDownlink(input) {\n  return {\n    data: {\n      bytes: input.bytes\n    },\n    warnings: [\"Decoding of downlink is not supported by the JS decoder.\"],\n    errors: []\n  }\n}\n\n// ----- contents of /src/decoder.js --------------------------------------------\n// https://github.com/thesolarnomad/lora-serialization/blob/master/src/decoder.js\n\nvar bytesToInt = function (bytes) {\n    var i = 0;\n    for (var x = 0; x < bytes.length; x++) {\n        i |= (bytes[x] << (x * 8));\n    }\n    return i;\n};\n\nvar version = function (bytes) {\n    if (bytes.length !== version.BYTES) {\n        throw new Error('version must have exactly 10 bytes');\n    }\n    return String.fromCharCode.apply(null, bytes).split('\\u0000')[0];\n};\nversion.BYTES = 10;\n\nvar uint8 = function (bytes) {\n    if (bytes.length !== uint8.BYTES) {\n        throw new Error('uint8 must have exactly 1 byte');\n    }\n    return bytesToInt(bytes);\n};\nuint8.BYTES = 1;\n\nvar uint16 = function (bytes) {\n    if (bytes.length !== uint16.BYTES) {\n        throw new Error('uint16 must have exactly 2 bytes');\n    }\n    return bytesToInt(bytes);\n};\nuint16.BYTES = 2;\n\nvar uint32 = function (bytes) {\n    if (bytes.length !== uint32.BYTES) {\n        throw new Error('uint32 must have exactly 4 bytes');\n    }\n    return bytesToInt(bytes);\n};\nuint32.BYTES = 4;\n\nvar uint64 = function (bytes) {\n    if (bytes.length !== uint64.BYTES) {\n        throw new Error('uint64 must have exactly 8 bytes');\n    }\n    return bytesToInt(bytes);\n};\nuint64.BYTES = 8;\n\nvar int8 = function (bytes) {\n    if (bytes.length !== int8.BYTES) {\n        throw new Error('int8 must have exactly 1 byte');\n    }\n    var value = +(bytesToInt(bytes));\n    if (value > 127) {\n        value -= 256;\n    }\n    return value;\n};\nint8.BYTES = 1;\n\nvar int16 = function (bytes) {\n    if (bytes.length !== int16.BYTES) {\n        throw new Error('int16 must have exactly 2 bytes');\n    }\n    var value = +(bytesToInt(bytes));\n    if (value > 32767) {\n        value -= 65536;\n    }\n    return value;\n};\nint16.BYTES = 2;\n\nvar int32 = function (bytes) {\n    if (bytes.length !== int32.BYTES) {\n        throw new Error('int32 must have exactly 4 bytes');\n    }\n    var value = +(bytesToInt(bytes));\n    if (value > 2147483647) {\n        value -= 4294967296;\n    }\n    return value;\n};\nint32.BYTES = 4;\n\nvar latLng = function (bytes) {\n    return +(int32(bytes) / 1e6).toFixed(6);\n};\nlatLng.BYTES = int32.BYTES;\n\nvar uptime = function (bytes) {\n    return uint64(bytes);\n};\nuptime.BYTES = uint64.BYTES;\n\nvar hdop = function (bytes) {\n    return +(uint16(bytes) / 100).toFixed(2);\n};\nhdop.BYTES = uint16.BYTES;\n\nvar altitude = function (bytes) {\n    // Option to increase altitude resolution (also on encoder side)\n    // return +(int16(bytes) / 4 - 1000).toFixed(1);\n    return +(int16(bytes));\n};\naltitude.BYTES = int16.BYTES;\n\n\nvar float = function (bytes) {\n    if (bytes.length !== float.BYTES) {\n        throw new Error('Float must have exactly 2 bytes');\n    }\n    var isNegative = bytes[0] & 0x80;\n    var b = ('00000000' + Number(bytes[0]).toString(2)).slice(-8)\n        + ('00000000' + Number(bytes[1]).toString(2)).slice(-8);\n    if (isNegative) {\n        var arr = b.split('').map(function (x) { return !Number(x); });\n        for (var i = arr.length - 1; i > 0; i--) {\n            arr[i] = !arr[i];\n            if (arr[i]) {\n                break;\n            }\n        }\n        b = arr.map(Number).join('');\n    }\n    var t = parseInt(b, 2);\n    if (isNegative) {\n        t = -t;\n    }\n    return +(t / 100).toFixed(2);\n};\nfloat.BYTES = 2;\n\nvar ufloat = function (bytes) {\n    return +(uint16(bytes) / 100).toFixed(2);\n};\nufloat.BYTES = uint16.BYTES;\n\nvar pressure = function (bytes) {\n    return +(uint16(bytes) / 10).toFixed(1);\n};\npressure.BYTES = uint16.BYTES;\n\nvar bitmap1 = function (byte) {\n    if (byte.length !== bitmap1.BYTES) {\n        throw new Error('Bitmap must have exactly 1 byte');\n    }\n    var i = bytesToInt(byte);\n    var bm = ('00000000' + Number(i).toString(2)).substr(-8).split('').map(Number).map(Boolean);\n    return ['adr', 'screensaver', 'screen', 'countermode', 'blescan', 'antenna', 'reserved', 'reserved']\n        .reduce(function (obj, pos, index) {\n            obj[pos] = +bm[index];\n            return obj;\n        }, {});\n};\nbitmap1.BYTES = 1;\n\nvar bitmap2 = function (byte) {\n    if (byte.length !== bitmap2.BYTES) {\n        throw new Error('Bitmap must have exactly 1 byte');\n    }\n    var i = bytesToInt(byte);\n    var bm = ('00000000' + Number(i).toString(2)).substr(-8).split('').map(Number).map(Boolean);\n    return ['battery', 'sensor3', 'sensor2', 'sensor1', 'gps', 'bme', 'reserved', 'counter']\n        .reduce(function (obj, pos, index) {\n            obj[pos] = +bm[index];\n            return obj;\n        }, {});\n};\nbitmap2.BYTES = 1;\n\nvar decode = function (bytes, mask, names) {\n\n    var maskLength = mask.reduce(function (prev, cur) {\n        return prev + cur.BYTES;\n    }, 0);\n    if (bytes.length < maskLength) {\n        throw new Error('Mask length is ' + maskLength + ' whereas input is ' + bytes.length);\n    }\n\n    names = names || [];\n    var offset = 0;\n    return mask\n        .map(function (decodeFn) {\n            var current = bytes.slice(offset, offset += decodeFn.BYTES);\n            return decodeFn(current);\n        })\n        .reduce(function (prev, cur, idx) {\n            prev[names[idx] || idx] = cur;\n            return prev;\n        }, {});\n};\n\nif (typeof module === 'object' && typeof module.exports !== 'undefined') {\n    module.exports = {\n        uint8: uint8,\n        uint16: uint16,\n        uint32: uint32,\n        int8: int8,\n        int16: int16,\n        int32: int32,\n        uptime: uptime,\n        float: float,\n        ufloat: ufloat,\n        pressure: pressure,\n        latLng: latLng,\n        hdop: hdop,\n        altitude: altitude,\n        bitmap1: bitmap1,\n        bitmap2: bitmap2,\n        version: version,\n        decode: decode\n    };\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Total PAX Count"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 500,
+                          "min": 0,
+                          "unit": "devices"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "pax",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "PAX Count",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "WiFi Devices"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "devices"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "wifi",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "WiFi",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Bluetooth Devices"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "devices"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "ble",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "BLE",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Count History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "pax",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Total PAX",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "wifi",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "WiFi",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "ble",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Bluetooth",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Environmental",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 50,
+                          "min": -20,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%RH"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Pressure"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "max": 1100,
+                          "min": 900,
+                          "unit": "hPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "pressure",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PM2.5"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "μg/m³"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "PM25",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "PM2.5",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PM10"
+                        },
+                        "properties": {
+                          "color": "#e67e22",
+                          "max": 150,
+                          "min": 0,
+                          "unit": "μg/m³"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "PM10",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "PM10",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Environmental Trends (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity (%RH)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "GPS & Status",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Location"
+                        },
+                        "properties": {
+                          "center": {
+                            "latitude": 0,
+                            "longitude": 0
+                          },
+                          "zoom": 15
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "latitude,longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Location",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Altitude"
+                        },
+                        "properties": {
+                          "color": "#16a085",
+                          "max": 3000,
+                          "min": 0,
+                          "unit": "m"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "altitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Altitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Satellites"
+                        },
+                        "properties": {
+                          "color": "#2c3e50",
+                          "max": 20,
+                          "min": 0,
+                          "unit": "sats"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "sats",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2c3e50",
+                            "name": "Satellites",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "max": 4.5,
+                          "min": 2.5,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"padding: 15px; font-family: monospace;\">\n  <div ng-if=\"value[0]\" style=\"margin-bottom: 10px;\">\n    <strong>Last Update:</strong> {{ value[0].ts | date:'medium' }}\n  </div>\n  <div ng-if=\"value[0].port\" style=\"margin-bottom: 10px;\">\n    <strong>LoRaWAN Port:</strong> {{ value[0].port }}\n  </div>\n  <div ng-if=\"value[0].cputemp\" style=\"margin-bottom: 10px;\">\n    <strong>CPU Temperature:</strong> {{ value[0].cputemp }}°C\n  </div>\n  <div ng-if=\"value[0].uptime\" style=\"margin-bottom: 10px;\">\n    <strong>Uptime:</strong> {{ value[0].uptime }} seconds\n  </div>\n  <div ng-if=\"value[0].memory\" style=\"margin-bottom: 10px;\">\n    <strong>Free Memory:</strong> {{ value[0].memory }} bytes\n  </div>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "opensource_esp32_paxcounter_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
