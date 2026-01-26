@@ -1,0 +1,7 @@
+site_name: plugins/devices/opensource-esp32-paxcounter
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
