@@ -1,0 +1,530 @@
+{
+  "name": "imbuildings_people_counter",
+  "version": "1.0.0",
+  "description": "Infrared based battery powered People Counter",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "imbuildings-imbuildings-people-counter"
+  },
+  "metadata": {
+    "name": "IMBUILDINGS-PEOPLE-COUNTER",
+    "description": "Infrared based battery powered People Counter",
+    "image": "assets/imbuildings-people-counter-black.png",
+    "category": "devices",
+    "vendor": "imbuildings"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Infrared based battery powered People Counter",
+        "enabled": true,
+        "name": "IMBUILDINGS-PEOPLE-COUNTER",
+        "product": "imbuildings_people_counter",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=10}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "imb-pc-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "imbuildings_people_counter_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId;\n}\n\n// Custom payload processing function configured in \"imbuildings_people_counter_data\" bucket.\nfunction parseOrDecodeIncomingData(payload) {\n    // Call the decodeThingerUplink function to decode the payload\n    return decodeThingerUplink(payload);\n}\n\nfunction decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nconst payloadTypes = {\n    COMFORT_SENSOR:                 0x01,\n    PEOPLE_COUNTER:                 0x02,\n    BUTTONS:                        0x03,\n    PULSE_COUNTER:                  0x04,\n    TRACKER:                        0x05,\n    DOWNLINK:                       0xF1\n}\n\nconst errorCode = {\n    UNKNOWN_PAYLOAD:                1,\n    EXPECTED_DOWNLINK_RESPONSE:     2,\n    UNKNOWN_PAYLOAD_TYPE:           3,\n    UNKNOWN_PAYLOAD_VARIANT:        4\n}\n\nconst settingIdentifier = {\n    DEVICE_ID:                      0x02,\n    INTERVAL:                       0x1E,\n    EVENT_SETTING:                  0x1F,\n    PAYLOAD_DEFINITION:             0x20,\n    HEARTBEAT_INTERVAL:             0x21,\n    HEARTBEAT_PAYLOAD_DEFINITION:   0x22,\n    DEVICE_ADDRESS:                 0x2B,\n    CONFIRMED_MESSAGES:             0x2F,\n    FPORT:                          0x33,\n    FPORT_HEARTBEAT:                0x36,\n    OOC_DISTANCE:                   0x50,\n    LED_INDICATION:                 0x51,\n    BUTTON_DELAY_TIME:              0x52,\n    DEVICE_COMMANDS:                0xC8,\n    ERRORS:                         0xF0\n}\n\nconst command = {\n    GET_PAYLOAD:                    0x01,\n    REJOIN:                         0x02,\n    COUNTER_PRESET:                 0x03,\n    SAVE:                           0x04,\n    BUTTON_PRESET:                  0x05\n}\n\nfunction decodeUplink(input){\n    let parsedData = {};\n\n    if(!containsIMBHeader(input.bytes)){\n        //When payload doesn't contain IMBuildings header\n        //Assumes that payload is transmitted on specific recommended fport\n        //e.g. payload type 2 variant 6 on FPort 26, type 2 variant 7 on FPort 27 and so on...\n        switch(input.fPort){\n            case 10:\n                //Assumes data is response from downlink\n                if(input.bytes[0] != payloadTypes.DOWNLINK || input.bytes[1] != 0x01) return getError(errorCode.EXPECTED_DOWNLINK_RESPONSE);\n                parsedData.payload_type = payloadTypes.DOWNLINK;\n                parsedData.payload_variant = 0x01;\n                break;\n            case 13:\n                if(input.bytes.length != 7) return getError(errorCode.UNKNOWN_PAYLOAD);\n\n                parsedData.payload_type = payloadTypes.COMFORT_SENSOR;\n                parsedData.payload_variant = 3;\n                break;\n            case 26:\n                if(input.bytes.length != 13) return getError(errorCode.UNKNOWN_PAYLOAD);\n\n                parsedData.payload_type = payloadTypes.PEOPLE_COUNTER;\n                parsedData.payload_variant = 6;\n                break;\n            case 27:\n                if(input.bytes.length != 5) return getError(errorCode.UNKNOWN_PAYLOAD);\n\n                parsedData.payload_type = payloadTypes.PEOPLE_COUNTER;\n                parsedData.payload_variant = 7;\n                break;\n            case 28:\n                if(input.bytes.length != 4) return getError(errorCode.UNKNOWN_PAYLOAD);\n\n                parsedData.payload_type = payloadTypes.PEOPLE_COUNTER;\n                parsedData.payload_variant = 8;\n                break;\n            case 33:\n                if(input.bytes.length != 14) return getError(errorCode.UNKNOWN_PAYLOAD);\n                parsedData.payload_type = payloadTypes.BUTTONS;\n                parsedData.payload_variant = 3;\n                break;\n            case 34:\n                if(input.bytes.length != 23) return getError(errorCode.UNKNOWN_PAYLOAD);\n                parsedData.payload_type = payloadTypes.BUTTONS;\n                parsedData.payload_variant = 4;\n                break;\n            default:\n                return { errors: []};\n        }\n    }else{\n        parsedData.payload_type = input.bytes[0];\n        parsedData.payload_variant = input.bytes[1];\n        parsedData.device_id = toHEXString(input.bytes, 2, 8)\n    }\n\n    switch(parsedData.payload_type){\n        case payloadTypes.COMFORT_SENSOR: parseComfortSensor(input, parsedData); break;\n        case payloadTypes.PEOPLE_COUNTER: parsePeopleCounter(input, parsedData); break;\n        case payloadTypes.DOWNLINK:       parsedData = parseDownlinkResponse(input.bytes); break;\n        case payloadTypes.BUTTONS:        parseButtons(input, parsedData); break;\n        default:\n            return getError(errorCode.UNKNOWN_PAYLOAD_TYPE);\n    }\n\n    return { data: parsedData}; \n\n}\n\nfunction containsIMBHeader(payload){\n    if(payload[0] == payloadTypes.COMFORT_SENSOR && payload[1] == 0x03 && payload.length == 20) return true;\n    if(payload[0] == payloadTypes.PEOPLE_COUNTER && payload[1] == 0x06 && payload.length == 23) return true;\n    if(payload[0] == payloadTypes.PEOPLE_COUNTER && payload[1] == 0x07 && payload.length == 15) return true;\n    if(payload[0] == payloadTypes.PEOPLE_COUNTER && payload[1] == 0x08 && payload.length == 14) return true;\n    if(payload[0] == payloadTypes.BUTTONS && payload[1] == 0x03 && payload.length == 14) return true;\n    if(payload[0] == payloadTypes.BUTTONS && payload[1] == 0x04 && payload.length == 23) return true;\n\n    return false;\n}\n\nfunction parseComfortSensor(input, parsedData){\n    switch(parsedData.payload_variant){\n        case 0x03:\n            parsedData.device_status = input.bytes[input.bytes.length - 10];\n            parsedData.battery_voltage = readUInt16BE(input.bytes, input.bytes.length - 9) / 100;\n            parsedData.temperature = readUInt16BE(input.bytes, input.bytes.length - 7) / 100;\n            parsedData.humidity = readUInt16BE(input.bytes, input.bytes.length - 5) / 100;\n            parsedData.CO2 = readUInt16BE(input.bytes, input.bytes.length - 3);\n            parsedData.presence = (input.bytes[input.bytes.length - 1] == 1) ? true : false;\n            break;\n    }\n\n}\n\nfunction parsePeopleCounter(input, parsedData){\n    switch(parsedData.payload_variant){\n        case 0x06:\n            parsedData.device_status = input.bytes[input.bytes.length - 13];\n            parsedData.battery_voltage = readUInt16BE(input.bytes, input.bytes.length - 12) / 100;\n            parsedData.counter_a = readUInt16BE(input.bytes, input.bytes.length - 10);\n            parsedData.counter_b = readUInt16BE(input.bytes, input.bytes.length - 8);\n            parsedData.sensor_status = input.bytes[input.bytes.length - 6];\n            parsedData.total_counter_a = readUInt16BE(input.bytes, input.bytes.length - 5);\n            parsedData.total_counter_b = readUInt16BE(input.bytes, input.bytes.length - 3);\n            parsedData.payload_counter = input.bytes[input.bytes.length - 1];\n            break;\n        case 0x07:\n            parsedData.sensor_status = input.bytes[input.bytes.length - 5];\n            parsedData.total_counter_a = readUInt16BE(input.bytes, input.bytes.length - 4);\n            parsedData.total_counter_b = readUInt16BE(input.bytes, input.bytes.length - 2);\n            break;\n        case 0x08:\n            parsedData.device_status = input.bytes[input.bytes.length - 4];\n            parsedData.battery_voltage = readUInt16BE(input.bytes, input.bytes.length - 3) / 100;\n            parsedData.sensor_status = input.bytes[input.bytes.length - 1];\n            break;\n    }\n}\n\nfunction parseButtons(input, parsedData){\n    switch(parsedData.payload_variant){\n        case 0x03:\n            parsedData.device_status = input.bytes[input.bytes.length - 4];\n            parsedData.battery_voltage = readUInt16BE(input.bytes, input.bytes.length - 3) / 100;\n            parsedData.button_pressed = (input.bytes[input.bytes.length - 1] != 0) ? true : false;\n            parsedData.button = {\n                a: (input.bytes[input.bytes.length - 1] & 0x01 == 0x01) ? true : false,\n                b: (input.bytes[input.bytes.length - 1] & 0x02 == 0x02) ? true : false,\n                c: (input.bytes[input.bytes.length - 1] & 0x04 == 0x04) ? true : false,\n                d: (input.bytes[input.bytes.length - 1] & 0x08 == 0x08) ? true : false,\n                e: (input.bytes[input.bytes.length - 1] & 0x10 == 0x10) ? true : false\n            }\n            break;\n        case 0x04:\n            parsedData.device_status = input.bytes[input.bytes.length - 13];\n            parsedData.battery_voltage = readUInt16BE(input.bytes, input.bytes.length - 12) / 100;\n            parsedData.button = {\n                a: readUInt16BE(input.bytes, input.bytes.length - 10),\n                b: readUInt16BE(input.bytes, input.bytes.length - 8),\n                c: readUInt16BE(input.bytes, input.bytes.length - 6),\n                d: readUInt16BE(input.bytes, input.bytes.length - 4),\n                e: readUInt16BE(input.bytes, input.bytes.length - 2)\n            }\n            break;\n    }\n}\n\nfunction decodeDownlink(input){\n    if(input.fPort != 10){\n        return { errors: ['Please use FPort 10 for downlink results']};\n    }\n\n    if(input.bytes[0] != 0xF1 || input.bytes[1] != 0x01){\n        return { errors: ['Expected downlink payload']};\n    }\n\n    return {\n        data: parseDownlinkResponse(input)\n    }\n\n}\n\nfunction parseDownlinkResponse(payload){\n    let parsedResponse = {};\n\n    let i = 2;\n    while( i < payload.length){\n        switch(payload[i + 1]){\n            case settingIdentifier.DEVICE_ID:\n                parsedResponse.device_id = toHEXString(payload, i + 2, 8);\n                break;\n            case settingIdentifier.INTERVAL:\n                parsedResponse.interval = payload[i + 2];\n                break;\n            case settingIdentifier.EVENT_SETTING:\n                parsedResponse.event = {\n                    type: payload[i + 2],\n                    count: payload[i + 3],\n                    timeout: payload[i + 4]\n                }\n                break;\n            case settingIdentifier.PAYLOAD_DEFINITION:\n                parsedResponse.payload = {\n                    type: payload[i + 2],\n                    variant: payload[i + 3],\n                    header: (payload[i + 4] == 0x01) ? true : false\n                }\n                break;\n            case settingIdentifier.HEARTBEAT_INTERVAL:\n                if(parsedResponse.heartbeat === undefined){\n                    parsedResponse.heartbeat = {};\n                }\n\n                parsedResponse.heartbeat.interval = payload[i + 2];\n                break;\n            case settingIdentifier.HEARTBEAT_PAYLOAD_DEFINITION:\n                if(parsedResponse.heartbeat === undefined){\n                    parsedResponse.heartbeat = {};\n                }\n\n                parsedResponse.heartbeat.payload = {\n                    type: payload[i + 2],\n                    variant: payload[i + 3],\n                    header: (payload[i + 4] == 0x01) ? true : false\n                }\n                break;\n            case settingIdentifier.DEVICE_ADDRESS:\n                parsedResponse.device_address = toHEXString(payload, i + 2, 4);\n                break;\n            case settingIdentifier.CONFIRMED_MESSAGES:\n                parsedResponse.confirmed_messages = payload[i + 2];\n                break;\n            case settingIdentifier.FPORT:\n                parsedResponse.fport = payload[i + 2];\n                break;\n            case settingIdentifier.FPORT_HEARTBEAT:\n                if(parsedResponse.heartbeat === undefined){\n                    parsedResponse.heartbeat = {};\n                }\n\n                parsedResponse.heartbeat.fport = payload[i + 2];\n                break;\n        }\n\n        i += payload[i];\n    }\n\n    return parsedResponse;\n}\n\nfunction encodeDownlink(input){\n    let dl = [payloadTypes.DOWNLINK, 0x01];\n\n    if(input.data.command !== undefined && input.data.command.rejoin !== undefined){\n        if(input.data.command.rejoin === true){\n            dl.push(0x03);\n            dl.push(settingIdentifier.DEVICE_COMMANDS);\n            dl.push(command.rejoin);\n        }\n    }\n\n    //Counter reset currently implemented as reset (all zeros)\n    if(input.data.command !== undefined && input.data.command.counter_preset !== undefined){\n        dl.push(0x07);\n        dl.push(settingIdentifier.DEVICE_COMMANDS);\n        dl.push(command.COUNTER_PRESET);\n\n        if(input.data.command.counter_preset.counter_a !== undefined && input.data.command.counter_preset.counter_b !== undefined){    \n            dl.push(0x00);\n            dl.push(0x00);\n            dl.push(0x00);\n            dl.push(0x00);\n        }else{\n            dl.push(0x00);\n            dl.push(0x00);\n            dl.push(0x00);\n            dl.push(0x00);\n        }\n    }\n\n    //Button preset currently implemented as reset (all zeros)\n    if(input.data.command !== undefined && input.data.command.button_preset !== undefined){\n        dl.push(0x0D);\n        dl.push(settingIdentifier.DEVICE_COMMANDS);\n        dl.push(command.BUTTON_PRESET);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n        dl.push(0x00);\n    }\n\n    if(input.data.interval !== undefined){\n        if(input.data.interval == null){\n            dl.push(0x02);\n            dl.push(settingIdentifier.INTERVAL);\n        }else{\n            dl.push(0x03);\n            dl.push(settingIdentifier.INTERVAL);\n            dl.push(input.data.interval);\n        }\n        \n    }\n\n    if(input.data.event !== undefined && input.data.event.type !== undefined && input.data.event.count !== undefined && input.data.event.timeout !== undefined){\n        dl.push(0x05);\n        dl.push(settingIdentifier.EVENT_SETTING);\n        dl.push(input.data.event.type);\n        dl.push(input.data.event.count);\n        dl.push(input.data.event.timeout);\n    }\n\n    if(input.data.payload !== undefined && input.data.payload.type !== undefined&& input.data.payload.variant !== undefined && input.data.payload.header !== undefined){\n        dl.push(0x05);\n        dl.push(settingIdentifier.PAYLOAD_DEFINITION);\n        dl.push(input.data.payload.type);\n        dl.push(input.data.payload.variant);\n        dl.push((input.data.payload.header === true) ? 0x01 : 0x00);\n    }\n\n    if(input.data.fport !== undefined){\n        dl.push(0x03);\n        dl.push(settingIdentifier.FPORT);\n        dl.push(input.data.fport);\n    }\n\n    if(input.data.heartbeat){\n        if(input.data.heartbeat.interval !== undefined){\n            dl.push(0x03);\n            dl.push(settingIdentifier.HEARTBEAT_INTERVAL);\n            dl.push(input.data.heartbeat.interval);\n        }\n\n        if(input.data.heartbeat.payload !== undefined && input.data.heartbeat.payload.type !== undefined && input.data.heartbeat.payload.variant !== undefined && input.data.heartbeat.payload.header !== undefined){\n            dl.push(0x05);\n            dl.push(settingIdentifier.HEARTBEAT_PAYLOAD_DEFINITION);\n            dl.push(input.data.heartbeat.payload.type);\n            dl.push(input.data.heartbeat.payload.variant);\n            dl.push((input.data.heartbeat.payload.header === true) ? 0x01 : 0x00);\n        }\n\n        if(input.data.heartbeat.fport !== undefined){\n            dl.push(0x03);\n            dl.push(settingIdentifier.FPORT_HEARTBEAT);\n            dl.push(input.data.heartbeat.fport);\n        }\n    }\n\n    if(input.data.ooc_ignore_distance !== undefined && input.data.ooc_detection_distance !== undefined){\n        if(input.data.ooc_detection_distance > 200) input.data.ooc_detection_distance = 200;\n        if(input.data.ooc_ignore_distance > 200) input.data.ooc_ignore_distance = 200;\n        dl.push(0x04);\n        dl.push(settingIdentifier.OOC_DISTANCE);\n        dl.push(input.data.ooc_ignore_distance);\n        dl.push(input.data.ooc_detection_distance);\n    }\n\n    if(input.data.led_function !== undefined){\n        dl.push(0x03);\n        dl.push(settingIdentifier.LED_INDICATION);\n        dl.push(input.data.led_function);\n    }\n\n    if(input.data.confirmed_messages !== undefined){\n        dl.push(0x03);\n        dl.push(settingIdentifier.CONFIRMED_MESSAGES);\n        dl.push(input.data.confirmed_messages);\n    }\n\n    if(input.data.save !== undefined && input.data.save === true){\n        dl.push(0x03);\n        dl.push(settingIdentifier.SAVE);\n        dl.push(command.save);\n    }\n\n    return {\n        fPort: 10,\n        bytes: dl\n    };\n}\n\n//Helper functions\nfunction getError(code){\n    switch(code){\n        case errorCode.UNKNOWN_PAYLOAD:             return { errors: ['Unable to detect correct payload. Please check your device configuration']};\n        case errorCode.EXPECTED_DOWNLINK_RESPONSE:  return { errors: ['Expected downlink reponse data on FPort 10. Please transmit downlinks on FPort 10']};\n        case errorCode.UNKNOWN_PAYLOAD_TYPE:        return { errors: ['Unknown payload type']};\n        case errorCode.UNKNOWN_PAYLOAD_VARIANT:     return { errors: ['Unknown payload variant']};\n    }\n}\n\nfunction bcd(dec) {\n\treturn ((dec / 10) << 4) + (dec % 10);\n}\n\nfunction unbcd(bcd) {\n\treturn ((bcd >> 4) * 10) + bcd % 16;\n}\n\nfunction toHEXString(payload, index, length){\n    var HEXString = '';\n\n    for(var i = 0; i < length; i++){\n        if(payload[index + i] < 16){\n            HEXString = HEXString + '0';\n        }\n        HEXString = HEXString + payload[index + i].toString(16);\n    }\n\n    return HEXString;\n}\n\nfunction readInt16BE(payload, index){\n    var int16 = (payload[index] << 8) + payload[++index];\n\n    if(int16 & 0x8000){\n        int16 = - (0x10000 - int16);\n    }\n\n    return int16;\n}\n\nfunction readUInt16BE(payload, index){\n    return (payload[index] << 8) + payload[++index];\n}\n\nfunction readInt8(payload, index){\n    var int8 = payload[index];\n\n    if(int8 & 0x80){\n        int8 = - (0x100 - int8);\n    }\n\n    return int8;\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "People Counter",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#1976D2",
+                          "currentColor": "#1976D2",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "People Flow History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "counter_a",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "Counter A (In)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "counter_b",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#66DA26",
+                            "name": "Counter B (Out)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Total Count A"
+                        },
+                        "properties": {
+                          "color": "#2E93fA",
+                          "max": 10000,
+                          "min": 0,
+                          "unit": "people"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "total_counter_a",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "Total A",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Total Count B"
+                        },
+                        "properties": {
+                          "color": "#66DA26",
+                          "max": 10000,
+                          "min": 0,
+                          "unit": "people"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "total_counter_b",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#66DA26",
+                            "name": "Total B",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f0e924",
+                          "max": 3.6,
+                          "min": 2,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "battery_voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f0e924",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor Status"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "sensor_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 12,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Events"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Counter A</th>\n        <th>Counter B</th>\n        <th>Total A</th>\n        <th>Total B</th>\n        <th>Battery (V)</th>\n        <th>Status</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.counter_a || '—' }}</td>\n        <td>{{ entry.counter_b || '—' }}</td>\n        <td>{{ entry.total_counter_a || '—' }}</td>\n        <td>{{ entry.total_counter_b || '—' }}</td>\n        <td>{{ entry.battery_voltage || '—' }}</td>\n        <td>{{ entry.sensor_status || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "counter_a",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "counter_a",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "counter_b",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#66DA26",
+                            "name": "counter_b",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "total_counter_a",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "total_a",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "total_counter_b",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "total_b",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "battery_voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f0e924",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imbuildings_people_counter_data",
+                              "mapping": "sensor_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "status",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
