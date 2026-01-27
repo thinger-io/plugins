@@ -12,7 +12,7 @@
   "metadata": {
     "name": "RestoTracker SCD18",
     "description": "Ultra-low power consumption, indoor&outdoor (BLE&WIFI&GPS) LoRaWAN Tracker - SCD18 model",
-    "image": "assets/restotracker_scd18.png",
+    "image": "assets/restotracker_scd1.png",
     "category": "devices",
     "vendor": "restotracker"
   },
