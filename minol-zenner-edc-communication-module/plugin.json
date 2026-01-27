@@ -12,7 +12,7 @@
   "metadata": {
     "name": "EDC-COMMUNICATION-MODULE",
     "description": "The EDC communication module is an add-on module for water meters for secure remote reading and for integrating water meters into smart metering systems",
-    "image": "assets/edc-communication-module.png",
+    "image": "assets/edc_communication.png",
     "category": "devices",
     "vendor": "minol-zenner"
   },
