@@ -1,5 +1,3 @@
-Based on the device data provided, here is the README.md:
-
 # SCD18 - Tracker
 
 The SCD18 is an ultra-low power consumption LoRaWAN tracker designed for both indoor and outdoor asset tracking applications. It features multi-mode positioning capabilities including BLE, WiFi, and GPS technologies, enabling accurate location tracking across diverse environments while maintaining exceptional battery efficiency.
