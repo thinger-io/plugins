@@ -1,0 +1,534 @@
+{
+  "name": "emu_emu_prof_ii",
+  "version": "1.0.0",
+  "description": "3-phase energy meter with MID B+D approval for billing purpose. Connection: Direct (100A) or indirect (CT /5 and /1A). Internal clock. External or internal antenna.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "emu-emu-prof-ii"
+  },
+  "metadata": {
+    "name": "Emu EMU-PROF-II",
+    "description": "3-phase energy meter with MID B+D approval for billing purpose. Connection: Direct (100A) or indirect (CT /5 and /1A). Internal clock. External or internal antenna.",
+    "image": "assets/emu-prof-ii.png",
+    "category": "devices",
+    "vendor": "emu"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "3-phase energy meter with MID B+D approval for billing purpose. Connection: Direct (100A) or indirect (CT /5 and /1A). Internal clock. External or internal antenna.",
+        "enabled": true,
+        "name": "Emu EMU-PROF-II",
+        "product": "emu_emu_prof_ii",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "emu_device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "emu-prof-ii-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "emu_emu_prof_ii_energy_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 12,
+                "unit": "months"
+              },
+              "tags": [
+                "energy",
+                "lorawan"
+              ]
+            }
+          },
+          "code": {
+            "code": "// Device Identifier Resolver configured in \"uplink\" API resource.\nfunction getId(payload) {\n    return payload.deviceId || payload.deviceEui || payload.dev_eui || 'unknown';\n}\n\n// Custom payload processing function configured in \"emu_emu_prof_ii_energy_data\" bucket.\nfunction parseOrDecodeIncomingData(payload) {\n    // Call the main decoder wrapper that handles both TTN v3 and Chirpstack formats\n    return decodeThingerUplink(payload);\n}\n\nfunction decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n* MIT License\n* Copyright (c) 2021 EMU Electronic AG (https://www.emuag.ch/). All rights reserved.\n*\n* Permission is hereby granted, free of charge, to any person obtaining a copy\n* of this software and associated documentation files (the \"Software\"), to deal\n* in the Software without restriction, including without limitation the rights\n* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n* copies of the Software, and to permit persons to whom the Software is\n* furnished to do so, subject to the following conditions:\n*\n* The above copyright notice and this permission notice shall be included in all\n* copies or substantial portions of the Software.\n*\n* THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n* SOFTWARE.\n*/\n\n/**\n * decodeUplink is called by TheThingsNetwork\n * we use our parsePayload() for decoding\n * \n * @param {*} input \n * @returns object containing decoded payload\n * {\n *      \"Active Energy Export T1\": {\n *        \"unit\": \"Wh\",\n *        \"value\": 0\n *      },\n *      \"Active Energy Export T2\": {\n *        \"unit\": \"Wh\",\n *        \"value\": 0\n *      },\n *      \"Active Energy Import T1\": {\n *        \"unit\": \"Wh\",\n *        \"value\": 4000\n *      },\n *      \"Active Energy Import T2\": {\n *        \"unit\": \"Wh\",\n *        \"value\": 0\n *      },\n *      \"Reactive Energy Export T1\": {\n *        \"unit\": \"varh\",\n *        \"value\": 0\n *      },\n *      \"Reactive Energy Export T2\": {\n *        \"unit\": \"varh\",\n *        \"value\": 0\n *      },\n *      \"Reactive Energy Import T1\": {\n *        \"unit\": \"varh\",\n *        \"value\": 0\n *      },\n *      \"Reactive Energy Import T2\": {\n *        \"unit\": \"varh\",\n *        \"value\": 0\n *      },\n *      \"medium\": {\n *        \"desc\": \"Electricity\",\n *        \"type\": 1\n *      },\n *      \"readoutInterval\": 900,\n *      \"timeStamp\": 1635499020,\n *      \"timestamp\": {\n *        \"unit\": \"seconds\",\n *        \"value\": 1635499020\n *      }\n */\nfunction decodeUplink(input) {\n    data = input.bytes;\n    //uplink with only 2 bytes is only status update, ignore it \n    if(data.length<=2){\n        return {};\n    }\n    \n    var obj = {};\n    \n    \n    //check CRC-8 which resides at the end\n    crc8Received = data[data.length - 1];\n    dataToCheck = [];\n    for(var i = 0; i < data.length - 1; i++){\n        dataToCheck.push(data[i]);\n    }\n    \n    if (crc8_encode(dataToCheck).toString(16) === crc8Received.toString(16)) {\n        //crc-8 seems ok, \n    } else {\n        obj.warnings = ['crc-8 wrong'];\n        //perhaps decide to stop further processing if crc-8 is wrong\n    } \n    \n    //first 4 bytes are allways the timestamp, this is the timestamp from the datalogger\n    var timeStamp = getUint32(data);\n    \n    obj.data = parsePayload(data);\n\n    //for TTN we strip unused information\n    for(var property in obj.data){\n        delete obj.data[property].cfgdescription;\n        delete obj.data[property].cfgtariff;\n        delete obj.data[property].cfgunit;\n        delete obj.data[property].cfgorder;\n        delete obj.data[property].order;\n        \n        \n        \n    }\n\n    obj.data.timeStamp = timeStamp;\n    obj.data.medium = {\n        \"type\": 1,\n        \"desc\": \"Electricity\"\n    };\n         \n    return obj;\n}\n\n/**\n * Decode is called by Chirpstack\n * @param {*} fPort \n * @param {*} data \n * @param {*} variables \n * @returns object containing decoded payload\n * \n * {\n *  \"Active Energy Import T1\": {\n *     \"unit\": \"Wh\",\n *     \"cfgdescription\": 3,\n *     \"cfgunit\": 1,\n *     \"cfgtariff\": 1,\n *     \"order\": 3,\n *     \"value\": 1809\n *  },\n *  \"Active Energy Import T2\": {\n *     \"unit\": \"Wh\",\n *     \"cfgdescription\": 3,\n *     \"cfgunit\": 1,\n *     \"cfgtariff\": 2,\n *     \"order\": 4,\n *     \"value\": 128\n *  },\n *  \"Active Energy Export T1\": {\n *     \"unit\": \"Wh\",\n *     \"cfgdescription\": 5,\n *     \"cfgunit\": 1,\n *     \"cfgtariff\": 1,\n *     \"order\": 5,\n *     \"value\": 1149\n *  },\n *  \"Active Energy Export T2\": {\n *     \"unit\": \"Wh\",\n *     \"cfgdescription\": 5,\n *     \"cfgunit\": 1,\n *     \"cfgtariff\": 2,\n *     \"order\": 6,\n *     \"value\": 17794\n *  },\n *  \"Reactive Energy Import T1\": {\n *     \"unit\": \"varh\",\n *     \"cfgdescription\": 10,\n *     \"cfgunit\": 5,\n *     \"cfgtariff\": 1,\n *     \"order\": 7,\n *     \"value\": 1864\n *  },\n *  \"Reactive Energy Import T2\": {\n *     \"unit\": \"varh\",\n *     \"cfgdescription\": 10,\n *     \"cfgunit\": 5,\n *     \"cfgtariff\": 2,\n *     \"order\": 8,\n *     \"value\": 2600\n *  },\n *  \"Reactive Energy Export T1\": {\n *     \"unit\": \"varh\",\n *     \"cfgdescription\": 13,\n *     \"cfgunit\": 5,\n *     \"cfgtariff\": 1,\n *     \"order\": 9,\n *     \"value\": 338\n *  },\n *  \"Reactive Energy Export T2\": {\n *     \"unit\": \"varh\",\n *     \"cfgdescription\": 13,\n *     \"cfgunit\": 5,\n *     \"cfgtariff\": 2,\n *     \"order\": 10,\n *     \"value\": 9661\n *  },\n *  \"timeStamp\": 1635499800,\n *  \"medium\": {\n *     \"type\": 1,\n *     \"desc\": \"Electricity\"\n *  },\n *  \"readoutInterval\": 900\n * }\n */\nfunction Decode(fPort, data, variables) {\n    //uplink with only 2 bytes is only status update, ignore it \n    if (data.length <= 2) {\n        return {};\n    }\n    \n    var obj = {};\n    \n    //check CRC-8 which resides at the end\n    crc8Received = data[data.length - 1];\n    dataToCheck = [];\n    for(var i = 0; i < data.length - 1; i++){\n        dataToCheck.push(data[i]);\n    }\n    \n    if (crc8_encode(dataToCheck).toString(16) === crc8Received.toString(16)) {\n        //crc-8 seems ok, \n    } else {\n        obj.warnings = ['crc-8 wrong'];\n        //perhaps decide to stop further processing if crc-8 is wrong\n    } \n    \n    //first 4 bytes are allways the timestamp, this is the timestamp from the datalogger\n    var timeStamp = getUint32(data);\n    obj = parsePayload(data);\n    obj.timeStamp = timeStamp;\n\n \n    //add a human readable timestamp to the payload\n    var meterDate = new Date(timeStamp * 1000);\n    var  options = { timeZone:'Europe/Berlin', weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour:'numeric', minute:'numeric', second:'numeric'};\n    obj.timeStampReadable = meterDate.toLocaleString('de-CH',options);\n\n    \n    obj.medium = {\n        \"type\": 1,\n        \"desc\": \"Electricity\"\n    };\n    \n    //Default readout-interval is allways 15 minutes\n    obj.readoutInterval = (15 * 60); //15 Min * 60 Sec\n    //you can overwrite the readout-interval when defining variables for this meter\n    if(variables !== null && variables.readoutInterval !== null){\n         obj.readoutInterval = variables.readoutInterval;\n    }\n    \n    return obj;\n}\n\n\n/**\n * encodeDownlink is called by TheThingsNetwork\n * @param {*} data Object containing configuration\n * @returns binary data \n */\nfunction encodeDownlink(data){\n/**\n * Example JSON-Object for Timestamp, Energy 0x03-0x0A \n * {\n *   \"fPort\": 1,\n *   \"timeInterval\": 15,\n *   \"sndAck\": true,\n *   \"startReJoin\": false,\n *   \"portIsActive\": true,\n *   \"values\": [\n *       1,\n *       3,\n *       4,\n *       5,\n *       6,\n *       7,\n *       8,\n *       9,\n *       10\n *   ]\n * } \n * \n */\n    //fPort must be defined else define it\n    if (data.data.fPort === null || data.data.fPort === undefined){\n        data.data.fPort = 1;\n    }\n    fPort = data.data.fPort;\n    bytes = [];\n\n    //just call the Encode function \n    bytes = Encode(fPort, data.data, {});\n         \n    return {fPort: fPort, bytes: bytes};\n}\n\n/**\n * decodeDownlink is used by TheThingsNetwork\n * @param {*} input  binary data containing configuration\n * @returns data object containing decoded configuration\n */\nfunction decodeDownlink(input) {\n    var data = {};\n    data.fPort = input.fPort;\n    if(input.bytes.length > 3){\n        var i = 0;\n        data.timeInterval = Number(getInt16([input.bytes[i++], input.bytes[i++]]));\n        configFlag = input.bytes[i++];\n        //sndAck activated ?\n        if (configFlag & 0x02) {\n            data.sndAck = true;\n        }\n        else {\n            data.sndAck = false;\n        }\n        //start a rejoin after receiving this uplink ?\n        if (configFlag & 0x04) {\n            data.startReJoin = true;\n        }\n        else {\n            data.startReJoin = false;\n        }\n        //is this uplink on this port activated ?\n        if (configFlag & 0x08) {\n            data.portIsActive = true;\n        }\n        else {\n            data.portIsActive = false;\n        }\n        data.values = []\n        for (i; i < input.bytes.length - 1; ++i) {\n            data.values.push(Number(getUint8(input.bytes[i])));\n        }\n    }\n    return data;\n}\n/**\n * Encode is called by Chirpstack\n * @param {*} fPort \n * @param {*} data Object containing configuration\n * @param {*} variables \n * @returns binary data\n */\nfunction Encode(fPort, data, variables) {\n/**\n * Example JSON-Object for Timestamp, Energy 0x03-0x0A \n * {\n *   \"fPort\": 1,\n *   \"timeInterval\": 15,\n *   \"sndAck\": true,\n *   \"startReJoin\": false,\n *   \"portIsActive\": true,\n *   \"values\": [\n *       1,\n *       3,\n *       4,\n *       5,\n *       6,\n *       7,\n *       8,\n *       9,\n *       10\n *   ]\n * } \n * \n */    \n    bytes = [];\n    \n    //make sure the time is valid and between 1 and 65535!\n    data.timeInterval = Math.min(data.timeInterval, 0xFFFF);\n    data.timeInterval = Math.max(data.timeInterval,1 );\n    \n    //push second byte to first position\n    bytes.push(data.timeInterval & 0X00FF);\n    //push first byte to second pposition\n    bytes.push(data.timeInterval >> 8);\n    \n    var configFlags = 0x00;\n    //Send Acknowledge for each Uplink back\n    if (data.sndAck) {\n        configFlags |= 0x02;\n    }\n    //Start Re-Join\n    if (data.startReJoin) {\n        configFlags |= 0x04;\n    }\n    //Enable this port so it sends data\n    if (data.portIsActive) {\n        configFlags |= 0x08;\n    }\n    \n    //Push the config flag on the stack\n    bytes.push(configFlags);\n    for(var i=0; i< data.values.length; i++) {\n        bytes.push(data.values[i]);\n    }\n    //apply crc-8\n    crc8 = crc8_encode(bytes);\n    bytes.push(crc8);\n    \n    return bytes;\n}\n\n\n \n\n/**\n* read 1 byte of data an convert it to an Uint8\n* @param {*} data \n* @returns \n*/\nfunction getUint8(data) {\n    var value = data >>> 0;\n    return value;\n    \n}\n\nfunction flip(n) {\n    var x = [];\n    n = Number(n);\n    //will work only for positive numbers\n    var single = n.toString(2).split(\"\");\n    for(var i = 0; i<single.length; i++){\n        x.push(single[i] == 1 ? 0 : 1);\n    }\n    \n    var tmp = x.join(\"\");\n    var y = (parseInt(tmp, 2) + 1) * -1;\n    return y;\n}\n\n\n/**\n* read 1 byte of data an convert it to an Int8\n* @param {*} data \n* @returns \n*/\nfunction getInt8(data) {\n    \n    if(data === 0){return 0;}\n    if(data >> 7 == 1){\n        return flip(data);\n    }\n    var value = data >>> 0;\n    return value;\n}\n/**\n* read 2 bytes of data an convert it to an Int16\n* @param {*} data \n* @returns \n*/\nfunction getInt16(data) {\n    \n    value = (data[1] << 8 | data[0]);\n    return value;\n    \n}\n/**\n* read 2 bytes of data an convert it to an Uint16\n* @param {*} data \n* @returns \n*/\nfunction getUint16(data) {\n    value = (data[1] << 8 | data[0]) >>> 0;\n    return value;\n    \n    \n}\n/**\n* read 4 bytes of data an convert it to an Int32\n* @param {*} data \n* @returns \n*/\nfunction getInt32(data) {\n    value = (data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]);\n    return value;\n    \n    \n    \n}\n/**\n* * read 4 bytes of data an convert it to an Uint32\n* @param {*} data \n* @returns \n*/\nfunction getUint32(data) {\n    \n    value = (data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]) >>> 0;\n    return value;\n}\n\n\n\n/**\n* read 8 bytes of data an convert it to an Int64\n* @param {*} data \n* @returns \n*/\nfunction getInt64(data) {\n    //JS can't handle bitwise operation with more than 32bit !\n    //so this won't work \n    //if Chirpstack will use another javascript engine we could use typearray's\n    var value = Number((data[7] << 56 | data[6] << 48 | data[5] << 40 | data[4] << 32 | data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]));\n    return value;\n    \n}\n/**\n* * read 8 bytes of data an convert it to an Uint32\n* @param {*} data \n* @returns \n*/\nfunction getUint64(data) {\n    //JS can't handle bitwise operation with more than 32bit !\n    //so this won't work \n    //if Chirpstack will use another javascript engine we could use typearray's\n    \n    value = Number((data[7] << 56 | data[6] << 48 | data[5] << 40 | data[4] << 32 | data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0]) >>> 0);\n    return value;\n    \n}\n\nfunction getBCD(data) {\n    var bcd = \"\";\n    for(var i=0; i< data.length; i++) {\n        bcd = bcd + \"\" + data[i];\n        \n    }\n    \n    return bcd;\n}\n\n\nfunction getASCII(data) {\n    var ascii = \"\";\n    \n    for(var i=0; i< data.length; i++) {\n        entry = getUint8(data[i]);\n        if (entry != 0x00) {\n            ascii = ascii + String.fromCharCode(entry.toString());\n        }\n    }\n    return ascii;\n}\n/**\n* parses the variable data and returns an object\n* \n* a value is identified by its id\n* \n* @param {*} obj \n* @param {*} data \n*/\nfunction parsePayload(data){\n    var dataTypes = [];\n    \n    //be sure to fill the complete array\n    //if we receive an invalid datatype we skip the rest of the data \n    for (i = 0; i < 256; i++) {\n        dataTypes[i] = {'len': 255,'description': 'invalid data-type'};\n    }\n    \n    //the \"order\" is assigned according to the entry\ndataTypes[0x00]={'len':4,'description':'data-logger-index','dataType':'Uint32'};\ndataTypes[0x01]={'len':4,'description':'timestamp','dataType':'Uint32','unit':'seconds'};\ndataTypes[0x02]={'len':4,'description':'timestamp-previous','dataType':'Uint32','unit':'seconds'};\ndataTypes[0x03]={'len':4,'description':'ActiveEnergyImportT1','dataType':'Uint32','unit':'Wh','cfgdescription':3,\"cfgunit\":1,'cfgtariff':1};\ndataTypes[0x04]={'len':4,'description':'ActiveEnergyImportT2','dataType':'Uint32','unit':'Wh','cfgdescription':3,\"cfgunit\":1,'cfgtariff':2};\ndataTypes[0x05]={'len':4,'description':'ActiveEnergyExportT1','dataType':'Uint32','unit':'Wh','cfgdescription':5,\"cfgunit\":1,'cfgtariff':1};\ndataTypes[0x06]={'len':4,'description':'ActiveEnergyExportT2','dataType':'Uint32','unit':'Wh','cfgdescription':5,\"cfgunit\":1,'cfgtariff':2};\ndataTypes[0x07]={'len':4,'description':'ReactiveEnergyImportT1','dataType':'Uint32','unit':'varh','cfgdescription':10,\"cfgunit\":5,'cfgtariff':1};\ndataTypes[0x08]={'len':4,'description':'ReactiveEnergyImportT2','dataType':'Uint32','unit':'varh','cfgdescription':10,\"cfgunit\":5,'cfgtariff':2};\ndataTypes[0x09]={'len':4,'description':'ReactiveEnergyExportT1','dataType':'Uint32','unit':'varh','cfgdescription':13,\"cfgunit\":5,'cfgtariff':1};\ndataTypes[0x0A]={'len':4,'description':'ReactiveEnergyExportT2','dataType':'Uint32','unit':'varh','cfgdescription':13,\"cfgunit\":5,'cfgtariff':2};\ndataTypes[0x0B]={'len':4,'description':'ActivePowerL123','dataType':'Int32','unit':'W','cfgdescription':25,\"cfgunit\":13};\ndataTypes[0x0C]={'len':4,'description':'ActivePowerL1','dataType':'Int32','unit':'W','cfgdescription':25,\"cfgunit\":13,'cfgphase':1};\ndataTypes[0x0D]={'len':4,'description':'ActivePowerL2','dataType':'Int32','unit':'W','cfgdescription':25,\"cfgunit\":13,'cfgphase':2};\ndataTypes[0x0E]={'len':4,'description':'ActivePowerL3','dataType':'Int32','unit':'W','cfgdescription':25,\"cfgunit\":13,'cfgphase':3};\ndataTypes[0x0F]={'len':4,'description':'CurrentL123','dataType':'Int32','unit':'mA','cfgdescription':31,\"cfgunit\":28};\ndataTypes[0x10]={'len':4,'description':'CurrentL1','dataType':'Int32','unit':'mA','cfgdescription':31,\"cfgunit\":28,'cfgphase':1};\ndataTypes[0x11]={'len':4,'description':'CurrentL2','dataType':'Int32','unit':'mA','cfgdescription':31,\"cfgunit\":28,'cfgphase':2};\ndataTypes[0x12]={'len':4,'description':'CurrentL3','dataType':'Int32','unit':'mA','cfgdescription':31,\"cfgunit\":28,'cfgphase':3};\ndataTypes[0x13]={'len':4,'description':'CurrentN','dataType':'Int32','unit':'mA','cfgdescription':31,\"cfgunit\":28,'cfgphase':4};\ndataTypes[0x14]={'len':4,'description':'VoltageL1-N','dataType':'Int32','unit':'V/10','unit_calculated':'V','factor':0.1,'fixed':1,'cfgdescription':30,\"cfgunit\":26,'cfgphase':1};\ndataTypes[0x15]={'len':4,'description':'VoltageL2-N','dataType':'Int32','unit':'V/10','unit_calculated':'V','factor':0.1,'fixed':1,'cfgdescription':30,\"cfgunit\":26,'cfgphase':2};\ndataTypes[0x16]={'len':4,'description':'VoltageL3-N','dataType':'Int32','unit':'V/10','unit_calculated':'V','factor':0.1,'fixed':1,'cfgdescription':30,\"cfgunit\":26,'cfgphase':3};\ndataTypes[0x17]={'len':1,'description':'PowerfactorL1','dataType':'Int8','unit':'Cos','factor':0.01,'fixed':2,'cfgdescription':32,\"cfgunit\":31,'cfgphase':1};\ndataTypes[0x18]={'len':1,'description':'PowerfactorL2','dataType':'Int8','unit':'Cos','factor':0.01,'fixed':2,'cfgdescription':32,\"cfgunit\":31,'cfgphase':2};\ndataTypes[0x19]={'len':1,'description':'PowerfactorL3','dataType':'Int8','unit':'Cos','factor':0.01,'fixed':2,'cfgdescription':32,\"cfgunit\":31,'cfgphase':3};\ndataTypes[0x1A]={'len':2,'description':'Frequency','dataType':'Int16','unit':'Hz','factor':0.1,'fixed':1,'cfgdescription':33,\"cfgunit\":32};\ndataTypes[0x1B]={'len':4,'description':'ActivePoweraverage','dataType':'Int32','unit':'W',\"cfgunit\":13,};\ndataTypes[0x1C]={'len':4,'description':'ActiveEnergyImportT1kWh','dataType':'Uint32','unit':'kWh','cfgdescription':3,\"cfgunit\":2,'cfgtariff':1};\ndataTypes[0x1D]={'len':4,'description':'ActiveEnergyImportT2kWh','dataType':'Uint32','unit':'kWh','cfgdescription':3,\"cfgunit\":2,'cfgtariff':2};\ndataTypes[0x1E]={'len':4,'description':'ActiveEnergyExportT1kWh','dataType':'Uint32','unit':'kWh','cfgdescription':5,\"cfgunit\":2,'cfgtariff':1};\ndataTypes[0x1F]={'len':4,'description':'ActiveEnergyExportT2kWh','dataType':'Uint32','unit':'kWh','cfgdescription':5,\"cfgunit\":2,'cfgtariff':2};\ndataTypes[0x20]={'len':4,'description':'ReactiveEnergyImportT1kvarh','dataType':'Uint32','unit':'kvarh','cfgdescription':10,\"cfgunit\":6,'cfgtariff':1};\ndataTypes[0x21]={'len':4,'description':'ReactiveEnergyImportT2kvarh','dataType':'Uint32','unit':'kvarh','cfgdescription':10,\"cfgunit\":6,'cfgtariff':2};\ndataTypes[0x22]={'len':4,'description':'ReactiveEnergyExportT1kvarh','dataType':'Uint32','unit':'kvarh','cfgdescription':13,\"cfgunit\":6,'cfgtariff':1};\ndataTypes[0x23]={'len':4,'description':'ReactiveEnergyExportT2kvarh','dataType':'Uint32','unit':'kvarh','cfgdescription':13,\"cfgunit\":6,'cfgtariff':2};\ndataTypes[0x24]={'len':8,'description':'ActiveEnergyImportT164bit','dataType':'uInt64','unit':'Wh','cfgdescription':3,\"cfgunit\":1,'cfgtariff':1};\ndataTypes[0x25]={'len':8,'description':'ActiveEnergyImportT264bit','dataType':'uInt64','unit':'Wh','cfgdescription':3,\"cfgunit\":1,'cfgtariff':2};\ndataTypes[0x26]={'len':8,'description':'ActiveEnergyExportT164bit','dataType':'uInt64','unit':'Wh','cfgdescription':5,\"cfgunit\":1,'cfgtariff':1};\ndataTypes[0x27]={'len':8,'description':'ActiveEnergyExportT264bit','dataType':'uInt64','unit':'Wh','cfgdescription':5,\"cfgunit\":1,'cfgtariff':2};\ndataTypes[0x28]={'len':8,'description':'ReactiveEnergyImportT164bit','dataType':'uInt64','unit':'varh','cfgdescription':10,\"cfgunit\":5,'cfgtariff':1};\ndataTypes[0x29]={'len':8,'description':'ReactiveEnergyImportT264bit','dataType':'uInt64','unit':'varh','cfgdescription':10,\"cfgunit\":5,'cfgtariff':2};\ndataTypes[0x2A]={'len':8,'description':'ReactiveEnergyExportT164bit','dataType':'uInt64','unit':'varh','cfgdescription':13,\"cfgunit\":5,'cfgtariff':1};\ndataTypes[0x2B]={'len':8,'description':'ReactiveEnergyExportT264bit','dataType':'uInt64','unit':'varh','cfgdescription':13,\"cfgunit\":5,'cfgtariff':2};\ndataTypes[0xF0]={'len':1,'description':'errorcode','dataType':'ErrorCode'};\ndataTypes[0xF1]={'len':4,'description':'serial-number','dataType':'MeterSerial'};\ndataTypes[0xF2]={'len':4,'description':'factor-number','dataType':'MeterSerial'};\ndataTypes[0xF3]={'len':2,'description':'current-transformerprimary','dataType':'Uint16',\"cfgunit\":72,};\ndataTypes[0xF4]={'len':2,'description':'current-transformersecondary','dataType':'Uint16',\"cfgunit\":72,};\ndataTypes[0xF5]={'len':2,'description':'voltage-transformerprimary','dataType':'Uint16',\"cfgunit\":72,};\ndataTypes[0xF6]={'len':2,'description':'voltage-transformersecondary','dataType':'Uint16',\"cfgunit\":72,};\ndataTypes[0xF7]={'len':1,'description':'meter-typ','dataType':'Uint8'};\ndataTypes[0xF8]={'len':4,'description':'MIDyear','dataType':'BCD',};\ndataTypes[0xF9]={'len':4,'description':'factoryyear','dataType':'BCD',};\ndataTypes[0xFA]={'len':4,'description':'firmwareversion','dataType':'ASCII'};\ndataTypes[0xFB]={'len':4,'description':'mid-Version','dataType':'ASCII'};\ndataTypes[0xFC]={'len':4,'description':'manufacturer','dataType':'ASCII'};\ndataTypes[0xFD]={'len':4,'description':'hw-index','dataType':'ASCII'};\ndataTypes[0xFE]={'len':4,'description':'systemtime','dataType':'Uint32'};\n    \n    \n    var obj = {};\n    \n    var i = 4; //the first 4 bytes is allways the timestamp\n    //the last byte is the crc-code so ignore this one\n    while (i < (data.length - 1)) {\n        //extract signature byte \n        indexOfDataType = data[i];\n        dataType = dataTypes[indexOfDataType];\n        i++;\n        //also save the sort-order value  \n        dataType.order = indexOfDataType;\n        \n        switch (dataType.dataType) {\n            case 'Int8':\n            dataType.value = Number(getInt8([data[i++]]));\n            break;\n            case 'Uint8':\n            dataType.value = Number(getUint8([data[i++]]));\n            break;\n            case 'Int16':\n            dataType.value = Number(getInt16([data[i++], data[i++]]));\n            break;\n            case 'Uint16':\n            dataType.value = Number(getUint16([data[i++], data[i++]]));\n            break;\n            case 'Uint32':\n            dataType.value = Number(getUint32([data[i++], data[i++], data[i++], data[i++]]));\n            break;\n            case 'Int32':\n            dataType.value = Number(getInt32([data[i++], data[i++], data[i++], data[i++]]));\n            break;\n            case 'uInt64':\n            dataType.value = Number(getUint64([data[i++], data[i++], data[i++], data[i++], data[i++], data[i++], data[i++], data[i++]]));\n            break;\n            case 'Int64':\n            dataType.value = Number(getInt64([data[i++], data[i++], data[i++], data[i++], data[i++], data[i++], data[i++], data[i++]]));\n            break;\n            case 'MeterSerial':\n\n                dataType.value = ('0' + Number(getUint8([data[i++]])).toString(16)).slice(-2);\n                dataType.value = ('0' + Number(getUint8([data[i++]])).toString(16)).slice(-2) + dataType.value;\n                dataType.value = ('0' + Number(getUint8([data[i++]])).toString(16)).slice(-2) + dataType.value;\n                dataType.value = ('0' + Number(getUint8([data[i++]])).toString(16)).slice(-2) + dataType.value;\n\n            break;\n            case 'BCD':\n            dataType.value = getBCD([data[i++], data[i++], data[i++], data[i++]]);\n            break;\n            case 'ASCII':\n            dataType.value = getASCII([data[i++], data[i++], data[i++], data[i++]]);\n            break;\n            case 'ErrorCode':\n            dataType.value =  Number(getUint8([data[i++]]));\n            //also encode the error\n            dataType.TimeChanged =  dataType.value & 0x01 ? true : false;\n            dataType.CTRatioChange =  dataType.value & 0x02 ? true : false;\n            dataType.VTRatioChange =  dataType.value & 0x04 ? true : false;\n            dataType.ImpulseWidthChange =  dataType.value & 0x08 ? true : false;\n            dataType.ImpulseRatioChange =  dataType.value & 0x10 ? true : false;\n            dataType.PowerFail =  dataType.value & 0x20 ? true : false;\n            dataType.LogbookFull = dataType.value & 0x80 ? true : false;\n            \n            break;\n            default:\n            break;\n            \n        }\n        //if we have a factor apply it but keep the old value\n        if (dataType.factor && !isNaN(dataType.factor)) {\n            var fixed = 0;\n            if (dataType.fixed && !isNaN(dataType.fixed)) {\n                fixed = dataType.fixed;\n            }\n            //save the value which was sent by the meter (perhaps needed later)\n            dataType.value_raw = dataType.value;\n            //calculate the new value using the factor\n            dataType.value = Number((dataType.value * dataType.factor).toFixed(fixed));\n        }\n        \n        obj[dataType.description] = dataType;\n        //remove all unused infos like dataType, description, len\n        delete dataType.len;\n        delete dataType.description;\n        delete dataType.dataType;\n        delete dataType.factor;\n        delete dataType.fixed;\n    }\n    \n    return obj;\n    \n    \n}\nfunction crc8_encode(data) {\n    \n    var xorOut = 0x0000;\n    var table = [\n        0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B,\n        0x12, 0x15, 0x38, 0x3F, 0x36, 0x31,\n        0x24, 0x23, 0x2A, 0x2D, 0x70, 0x77,\n        0x7E, 0x79, 0x6C, 0x6B, 0x62, 0x65,\n        0x48, 0x4F, 0x46, 0x41, 0x54, 0x53,\n        0x5A, 0x5D, 0xE0, 0xE7, 0xEE, 0xE9,\n        0xFC, 0xFB, 0xF2, 0xF5, 0xD8, 0xDF,\n        0xD6, 0xD1, 0xC4, 0xC3, 0xCA, 0xCD,\n        0x90, 0x97, 0x9E, 0x99, 0x8C, 0x8B,\n        0x82, 0x85, 0xA8, 0xAF, 0xA6, 0xA1,\n        0xB4, 0xB3, 0xBA, 0xBD, 0xC7, 0xC0,\n        0xC9, 0xCE, 0xDB, 0xDC, 0xD5, 0xD2,\n        0xFF, 0xF8, 0xF1, 0xF6, 0xE3, 0xE4,\n        0xED, 0xEA, 0xB7, 0xB0, 0xB9, 0xBE,\n        0xAB, 0xAC, 0xA5, 0xA2, 0x8F, 0x88,\n        0x81, 0x86, 0x93, 0x94, 0x9D, 0x9A,\n        0x27, 0x20, 0x29, 0x2E, 0x3B, 0x3C,\n        0x35, 0x32, 0x1F, 0x18, 0x11, 0x16,\n        0x03, 0x04, 0x0D, 0x0A, 0x57, 0x50,\n        0x59, 0x5E, 0x4B, 0x4C, 0x45, 0x42,\n        0x6F, 0x68, 0x61, 0x66, 0x73, 0x74,\n        0x7D, 0x7A, 0x89, 0x8E, 0x87, 0x80,\n        0x95, 0x92, 0x9B, 0x9C, 0xB1, 0xB6,\n        0xBF, 0xB8, 0xAD, 0xAA, 0xA3, 0xA4,\n        0xF9, 0xFE, 0xF7, 0xF0, 0xE5, 0xE2,\n        0xEB, 0xEC, 0xC1, 0xC6, 0xCF, 0xC8,\n        0xDD, 0xDA, 0xD3, 0xD4, 0x69, 0x6E,\n        0x67, 0x60, 0x75, 0x72, 0x7B, 0x7C,\n        0x51, 0x56, 0x5F, 0x58, 0x4D, 0x4A,\n        0x43, 0x44, 0x19, 0x1E, 0x17, 0x10,\n        0x05, 0x02, 0x0B, 0x0C, 0x21, 0x26,\n        0x2F, 0x28, 0x3D, 0x3A, 0x33, 0x34,\n        0x4E, 0x49, 0x40, 0x47, 0x52, 0x55,\n        0x5C, 0x5B, 0x76, 0x71, 0x78, 0x7F,\n        0x6A, 0x6D, 0x64, 0x63, 0x3E, 0x39,\n        0x30, 0x37, 0x22, 0x25, 0x2C, 0x2B,\n        0x06, 0x01, 0x08, 0x0F, 0x1A, 0x1D,\n        0x14, 0x13, 0xAE, 0xA9, 0xA0, 0xA7,\n        0xB2, 0xB5, 0xBC, 0xBB, 0x96, 0x91,\n        0x98, 0x9F, 0x8A, 0x8D, 0x84, 0x83,\n        0xDE, 0xD9, 0xD0, 0xD7, 0xC2, 0xC5,\n        0xCC, 0xCB, 0xE6, 0xE1, 0xE8, 0xEF,\n        0xFA, 0xFD, 0xF4, 0xF3\n    ];\n    var crc = 0x0000;\n    for (var j = 0; j < data.length; j++) {\n        crc = table[crc ^ data[j]];\n    }\n    return (crc ^ xorOut) & 0xFFFF;\n    \n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Energy Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Active Power (Total)"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 10000,
+                          "min": -10000,
+                          "unit": "W"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActivePowerL123.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Active Power",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Frequency"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 55,
+                          "min": 45,
+                          "unit": "Hz"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "Frequency.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Frequency",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 4,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Active Energy Import/Export (T1)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActiveEnergyImportT1.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Import T1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActiveEnergyExportT1.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Export T1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "3-Phase Active Power"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActivePowerL1.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Phase L1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActivePowerL2.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Phase L2",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "ActivePowerL3.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Phase L3",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 18,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "3-Phase Voltage (L-N)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "VoltageL1-N.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "L1-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "VoltageL2-N.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "L2-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "VoltageL3-N.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "L3-N",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 18,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "3-Phase Current"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "CurrentL1.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "L1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "CurrentL2.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "L2",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "emu_emu_prof_ii_energy_data",
+                              "mapping": "CurrentL3.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "L3",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
