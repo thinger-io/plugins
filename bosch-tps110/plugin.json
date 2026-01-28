@@ -12,7 +12,7 @@
   "metadata": {
     "name": "BOSCH TPS110",
     "description": "BOSCH wireless smart parking sensor with magnetometer, radar, GPS, and temperature sensors for parking lot management",
-    "image": "assets/tps110.png",
+    "image": "assets/bosch-tps110.png",
     "category": "devices",
     "vendor": "bosch"
   },

@@ -1,6 +1,3 @@
-Based on the device data provided, I will create the README.md documentation:
-
-```markdown
 # BOSCH Parking Lot Sensor
 
 The BOSCH wireless smart parking sensor is a LoRaWAN® end device designed for parking space occupancy detection. It utilizes dual-sensor technology combining a magnetometer and radar for highly reliable vehicle detection. The sensor enables active parking lot management features including search, navigation, and reservation capabilities. Additionally, the BOSCH parking lot sensor integrates a GPS receiver for precise location tracking and a temperature sensor for environmental monitoring.
@@ -68,4 +65,3 @@ This product provides:
 
 - [BOSCH Connectivity](https://www.bosch-connectivity.com/)
 - [Thinger.io Documentation](https://docs.thinger.io)
-```
