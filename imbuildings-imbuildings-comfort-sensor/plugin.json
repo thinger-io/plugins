@@ -12,7 +12,7 @@
   "metadata": {
     "name": "IMBUILDINGS-COMFORT-SENSOR",
     "description": "Sensor for monitoring Indoor Air Quality",
-    "image": "assets/imbuildings-people-counter-black.png",
+    "image": "assets/imbuildings-comfort-sensor.png",
     "category": "devices",
     "vendor": "imbuildings"
   },
