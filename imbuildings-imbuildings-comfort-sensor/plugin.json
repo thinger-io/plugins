@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "imbuildings-imbuildings-people-counter"
+    "directory": "imbuildings-imbuildings-comfort-sensor"
   },
   "metadata": {
     "name": "IMBUILDINGS-COMFORT-SENSOR",
