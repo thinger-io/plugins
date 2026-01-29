@@ -1,0 +1,623 @@
+{
+  "name": "digital_matter_oyster",
+  "version": "1.0.0",
+  "description": "The Digital Matter Oyster is an ultra-rugged and long-life battery-powered GPS tracking device for asset tracking and management on LoRaWAN® networks that is packed with a GPS+GLONASS sensor and a 3-axis accelerometer. The IP67 rated housing ensures the d",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "digital-matter-oyster"
+  },
+  "metadata": {
+    "name": "Digital-Matter OYSTER",
+    "description": "The Digital Matter Oyster is an ultra-rugged and long-life battery-powered GPS tracking device for asset tracking and management on LoRaWAN® networks that is packed with a GPS+GLONASS sensor and a 3-axis accelerometer. The IP67 rated housing ensures the d",
+    "image": "assets/oyster.png",
+    "category": "devices",
+    "vendor": "digital-matter"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Digital Matter Oyster is an ultra-rugged and long-life battery-powered GPS tracking device for asset tracking and management on LoRaWAN® networks that is packed with a GPS+GLONASS sensor and a 3-axis accelerometer. The IP67 rated housing ensures the d",
+        "enabled": true,
+        "name": "Digital-Matter OYSTER",
+        "product": "digital_matter_oyster",
+        "profile": {
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input)\n{\n  var port = input.fPort;\n  var bytes = input.bytes;\n  var decoded = {};\n  var location = {};\n  var warnings = [];\n\n  if (port === 1)\n  {\n    decoded.type = \"position\";\n\n    decoded.inTrip    = ((bytes[8] & 0x1) !== 0);\n    decoded.fixFailed = ((bytes[8] & 0x2) !== 0);\n    decoded.batV = Number((bytes[10] * 0.025).toFixed(2));\n\n    decoded.manDown = null;\n\n    location.latitudeDeg = bytes[0] +\n                           bytes[1] * 256 +\n                           bytes[2] * 65536 +\n                           bytes[3] * 16777216;\n    if (location.latitudeDeg >= 0x80000000) { // 2^31\n      location.latitudeDeg -= 0x100000000;  // 2^32\n    }\n    location.latitudeDeg /= 1e7;\n\n    location.longitudeDeg = bytes[4] +\n                            bytes[5] * 256 +\n                            bytes[6] * 65536 +\n                            bytes[7] * 16777216;\n    if (location.longitudeDeg >= 0x80000000) { // 2^31\n      location.longitudeDeg -= 0x100000000;  // 2^32\n    }\n    location.longitudeDeg /= 1e7;\n    \n    location.headingDeg = (bytes[8] >> 2) * 5.625;\n    location.speedKmph = bytes[9];\n\n    if (decoded.fixFailed) {\n      decoded.cached = location;\n      warnings.push(\"fix failed\");\n    } else {\n      decoded = Object.assign(decoded, location);\n    }\n  }\n  else if (port === 4)\n  {\n    decoded.type = \"position\";\n\n    decoded.batV = Number((bytes[7] * 0.025).toFixed(2));\n\n    decoded.inTrip    = ((bytes[8] & 0x1) !== 0);\n    decoded.fixFailed = ((bytes[8] & 0x2) !== 0);\n    decoded.manDown   = ((bytes[8] & 0x4) !== 0);\n\n    location.latitudeDeg = bytes[0] + \n                           bytes[1] * 256 + \n                           bytes[2] * 65536;\n    if (location.latitudeDeg >= 0x800000) { // 2^23\n      location.latitudeDeg -= 0x1000000;  // 2^24\n    }\n    location.latitudeDeg *= 256e-7;\n\n    location.longitudeDeg = bytes[3] +\n                            bytes[4] * 256 +\n                            bytes[5] * 65536;\n    if (location.longitudeDeg >= 0x800000) { // 2^23\n      location.longitudeDeg -= 0x1000000;  // 2^24\n    }\n    location.longitudeDeg *= 256e-7;\n\n    location.headingDeg = (bytes[6] & 0x7) * 45;\n    location.speedKmph = (bytes[6] >> 3) * 5;\n\n    if (decoded.fixFailed) {\n      decoded.cached = location;\n      warnings.push(\"fix failed\");\n    } else {\n      decoded = Object.assign(decoded, location);\n    }\n  }\n  else if (port === 2)\n  {\n    decoded.type = \"downlink ack\";\n\n    decoded.sequence = (bytes[0] & 0x7F);\n    decoded.accepted = ((bytes[0] & 0x80) !== 0);\n    decoded.fwMaj = bytes[1];\n    decoded.fwMin = bytes[2];\n  }\n  else if (port === 3)\n  {\n    decoded.type = \"stats\";\n\n    decoded.initialBatV    =  Number((4.0 + 0.100 * (bytes[0] & 0xF)).toFixed(1));\n    decoded.txCount        =  32 * ((bytes[0] >> 4) + (bytes[1]  & 0x7F) *  16);\n    decoded.tripCount      =  32 * ((bytes[1] >> 7) + (bytes[2]  & 0xFF) *   2\n                                                    + (bytes[3]  & 0x0F) * 512);\n    decoded.gpsSuccesses   =  32 * ((bytes[3] >> 4) + (bytes[4]  & 0x3F) *  16);\n    decoded.gpsFails       =  32 * ((bytes[4] >> 6) + (bytes[5]  & 0x3F) *   4);\n    decoded.aveGpsFixS     =   1 * ((bytes[5] >> 6) + (bytes[6]  & 0x7F) *   4);\n    decoded.aveGpsFailS    =   1 * ((bytes[6] >> 7) + (bytes[7]  & 0xFF) *   2);\n    decoded.aveGpsFreshenS =   1 * ((bytes[7] >> 8) + (bytes[8]  & 0xFF) *   1);\n    decoded.wakeupsPerTrip =   1 * ((bytes[8] >> 8) + (bytes[9]  & 0x7F) *   1);\n    decoded.uptimeWeeks    =   1 * ((bytes[9] >> 7) + (bytes[10] & 0xFF) *   2);\n  }\n  else\n  {\n    return {\n      warnings: ['unknown FPort'],\n    };\n  }\n\n  return {\n    data: decoded,\n    warnings: warnings,\n  };\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Asset Tracking",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 8,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#1565C0",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Real-time GPS Position",
+                          "title": "Asset Location"
+                        },
+                        "properties": {
+                          "centerOnLastPosition": true,
+                          "showLastKnownPosition": true,
+                          "showPath": true
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": {
+                                "lat": "latitudeDeg",
+                                "lng": "longitudeDeg"
+                              },
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Location",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#2E7D32",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Device Power Status",
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#2E7D32',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.3 } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: {\n        min: 3.0,\n        max: 4.5,\n        labels: { formatter: function(val) { return val.toFixed(2) + ' V'; }, style: { colors: '#FFFFFF' } }\n    },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#388E3C' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "batV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Battery (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 6,
+                          "sizeX": 4,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#E65100",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Asset Movement Speed",
+                          "title": "Speed"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#E65100',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'stepline', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: {\n        min: 0,\n        labels: { formatter: function(val) { return val.toFixed(0) + ' km/h'; }, style: { colors: '#FFFFFF' } }\n    },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#F57C00' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "speedKmph",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FF9800",
+                            "name": "Speed (km/h)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#5E35B1",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Asset Direction (degrees)",
+                          "title": "Heading"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#5E35B1',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'stepline', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: {\n        min: 0,\n        max: 360,\n        labels: { formatter: function(val) { return val.toFixed(0) + '°'; }, style: { colors: '#FFFFFF' } }\n    },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#7E57C2' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "headingDeg",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9575CD",
+                            "name": "Heading (°)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#00838F",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "In Trip / GPS Fix Status",
+                          "title": "Trip Status"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#00838F',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'stepline', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: {\n        min: 0,\n        max: 1,\n        tickAmount: 1,\n        labels: { formatter: function(val) { return val === 1 ? 'Yes' : 'No'; }, style: { colors: '#FFFFFF' } }\n    },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#0097A7' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "inTrip",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#26C6DA",
+                            "name": "In Trip",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 1
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "fixFailed",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#EF5350",
+                            "name": "GPS Fix Failed",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Device Stats",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#37474F",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Success vs Failure Count",
+                          "title": "GPS Performance"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar',\n        background: '#37474F',\n        toolbar: { show: true }\n    },\n    plotOptions: { bar: { horizontal: false, columnWidth: '55%' } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: { labels: { style: { colors: '#FFFFFF' } } },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#546E7A' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "gpsSuccesses",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "GPS Successes",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "gpsFails",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#F44336",
+                            "name": "GPS Fails",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#1565C0",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Trip Count and Transmissions",
+                          "title": "Trip & TX Statistics"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#1565C0',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: { labels: { style: { colors: '#FFFFFF' } } },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#1976D2' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "tripCount",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#42A5F5",
+                            "name": "Trip Count",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "txCount",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#AB47BC",
+                            "name": "TX Count",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#6A1B9A",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Average Fix/Fail Duration (seconds)",
+                          "title": "GPS Fix Timing"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#6A1B9A',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1 } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: { labels: { formatter: function(val) { return val.toFixed(0) + ' s'; }, style: { colors: '#FFFFFF' } } },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#8E24AA' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "aveGpsFixS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4CAF50",
+                            "name": "Avg Fix Time (s)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "aveGpsFailS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FF5722",
+                            "name": "Avg Fail Time (s)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#00695C",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Uptime in Weeks",
+                          "title": "Device Uptime"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#00695C',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.2 } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#FFFFFF' } } },\n    yaxis: { labels: { formatter: function(val) { return val.toFixed(0) + ' wks'; }, style: { colors: '#FFFFFF' } } },\n    tooltip: { x: { format: 'dd/MM/yyyy HH:mm' }, shared: true },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    grid: { borderColor: '#00897B' }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 30
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "digital_matter_oyster_data",
+                              "mapping": "uptimeWeeks",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#26A69A",
+                            "name": "Uptime (weeks)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
