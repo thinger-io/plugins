@@ -1,5 +1,3 @@
-Based on the provided device data and template, here is the README.md:
-
 # Wind Sensor
 
 The Wind Sensor is a LoRaWAN-enabled device designed for wind monitoring applications. It features integrated wind measurement capabilities combined with a controllable LED indicator for status visualization and signaling purposes.

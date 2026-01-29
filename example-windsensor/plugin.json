@@ -12,7 +12,7 @@
   "metadata": {
     "name": "example_windsensor",
     "description": "LoRaWAN Wind Sensor with controllable LED for environmental monitoring",
-    "image": "assets/windsensor.png",
+    "image": "assets/example-windsensor.png",
     "category": "devices",
     "vendor": "example"
   },
