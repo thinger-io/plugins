@@ -1,0 +1,268 @@
+{
+  "name": "xignal_xignal_mousetrap",
+  "version": "1.0.0",
+  "description": "Intelligent mouse trap made by DimoSystems",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "xignal-xignal-mousetrap"
+  },
+  "metadata": {
+    "name": "Xignal XIGNAL-MOUSETRAP",
+    "description": "Intelligent mouse trap made by DimoSystems",
+    "image": "assets/mousetrap1.png",
+    "category": "devices",
+    "vendor": "xignal"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Intelligent mouse trap made by DimoSystems",
+        "enabled": true,
+        "name": "Xignal XIGNAL-MOUSETRAP",
+        "product": "xignal_xignal_mousetrap",
+        "profile": {
+          "buckets": {
+            "xignal_xignal_mousetrap_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var data = {};\n\n  switch (input.fPort) {\n    case 1:\n\n     if (input.bytes[4] === 0x00){\n       data.trapState = 'failed';\n     } else if (input.bytes[4] === 0x01){\n       data.trapState = 'normal';\n     } else if (input.bytes[4] === 0x02){\n      data.trapState = 'trapped';\n    } else if (input.bytes[4] === 0x03){\n      data.trapState = 'abnormal';\n    } else if (input.bytes[4] === 0x04){\n      data.trapState = 'moved';\n    } else if (input.bytes[4] === 0x07){\n      data.trapState = 'error';\n    } else if (input.bytes[4] === 0x08){\n      data.trapState = 'wakeup';\n    }\n    data.msgId = input.bytes[0];\n    data.battVoltage = input.bytes[1]/10;\n    data.temperature = (input.bytes[2] << 8 | input.bytes[3]) / 100;\n    data.id = input.bytes[10] << 8 | input.bytes[5];\n       \n        \n    \n    \n      return {\n        data : data,\n      };\n  }\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Mouse Trap Monitor",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#2E7D32",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Status over time",
+                          "title": "Trap State History"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'scatter',\n        background: '#2E7D32',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'stepline', width: 2 },\n    markers: { size: 6 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { style: { colors: '#FFFFFF' } }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "xignal_xignal_mousetrap_data",
+                              "mapping": "trapState",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FFEB3B",
+                            "name": "Trap State",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#1565C0",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Ambient temperature (°C)",
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        background: '#1565C0',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { \n            formatter: function(val) { return val.toFixed(1) + '°C'; },\n            style: { colors: '#FFFFFF' }\n        }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "xignal_xignal_mousetrap_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FF5722",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#F57C00",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Device battery level (V)",
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        background: '#F57C00',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.3 } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        min: 0,\n        max: 5,\n        labels: { \n            formatter: function(val) { return val.toFixed(2) + ' V'; },\n            style: { colors: '#FFFFFF' }\n        }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "xignal_xignal_mousetrap_data",
+                              "mapping": "battVoltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#FFEB3B",
+                            "name": "Battery Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 8,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#5E35B1",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "subtitle": "Message counter tracking",
+                          "title": "Message ID Sequence"
+                        },
+                        "properties": {
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar',\n        background: '#5E35B1',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x' }\n    },\n    plotOptions: { bar: { columnWidth: '50%' } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { \n            formatter: function(val) { return Math.round(val); },\n            style: { colors: '#FFFFFF' }\n        }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};"
+                        },
+                        "sources": [
+                          {
+                            "$timespan": {
+                              "magnitude": "day",
+                              "mode": "configurable",
+                              "period": "latest",
+                              "value": 7
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "xignal_xignal_mousetrap_data",
+                              "mapping": "msgId",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#B39DDB",
+                            "name": "Message ID",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
