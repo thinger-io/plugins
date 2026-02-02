@@ -1,0 +1,509 @@
+{
+  "name": "moirelabs_p1ap",
+  "version": "1.0.0",
+  "description": "The Moire Labs Digital pressure transducer P1AP is a telemetry-enabled, battery-powered pressure sensor, which is primarily used to measure pressure in distribution pipes of gasses or liquids and sending the measured data over the wireless network into ce",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "moirelabs-p1ap"
+  },
+  "metadata": {
+    "name": "Moirelabs P1AP",
+    "description": "The Moire Labs Digital pressure transducer P1AP is a telemetry-enabled, battery-powered pressure sensor, which is primarily used to measure pressure in distribution pipes of gasses or liquids and sending the measured data over the wireless network into ce",
+    "image": "assets/p1ap-foto-front.png",
+    "category": "devices",
+    "vendor": "moirelabs"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Moire Labs Digital pressure transducer P1AP is a telemetry-enabled, battery-powered pressure sensor, which is primarily used to measure pressure in distribution pipes of gasses or liquids and sending the measured data over the wireless network into ce",
+        "enabled": true,
+        "name": "Moirelabs P1AP",
+        "product": "moirelabs_p1ap",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "moirelabs_p1ap_autoprovision": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "moirelabs-p1ap-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "moirelabs_p1ap_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar units = ['C', 'Pa', 'kPa', 'MPa'];\n\nfunction bytesToFloat(bytes) {\n    \"use strict\";\n    var bits = bytes[3]<<24 | bytes[2]<<16 | bytes[1]<<8 | bytes[0];\n    var sign = (bits>>>31 === 0) ? 1.0 : -1.0;\n    var e = bits>>>23 & 0xff;\n    var m = (e === 0) ? (bits & 0x7fffff)<<1 : (bits & 0x7fffff) | 0x800000;\n    var f = sign * m * Math.pow(2, e - 150);\n    return f;\n}\n\nfunction decodeUplink(input) {\n    \"use strict\";\n    switch (input.fPort) {\n        case 1:\n            return {\n                data: {\n                    unit: units[input.bytes[0]],\n                    min_value: +bytesToFloat(input.bytes.slice(1, 5)).toFixed(4),\n                    max_value: +bytesToFloat(input.bytes.slice(5, 9)).toFixed(4),\n                    average_value: +bytesToFloat(input.bytes.slice(9, 13)).toFixed(4),\n                    last_value: +bytesToFloat(input.bytes.slice(13, 17)).toFixed(4)\n                }\n            };\n        default:\n            return {\n                errors: ['Unknown FPort - see device manual!'],\n            };\n      }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Pressure Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Current Pressure"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": "kPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "last_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Current Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Average Pressure"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": "kPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "average_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Average Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Min Pressure"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": "kPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "min_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Min Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Max Pressure"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": "kPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "max_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Max Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 4,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Pressure History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "last_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Current Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "average_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Average Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Measurements"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Current</th>\n        <th>Average</th>\n        <th>Min</th>\n        <th>Max</th>\n        <th>Unit</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.last_value | number:2 }}</td>\n        <td>{{ entry.average_value | number:2 }}</td>\n        <td>{{ entry.min_value | number:2 }}</td>\n        <td>{{ entry.max_value | number:2 }}</td>\n        <td>{{ entry.unit || 'kPa' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "last_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "last_value",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "average_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "average_value",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "min_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "min_value",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "max_value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "max_value",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moirelabs_p1ap_data",
+                              "mapping": "unit",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "unit",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
