@@ -113,20 +113,25 @@
             {
               "property": "dashboard",
               "value": {
+                "name": "Moodbox",
+                "placeholders": {
+                  "sources": []
+                },
                 "tabs": [
                   {
                     "name": "Button Feedback",
                     "widgets": [
                       {
+                        "api": {},
                         "layout": {
                           "col": 0,
                           "row": 0,
-                          "sizeX": 12,
+                          "sizeX": 6,
                           "sizeY": 8
                         },
                         "panel": {
-                          "color": "#1976D2",
-                          "currentColor": "#1976D2",
+                          "color": "#F5F5F5",
+                          "currentColor": "#F5F5F5",
                           "showFullscreen": true,
                           "showOffline": {
                             "type": "last_sample"
@@ -137,7 +142,7 @@
                         "properties": {
                           "alignTimeSeries": false,
                           "dataAppend": false,
-                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar',\n        background: '#1976D2',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            dataLabels: { position: 'top' }\n        }\n    },\n    dataLabels: {\n        enabled: true,\n        style: { colors: ['#333'] }\n    },\n    stroke: { show: true, width: 2, colors: ['transparent'] },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        title: { text: 'Count' },\n        labels: { formatter: function(val) { return Math.floor(val); } }\n    },\n    fill: { opacity: 1 },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true,\n        intersect: false\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } }\n};",
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar',\n        background: '#F5F5F5',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            dataLabels: { position: 'top' }\n        }\n    },\n    dataLabels: {\n        enabled: true,\n        style: { colors: ['#2B2B2B'] }\n    },\n    stroke: { show: true, width: 2, colors: ['transparent'] },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#555555' } } },\n    yaxis: {\n        title: { text: 'Count', style: { color: '#555555' } },\n        labels: { formatter: function(val) { return Math.floor(val); }, style: { colors: '#555555' } }\n    },\n    fill: { opacity: 1 },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true,\n        intersect: false\n    },\n    legend: { position: 'bottom', labels: { colors: '#2B2B2B' } }\n};",
                           "realTimeUpdate": true
                         },
                         "sources": [
@@ -152,7 +157,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#00E396",
+                            "color": "#E74C3C",
                             "name": "Button A",
                             "source": "bucket",
                             "timespan": {
@@ -174,7 +179,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#008FFB",
+                            "color": "#3498DB",
                             "name": "Button B",
                             "source": "bucket",
                             "timespan": {
@@ -196,7 +201,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#FEB019",
+                            "color": "#F39C12",
                             "name": "Button C",
                             "source": "bucket",
                             "timespan": {
@@ -218,7 +223,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#FF4560",
+                            "color": "#27AE60",
                             "name": "Button D",
                             "source": "bucket",
                             "timespan": {
@@ -240,7 +245,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#775DD0",
+                            "color": "#8E44AD",
                             "name": "Button E",
                             "source": "bucket",
                             "timespan": {
@@ -257,13 +262,13 @@
                       {
                         "layout": {
                           "col": 0,
-                          "row": 8,
+                          "row": 14,
                           "sizeX": 6,
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#424242",
-                          "currentColor": "#424242",
+                          "color": "#F5F5F5",
+                          "currentColor": "#F5F5F5",
                           "showFullscreen": true,
                           "showOffline": {
                             "type": "last_sample"
@@ -274,7 +279,7 @@
                         "properties": {
                           "alignTimeSeries": false,
                           "dataAppend": false,
-                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#424242',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        title: { text: 'Voltage (V)' },\n        labels: { formatter: function(val) { return val.toFixed(2) + ' V'; } },\n        min: 2.5,\n        max: 3.6\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#FFFFFF' } },\n    annotations: {\n        yaxis: [\n            {\n                y: 2.8,\n                borderColor: '#FF4560',\n                label: {\n                    borderColor: '#FF4560',\n                    style: { color: '#fff', background: '#FF4560' },\n                    text: 'Low Battery'\n                }\n            }\n        ]\n    }\n};",
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'line',\n        background: '#F5F5F5',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'smooth', width: 2 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false, style: { colors: '#555555' } } },\n    yaxis: {\n        title: { text: 'Voltage (V)', style: { color: '#555555' } },\n        labels: { formatter: function(val) { return val.toFixed(2) + ' V'; }, style: { colors: '#555555' } },\n        min: 2.5,\n        max: 3.6\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#2B2B2B' } },\n    grid: {\n        borderColor: '#DDDDDD',\n        xaxis: { lines: { show: true } },\n        yaxis: { lines: { show: true } }\n    },\n    annotations: {\n        yaxis: [\n            {\n                y: 2.8,\n                borderColor: '#E74C3C',\n                label: {\n                    style: { background: '#E74C3C', color: '#FFFFFF' },\n                    text: 'Low Battery'\n                }\n            }\n        ]\n    }\n};",
                           "realTimeUpdate": true
                         },
                         "sources": [
@@ -289,7 +294,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#00E396",
+                            "color": "#16A085",
                             "name": "Battery",
                             "source": "bucket",
                             "timespan": {
@@ -305,25 +310,38 @@
                       },
                       {
                         "layout": {
-                          "col": 6,
+                          "col": 0,
                           "row": 8,
                           "sizeX": 6,
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#2E7D32",
-                          "currentColor": "#2E7D32",
+                          "color": "#F5F5F5",
+                          "currentColor": "#F5F5F5",
+                          "showOffline": {
+                            "type": "none"
+                          },
                           "title": "Device Status"
                         },
                         "properties": {
-                          "color": "#FFFFFF",
+                          "color": "#2B2B2B",
                           "size": 24,
                           "text": "Moodbox User Feedback Device\\n\\nMonitoring 5 button inputs (A-E) for user satisfaction tracking.\\n\\nData retention: 6 months\\nUpdate interval: Event-driven",
                           "unit": "",
                           "unitpost": false,
                           "val": ""
                         },
-                        "sources": [],
+                        "sources": [
+                          {
+                            "bucket": {},
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
                         "type": "text"
                       }
                     ]
