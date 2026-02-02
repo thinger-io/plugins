@@ -1,0 +1,118 @@
+{
+  "name": "digi_international_digi_xbee_lr",
+  "version": "1.0.0",
+  "description": "Digi XBee LR LoRaWAN module (MMT with U.FL antenna connector). Software-defined radio with multi-region support and X-ON zero-touch provisioning. Use XBee Studio for configuring your lorawan settings.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "digi-international-digi-xbee-lr"
+  },
+  "metadata": {
+    "name": "Digi-International DIGI-XBEE-LR",
+    "description": "Digi XBee LR LoRaWAN module (MMT with U.FL antenna connector). Software-defined radio with multi-region support and X-ON zero-touch provisioning. Use XBee Studio for configuring your lorawan settings.",
+    "image": "assets/digi-xbee-lr.png",
+    "category": "devices",
+    "vendor": "digi-international"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Digi XBee LR LoRaWAN module (MMT with U.FL antenna connector). Software-defined radio with multi-region support and X-ON zero-touch provisioning. Use XBee Studio for configuring your lorawan settings.",
+        "enabled": true,
+        "name": "Digi-International DIGI-XBEE-LR",
+        "product": "digi_international_digi_xbee_lr",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "digi_xbee_lr.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
