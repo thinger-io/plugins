@@ -100,7 +100,7 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
     res.status(200).json(jsonRpcError(id, -32602, 'Missing or invalid protocolVersion in initialize'));
     return false;
   }
-  if (!SUPPORTED_PROTOCOL_VERSIONS.includes(requested)) {
+  /*if (!SUPPORTED_PROTOCOL_VERSIONS.includes(requested)) {
     res
       .status(200)
       .json(
@@ -110,7 +110,7 @@ function preflightInitializeGuard(body: any, res: Response): boolean {
         })
       );
     return false;
-  }
+  }*/
 
   const caps = params.capabilities ?? {};
   const missing = REQUIRED_CLIENT_CAPABILITIES.filter((k) => !(k in caps));
