@@ -12,7 +12,7 @@
   "metadata": {
     "name": "BOSCH TPS110",
     "description": "BOSCH wireless smart parking sensor with magnetometer, radar, GPS, and temperature sensors for parking lot management",
-    "image": "assets/tps110.png",
+    "image": "assets/bosch-tps110.png",
     "category": "devices",
     "vendor": "bosch"
   },
@@ -139,6 +139,10 @@
             {
               "property": "dashboard",
               "value": {
+                "name": "Bosch_tps110",
+                "placeholders": {
+                  "sources": []
+                },
                 "tabs": [
                   {
                     "name": "Parking Monitor",
@@ -151,8 +155,8 @@
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#1976D2",
-                          "currentColor": "#1976D2",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showOffline": {
                             "type": "last_sample"
                           },
@@ -188,21 +192,21 @@
                       },
                       {
                         "layout": {
-                          "col": 3,
-                          "row": 0,
+                          "col": 0,
+                          "row": 6,
                           "sizeX": 3,
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#FF9800",
-                          "currentColor": "#FF9800",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showOffline": {
                             "type": "none"
                           },
                           "title": "Temperature"
                         },
                         "properties": {
-                          "color": "#FF5722",
+                          "color": "#ff0000",
                           "max": 50,
                           "min": -20,
                           "unit": "°C"
@@ -230,14 +234,14 @@
                       },
                       {
                         "layout": {
-                          "col": 6,
-                          "row": 0,
+                          "col": 3,
+                          "row": 6,
                           "sizeX": 3,
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#FFC107",
-                          "currentColor": "#FFC107",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showOffline": {
                             "type": "none"
                           },
@@ -272,21 +276,21 @@
                       },
                       {
                         "layout": {
-                          "col": 9,
+                          "col": 3,
                           "row": 0,
                           "sizeX": 3,
                           "sizeY": 6
                         },
                         "panel": {
-                          "color": "#9C27B0",
-                          "currentColor": "#9C27B0",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showOffline": {
                             "type": "none"
                           },
                           "title": "Radar Confidence"
                         },
                         "properties": {
-                          "color": "#E91E63",
+                          "color": "#32e010",
                           "max": 100,
                           "min": 0,
                           "unit": "%"
@@ -315,13 +319,13 @@
                       {
                         "layout": {
                           "col": 0,
-                          "row": 6,
+                          "row": 24,
                           "sizeX": 6,
                           "sizeY": 12
                         },
                         "panel": {
-                          "color": "#424242",
-                          "currentColor": "#424242",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showFullscreen": true,
                           "showOffline": {
                             "type": "none"
@@ -332,7 +336,7 @@
                         "properties": {
                           "alignTimeSeries": true,
                           "dataAppend": false,
-                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#424242',\n        toolbar: {\n            show: true,\n            tools: {\n                download: true,\n                selection: true,\n                zoom: true,\n                zoomin: true,\n                zoomout: true,\n                pan: true,\n                reset: true\n            },\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 2\n    },\n    fill: {\n        type: 'solid',\n        opacity: 0.6\n    },\n    grid: {\n        row: {\n            colors: ['#555555', 'transparent'],\n            opacity: 0.3\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false,\n            style: {\n                colors: '#FFFFFF'\n            }\n        }\n    },\n    yaxis: {\n        min: 0,\n        max: 1,\n        tickAmount: 1,\n        labels: {\n            formatter: function(val) {\n                return val === 1 ? 'Occupied' : 'Free';\n            },\n            style: {\n                colors: '#FFFFFF'\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        y: {\n            formatter: function(val) {\n                return val === 1 ? 'Occupied' : 'Free';\n            }\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n            colors: '#FFFFFF'\n        }\n    },\n    colors: ['#4CAF50']\n};",
+                          "options": "var options = {\n    series: series,\n    chart: {\n        type: 'area',\n        background: '#FCFCFC',\n        toolbar: {\n            show: true,\n            tools: {\n                download: true,\n                selection: true,\n                zoom: true,\n                zoomin: true,\n                zoomout: true,\n                pan: true,\n                reset: true\n            },\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 2\n    },\n    fill: {\n        type: 'solid',\n        opacity: 0.6\n    },\n    grid: {\n        row: {\n            colors: ['#EEEEEE', 'transparent'],\n            opacity: 0.5\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false,\n            style: {\n                colors: '#333333'\n            }\n        }\n    },\n    yaxis: {\n        min: 0,\n        max: 1,\n        tickAmount: 1,\n        labels: {\n            formatter: function(val) {\n                return val === 1 ? 'Occupied' : 'Free';\n            },\n            style: {\n                colors: '#333333'\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        y: {\n            formatter: function(val) {\n                return val === 1 ? 'Occupied' : 'Free';\n            }\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n            colors: '#333333'\n        }\n    },\n    colors: ['#4CAF50']\n};",
                           "realTimeUpdate": false
                         },
                         "sources": [
@@ -366,14 +370,14 @@
                       },
                       {
                         "layout": {
-                          "col": 6,
-                          "row": 6,
+                          "col": 0,
+                          "row": 12,
                           "sizeX": 6,
                           "sizeY": 12
                         },
                         "panel": {
-                          "color": "#1565C0",
-                          "currentColor": "#1565C0",
+                          "color": "#F8F8F8",
+                          "currentColor": "#F8F8F8",
                           "showFullscreen": true,
                           "showOffline": {
                             "type": "none"
@@ -382,10 +386,10 @@
                           "title": "Environmental Monitoring"
                         },
                         "properties": {
-                          "alignTimeSeries": true,
+                          "alignTimeSeries": false,
                           "dataAppend": false,
-                          "options": "var options = {\n    series: series,\n    chart: {\n        background: '#1565C0',\n        toolbar: {\n            show: true,\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    grid: {\n        row: {\n            colors: ['#1976D2', 'transparent'],\n            opacity: 0.3\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false,\n            style: {\n                colors: '#FFFFFF'\n            }\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function(val) {\n                return val.toFixed(1) + '°C';\n            },\n            style: {\n                colors: '#FFFFFF'\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm'\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n            colors: '#FFFFFF'\n        }\n    },\n    colors: ['#FF5722']\n};",
-                          "realTimeUpdate": false
+                          "options": "var options = {\n    series: series,\n    chart: {\n        background: '#FEFEFE',\n        toolbar: {\n            show: true,\n            autoSelected: 'zoom'\n        },\n        zoom: {\n            enabled: true,\n            type: 'x',\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    grid: {\n        row: {\n            colors: ['#F0F0F0', 'transparent'],\n            opacity: 0.5\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false,\n            style: {\n                colors: '#333333'\n            }\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function(val) {\n                return val.toFixed(1) + '°C';\n            },\n            style: {\n                colors: '#333333'\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm'\n        },\n        shared: true\n    },\n    legend: {\n        position: 'bottom',\n        labels: {\n            colors: '#333333'\n        }\n    },\n    colors: ['#FF5722']\n};",
+                          "realTimeUpdate": true
                         },
                         "sources": [
                           {
@@ -402,7 +406,7 @@
                                 "group": []
                               }
                             },
-                            "color": "#FF5722",
+                            "color": "#ff0000",
                             "name": "Temperature",
                             "source": "bucket",
                             "timespan": {
@@ -414,177 +418,8 @@
                             "transform": ""
                           }
                         ],
-                        "type": "apex_charts"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 18,
-                          "sizeX": 12,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Recent Events"
-                        },
-                        "properties": {
-                          "source": "code",
-                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Status</th>\n        <th>Temperature (°C)</th>\n        <th>Battery (V)</th>\n        <th>Radar Confidence (%)</th>\n        <th>GPS</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td><span ng-class=\"{'label label-success': entry.occupied, 'label label-default': !entry.occupied}\">{{ entry.occupied ? 'Occupied' : 'Free' }}</span></td>\n        <td>{{ entry.temperature || '—' }}</td>\n        <td>{{ entry.battery || '—' }}</td>\n        <td>{{ entry.radar_confidence || '—' }}</td>\n        <td>{{ entry.latitude && entry.longitude ? (entry.latitude + ', ' + entry.longitude) : '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "ts",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#1abc9c",
-                            "name": "timestamp",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "occupied",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#4CAF50",
-                            "name": "occupancy",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "temperature",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#FF5722",
-                            "name": "temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "battery",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#FFC107",
-                            "name": "battery",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "radar_confidence",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#E91E63",
-                            "name": "radar",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "latitude",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#2196F3",
-                            "name": "latitude",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bosch_tps110_data_bucket",
-                              "mapping": "longitude",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#2196F3",
-                            "name": "longitude",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "html_time"
+                        "type": "apex_charts",
+                        "api": {}
                       }
                     ]
                   }
