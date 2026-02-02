@@ -1,0 +1,40 @@
+{
+  "name": "nucleo_wl55jc1",
+  "version": "1.0.0",
+  "description": "The STMicroelectronics NUCLEO-WL55JC1 is a development board based on the STM32WL55JC microcontroller that comes with a built-in temperature sensor and a light sensor. The NUCLEO-WL55JC1 board supports a wide choice of Integrated Development Environments ",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "stmicroelectronics-nucleo-wl55jc1"
+  },
+  "metadata": {
+    "name": "NUCLEO-WL55JC1",
+    "description": "The STMicroelectronics NUCLEO-WL55JC1 is a development board based on the STM32WL55JC microcontroller that comes with a built-in temperature sensor and a light sensor. The NUCLEO-WL55JC1 board supports a wide choice of Integrated Development Environments ",
+    "image": "assets/nucleo-wl55jc.jpg",
+    "category": "devices",
+    "vendor": "stmicroelectronics"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The STMicroelectronics NUCLEO-WL55JC1 is a development board based on the STM32WL55JC microcontroller that comes with a built-in temperature sensor and a light sensor. The NUCLEO-WL55JC1 board supports a wide choice of Integrated Development Environments ",
+        "enabled": true,
+        "name": "NUCLEO-WL55JC1",
+        "product": "nucleo_wl55jc1",
+        "profile": {
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var data = {};\n  switch (input.fPort) {\n    case 2:\n      data.battery_voltage = {\n        displayName: 'Battery voltage',\n        unit: 'V',\n        value: (((input.bytes[6] * 1200) / 254) + 1800) / 1000\n      };\n      data.humidity = {\n        displayName: 'Relative humidity',\n        unit: '%',\n        value: ((input.bytes[4] << 8) + input.bytes[5]) / 10\n      };\n      data.light = {\n        displayName: 'Red led status',\n        value: (input.bytes[0] & 0x01) ? 'ON':'OFF'\n      };\n      data.pressure = {\n        displayName: 'Barometric pressure',\n        unit: 'hPa',\n        value: ((input.bytes[1] << 8) + input.bytes[2]) / 10\n      };\n      data.temperature = {\n        displayName: 'Internal temperature',\n        unit: '°C',\n        value: input.bytes[3] & 0x80 ? input.bytes[3] - 0x100 : input.bytes[3]\n      };\n      return {\n        data: data\n      }\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n\nfunction encodeDownlink(input) {\n  return {\n    bytes: [input.data.led],\n    fPort: 2,\n  };\n}\n\nfunction decodeDownlink(input) {\n  switch (input.fPort) {\n    case 2:\n      return {\n        data: {\n          led: input.bytes[0],\n        },\n      };\n    default:\n      return {\n        errors: ['invalid FPort'],\n      };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
