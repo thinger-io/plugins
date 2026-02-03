@@ -7,12 +7,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "imbuildings-imbuildings-people-counter"
+    "directory": "imbuildings-imbuildings-comfort-sensor"
   },
   "metadata": {
     "name": "IMBUILDINGS-COMFORT-SENSOR",
     "description": "Sensor for monitoring Indoor Air Quality",
-    "image": "assets/imbuildings-people-counter-black.png",
+    "image": "assets/imbuildings-comfort-sensor.png",
     "category": "devices",
     "vendor": "imbuildings"
   },
