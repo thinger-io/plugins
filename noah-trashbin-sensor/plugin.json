@@ -1,540 +1,561 @@
 {
-  "name": "noah_trashbin_sensor",
-  "version": "1.0.0",
-  "description": "Trashbin Sensor for Monitoring trash fill level",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "noah-trashbin-sensor"
-  },
-  "metadata": {
-    "name": "Noah TRASHBIN-SENSOR",
+    "name": "noah-trashbin-sensor",
+    "version": "1.0.0",
     "description": "Trashbin Sensor for Monitoring trash fill level",
-    "image": "assets/220420_perspective-01.png",
-    "category": "devices",
-    "vendor": "noah"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "Trashbin Sensor for Monitoring trash fill level",
-        "enabled": true,
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "noah-trashbin-sensor"
+    },
+    "metadata": {
         "name": "Noah TRASHBIN-SENSOR",
-        "product": "noah_trashbin_sensor",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
-                }
-              }
-            },
-            "uplink": {
-              "device_id_resolver": "getId",
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_function": "",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
-            }
-          },
-          "autoprovisions": {
-            "noah_device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "noah-trashbin-.*"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "noah_trashbin_sensor_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": [
-                "telemetry",
-                "trash_level"
-              ]
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n\n\nfunction decodeUplink(input) {\n\t// Decode an uplink message from a buffer\n\t// (array) of bytes to an object of fields.\n\tvar decoded = {};\n\tvar bytes = input.bytes;\n\t// temperature  \n\trawtemp = bytes[0] + bytes[1] * 256;\n\t\n\tdecoded.temp = sflt162f(rawtemp) * 100;\n\t\n\t// humidity \n\tdecoded.voltage = bytes[2] + bytes[3] * 256;\n\t// = sflt162f(rawvolate) * 100;\n\t\n\trawdis = bytes[4] + bytes[5] * 256;\n\tdecoded.level = sflt162f(rawdis) * 100;\n\t\n\treturn {data: decoded};\n  }\n\nfunction sflt162f(rawSflt16)\n\t{\n\t// rawSflt16 is the 2-byte number decoded from wherever;\n\t// it's in range 0..0xFFFF\n\t// bit 15 is the sign bit\n\t// bits 14..11 are the exponent\n\t// bits 10..0 are the the mantissa. Unlike IEEE format, \n\t// \tthe msb is transmitted; this means that numbers\n\t//\tmight not be normalized, but makes coding for\n\t//\tunderflow easier.\n\t// As with IEEE format, negative zero is possible, so\n\t// we special-case that in hopes that JavaScript will\n\t// also cooperate.\n\t//\n\t// The result is a number in the open interval (-1.0, 1.0);\n\t// \n\t\n\t// throw away high bits for repeatability.\n\trawSflt16 &= 0xFFFF;\n\n\t// special case minus zero:\n\tif (rawSflt16 == 0x8000)\n\t\treturn -0.0;\n\n\t// extract the sign.\n\tvar sSign = ((rawSflt16 & 0x8000) != 0) ? -1 : 1;\n\t\n\t// extract the exponent\n\tvar exp1 = (rawSflt16 >> 11) & 0xF;\n\n\t// extract the \"mantissa\" (the fractional part)\n\tvar mant1 = (rawSflt16 & 0x7FF) / 2048.0;\n\n\t// convert back to a floating point number. We hope \n\t// that Math.pow(2, k) is handled efficiently by\n\t// the JS interpreter! If this is time critical code,\n\t// you can replace by a suitable shift and divide.\n\tvar f_unscaled = sSign * mant1 * Math.pow(2, exp1 - 15);\n\n\treturn f_unscaled;\n\t}\n",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "properties": {
-            "noah_trashbin_sensor_fill_level": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "level": 0
-              },
-              "enabled": true
-            },
-            "noah_trashbin_sensor_temperature": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "temp": 0
-              },
-              "enabled": true
-            },
-            "noah_trashbin_sensor_voltage": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "voltage": 0
-              },
-              "enabled": true
-            },
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": [
+        "description": "Trashbin Sensor for Monitoring trash fill level",
+        "image": "assets/trashbin_sensor.png",
+        "category": "devices",
+        "vendor": "noah"
+    },
+    "resources": {
+        "products": [
             {
-              "property": "dashboard",
-              "value": {
-                "tabs": [
-                  {
-                    "name": "Trashbin Monitor",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 3,
-                          "sizeY": 12
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Fill Level History"
-                        },
-                        "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": false
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "level",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "Fill Level",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
+                "description": "Trashbin Sensor for Monitoring trash fill level",
+                "enabled": true,
+                "name": "Noah TRASHBIN-SENSOR",
+                "product": "noah_trashbin_sensor",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
                             }
-                          }
-                        ],
-                        "type": "chart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 0,
-                          "sizeX": 1,
-                          "sizeY": 6
                         },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Current Fill Level"
-                        },
-                        "properties": {
-                          "color": "#e74c3c",
-                          "max": 100,
-                          "min": 0,
-                          "unit": "%"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "level",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "Level",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
                             }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 6,
-                          "sizeX": 1,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature"
-                        },
-                        "properties": {
-                          "color": "#3498db",
-                          "max": 50,
-                          "min": -20,
-                          "unit": "°C"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "temp",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                        }
+                    },
+                    "autoprovisions": {
+                        "noah_device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "noah-trashbin-.*"
                             },
-                            "color": "#3498db",
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 12
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Recent Measurements"
-                        },
-                        "properties": {
-                          "source": "code",
-                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Fill Level (%)</th>\r\n        <th>Temperature (°C)</th>\r\n        <th>Voltage</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.level || '—' }}</td>\r\n        <td>{{ entry.temp || '—' }}</td>\r\n        <td>{{ entry.voltage || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "ts",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "noah_trashbin_sensor_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
                             },
-                            "color": "#1abc9c",
-                            "name": "ts",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "level",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
                             },
-                            "color": "#e74c3c",
-                            "name": "level",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "temp",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "tags": [
+                                "telemetry",
+                                "trash_level"
+                            ]
+                        }
+                    },
+                    "code": {
+                        "code": "function getTemperature(payload) {\n    return payload.temp;\n}\n\nfunction getVoltage(payload) {\n    return payload.voltage;\n}\n\nfunction getLevel(payload) {\n    return payload.level;\n}\n\nfunction decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n\n\nfunction decodeUplink(input) {\n\t// Decode an uplink message from a buffer\n\t// (array) of bytes to an object of fields.\n\tvar decoded = {};\n\tvar bytes = input.bytes;\n\t// temperature  \n\trawtemp = bytes[0] + bytes[1] * 256;\n\t\n\tdecoded.temp = sflt162f(rawtemp) * 100;\n\t\n\t// humidity \n\tdecoded.voltage = bytes[2] + bytes[3] * 256;\n\t// = sflt162f(rawvolate) * 100;\n\t\n\trawdis = bytes[4] + bytes[5] * 256;\n\tdecoded.level = sflt162f(rawdis) * 100;\n\t\n\treturn {data: decoded};\n  }\n\nfunction sflt162f(rawSflt16)\n\t{\n\t// rawSflt16 is the 2-byte number decoded from wherever;\n\t// it's in range 0..0xFFFF\n\t// bit 15 is the sign bit\n\t// bits 14..11 are the exponent\n\t// bits 10..0 are the the mantissa. Unlike IEEE format, \n\t// \tthe msb is transmitted; this means that numbers\n\t//\tmight not be normalized, but makes coding for\n\t//\tunderflow easier.\n\t// As with IEEE format, negative zero is possible, so\n\t// we special-case that in hopes that JavaScript will\n\t// also cooperate.\n\t//\n\t// The result is a number in the open interval (-1.0, 1.0);\n\t// \n\t\n\t// throw away high bits for repeatability.\n\trawSflt16 &= 0xFFFF;\n\n\t// special case minus zero:\n\tif (rawSflt16 == 0x8000)\n\t\treturn -0.0;\n\n\t// extract the sign.\n\tvar sSign = ((rawSflt16 & 0x8000) != 0) ? -1 : 1;\n\t\n\t// extract the exponent\n\tvar exp1 = (rawSflt16 >> 11) & 0xF;\n\n\t// extract the \"mantissa\" (the fractional part)\n\tvar mant1 = (rawSflt16 & 0x7FF) / 2048.0;\n\n\t// convert back to a floating point number. We hope \n\t// that Math.pow(2, k) is handled efficiently by\n\t// the JS interpreter! If this is time critical code,\n\t// you can replace by a suitable shift and divide.\n\tvar f_unscaled = sSign * mant1 * Math.pow(2, exp1 - 15);\n\n\treturn f_unscaled;\n\t}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "trashbin_decoder_flow": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
                             },
-                            "color": "#3498db",
-                            "name": "temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "voltage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
                             },
-                            "color": "#f39c12",
-                            "name": "voltage",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          }
-                        ],
-                        "type": "html_time"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 12,
-                          "sizeX": 3,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature History"
-                        },
-                        "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": false
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "temp",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "noah_trashbin_sensor_fill_level": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getLevel",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
                             },
-                            "color": "#3498db",
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          }
-                        ],
-                        "type": "chart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 12,
-                          "sizeX": 1,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Battery Voltage"
-                        },
-                        "properties": {
-                          "color": "#f39c12",
-                          "max": 5000,
-                          "min": 0,
-                          "unit": "mV"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "voltage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "default": {
+                                "level": 0,
+                                "source": "value"
                             },
-                            "color": "#f39c12",
-                            "name": "Voltage",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 12,
-                          "sizeX": 2,
-                          "sizeY": 6
+                            "enabled": true
                         },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Voltage History"
-                        },
-                        "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": false
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "noah_trashbin_sensor_data",
-                              "mapping": "voltage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                        "noah_trashbin_sensor_temperature": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getTemperature",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
                             },
-                            "color": "#f39c12",
-                            "name": "Voltage",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
+                            "default": {
+                                "source": "value",
+                                "temp": 0
+                            },
+                            "enabled": true
+                        },
+                        "noah_trashbin_sensor_voltage": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getVoltage",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value",
+                                "voltage": 0
+                            },
+                            "enabled": true
+                        },
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Trashbin Monitor",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Fill Level History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Fill Level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Current Fill Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#3498db",
+                                                    "max": 50,
+                                                    "min": -20,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "temp",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Recent Measurements"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Fill Level (%)</th>\r\n        <th>Temperature (°C)</th>\r\n        <th>Voltage</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.level || '—' }}</td>\r\n        <td>{{ entry.temp || '—' }}</td>\r\n        <td>{{ entry.voltage || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "temp",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "voltage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "temp",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 12,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery Voltage"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 5000,
+                                                    "min": 0,
+                                                    "unit": "mV"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "voltage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 12,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Voltage History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "noah_trashbin_sensor_data",
+                                                            "mapping": "voltage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            }
+                                        ]
+                                    }
+                                ]
                             }
-                          }
-                        ],
-                        "type": "chart"
-                      }
+                        }
                     ]
-                  }
-                ]
-              }
+                }
             }
-          ]
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
