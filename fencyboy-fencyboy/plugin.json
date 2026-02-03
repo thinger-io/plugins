@@ -1,0 +1,573 @@
+{
+  "name": "fencyboy_fencyboy",
+  "version": "1.0.0",
+  "description": "The Fencyboy electric fence sensor monitors the voltage on agricultural livestock electric fences up to 15 kV. It can be powered by single-use batteries or with a solar panel and rechargeable battery.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "fencyboy-fencyboy"
+  },
+  "metadata": {
+    "name": "Fencyboy FENCYBOY",
+    "description": "The Fencyboy electric fence sensor monitors the voltage on agricultural livestock electric fences up to 15 kV. It can be powered by single-use batteries or with a solar panel and rechargeable battery.",
+    "image": "assets/fencyboy.png",
+    "category": "devices",
+    "vendor": "fencyboy"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Fencyboy electric fence sensor monitors the voltage on agricultural livestock electric fences up to 15 kV. It can be powered by single-use batteries or with a solar panel and rechargeable battery.",
+        "enabled": true,
+        "name": "Fencyboy FENCYBOY",
+        "product": "fencyboy_fencyboy",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "fencyboy-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "fencyboy_fencyboy_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * Fencyboy v1.3.1 Payload Decoder TTN\n *\n */\n\nfunction decodeNormalPayload(bytes) {\n  \n  // decode status byte\n  var statusByte = bytes[0];\n  var isInActiveMode = Boolean(statusByte & 0x01);\n  var hasBatterySensorData = Boolean(statusByte & 0x04);\n  var adcLastReadOkay = Boolean(statusByte & 0x08);\n  var adcVerify = Boolean(statusByte & 0x10);\n  \n  // baseline size is 5\n  // optionally 8 bytes for fence voltages\n  // optionally 8 bytes for battery sensor data with temperature\n  var validByteLenghts = [\n    5, // baseline size\n    13, // baseline + battery sensor with temperature\n    13, // baseline + fence voltages\n    21, // baseline + fence voltages + battery sensor with temperature\n  ];\n  if (!isElementInArray(bytes.length, validByteLenghts)) {\n    return {\n      data: { },\n      warnings: [\n        \"Unexpected length of bytes: \" + bytes.length + \". Expected lenght to be one of \" + validByteLenghts + \".\"\n      ],\n      errors: []\n    }\n  }\n  \n  var idx = 1;\n  var batteryVoltage = readUInt16BG(bytes.slice(idx, idx+2)) / 1000;\n  idx += 2;\n  var impulsecounter = readUInt16BG(bytes.slice(idx, idx + 2));\n  idx += 2;\n  \n  var data = {\n    ACTIVE_MODE: isInActiveMode,\n    BATTERYVOLTAGE: batteryVoltage,\n    IMPULSES: impulsecounter,\n    DEBUG: {\n      ADC_LAST_READ_OKAY: adcLastReadOkay,\n      ADC_VERIFY: adcVerify\n    },\n  };\n  \n \n  data.FENCEVOLTAGE = 0.0;\n  data.FENCE_VOLTAGE_STD = 0.0;\n  data.FENCEVOLTAGEMIN = 0.0;\n  data.FENCEVOLTAGEMAX = 0.0;\n  if (impulsecounter > 0) {\n    data.FENCEVOLTAGE = readInt16BG(bytes.slice(idx, idx + 2));\n    idx += 2;\n    data.FENCE_VOLTAGE_STD = readInt16BG(bytes.slice(idx, idx + 2)) / 10;\n    idx += 2;\n    data.FENCEVOLTAGEMIN = readInt16BG(bytes.slice(idx, idx + 2));\n    idx += 2;\n    data.FENCEVOLTAGEMAX = readInt16BG(bytes.slice(idx, idx + 2));\n    idx += 2;\n  }\n\n  if (hasBatterySensorData) {\n    data.BATTERYVOLTAGE = readInt16BG(bytes.slice(idx, idx + 2)) / 1000;\n    idx += 2;\n\n    data.REMAINING_CAPACITY = bytesToFloat(bytes.slice(idx, idx + 4));\n    idx += 4;\n    \n    data.TEMPERATURE = readInt16BG(bytes.slice(idx, idx + 2)) / 100;\n    idx += 2;\n  }\n\n  return {\n    data: data,\n    warnings: [],\n    errors: []\n  };\n}\n\nfunction decodeSettingsPayload(bytes) {\n  \n  // Unexpected length of bytes: \" + bytes.length + \". Expected lenght 12.\n  if (bytes.length != 12) {\n    \n    return {\n      data: { },\n      warnings: [\"Invalid length of Settings payload: \" + bytes.length],\n      errors: []\n    }\n  }\n  \n  return {\n    data: {\n      CONFIGURATION_VERSION: bytes[0],\n      CONFIGURATION_SENDINTERVAL: bytes[1],\n      CONFIGURATION_STATUSLED_ON: Boolean(bytes[2]),\n      CONFIGURATION_SMARTSLEEP_ON: Boolean(bytes[3]),\n      CONFIGURATION_EXPECTED_MS_BETWEEN_IMPULSES: readUInt16BG(bytes.slice(4, 6)),\n      CONFIGURATION_PERIODIC_RESTART_TIME_MINUTES: readUInt16BG(bytes.slice(6, 8)),\n      CONFIGURATION_VOLTAGE_DIVIDER_MULTIPLIER: bytesToFloat(bytes.slice(8, 12)),\n    },\n    warnings: [],\n    errors: []\n  };\n}\n\nfunction decodeMinutesTillRestartPayload(bytes) {\n\n    // Unexpected length of bytes: \" + bytes.length + \". Expected lenght 2.\n    if (bytes.length != 2) {\n      \n      return {\n        data: { },\n        warnings: [\"Invalid length of MinutesTillRestart payload: \" + bytes.length],\n        errors: []\n      }\n    }\n    \n    return {\n      data: {\n        MINUTES_TILL_RESTART: readUInt16BG(bytes.slice(0, 2)),\n      },\n      warnings: [],\n      errors: []\n    };\n}\n\nfunction decodeUplink(input, x) {\n  \n  //var metadata = getMetadata(input);\n\n  if (input.fPort === 1) {\n    return decodeNormalPayload(input.bytes);  \n  } else if (input.fPort === 2) {\n    return decodeSettingsPayload(input.bytes);  \n  } else if (input.fPort === 3) {\n    return decodeMinutesTillRestartPayload(input.bytes);\n  }\n  \n  return {\n    data: { },\n    warnings: [],\n    errors: [\"invalid fPort: \"+ input.fPort]\n  };\n}\n\nfunction isElementInArray(element, array) {\n    for (var index = 0; index < array.length; index++) {\n        if (element === array[index]) {\n            return true;\n        }\n    }\n    return false;\n}\n\n\n/* ******************************************\n * bytes to number\n ********************************************/\nfunction readUInt16BG(bytes) {\n    var value = (bytes[0] << 8) + bytes[1];\n    return value & 0xffff;\n}\n\nfunction readUInt32BG(bytes) {\n    var value = (bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3];\n    return value & 0xffffffff;\n}\n\nfunction readInt16BG(bytes) {\n    var ref = readUInt16BG(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}\n\nfunction readInt32BG(bytes) {\n    var ref = readUInt32BG(bytes);\n    return ref > 0x7fffffff ? ref - 0x100000000 : ref;\n}\n\nfunction bytesToFloat(bytes) {\n    //MSB Format (least significant byte first).\n    var bits = bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];\n    var sign = (bits >>> 31 === 0) ? 1.0 : -1.0;\n    var e = bits >>> 23 & 0xff;\n    var m = (e === 0) ? (bits & 0x7fffff) << 1 : (bits & 0x7fffff) | 0x800000;\n    var f = sign * m * Math.pow(2, e - 150);\n    return f;\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Fence Voltage History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "FENCEVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Fence Voltage (avg)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "FENCEVOLTAGEMAX",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Fence Voltage (max)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "FENCEVOLTAGEMIN",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Fence Voltage (min)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Fence Voltage"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 15000,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "FENCEVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4.5,
+                          "min": 2.5,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "BATTERYVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 50,
+                          "min": -20,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "TEMPERATURE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Recorded Data"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Fence Voltage (V)</th>\n        <th>Battery (V)</th>\n        <th>Impulses</th>\n        <th>Temperature (°C)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.FENCEVOLTAGE || '—' }}</td>\n        <td>{{ entry.BATTERYVOLTAGE || '—' }}</td>\n        <td>{{ entry.IMPULSES || '—' }}</td>\n        <td>{{ entry.TEMPERATURE || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "FENCEVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "fence voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "BATTERYVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "battery voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "IMPULSES",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "impulses",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "TEMPERATURE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery & Temperature History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "BATTERYVOLTAGE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Battery Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "TEMPERATURE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Remaining Capacity"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "fencyboy_fencyboy_data_bucket",
+                              "mapping": "REMAINING_CAPACITY",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
