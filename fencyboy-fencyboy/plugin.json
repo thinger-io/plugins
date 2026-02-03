@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Fencyboy FENCYBOY",
     "description": "The Fencyboy electric fence sensor monitors the voltage on agricultural livestock electric fences up to 15 kV. It can be powered by single-use batteries or with a solar panel and rechargeable battery.",
-    "image": "assets/fencyboy-v1-3-1_solar_photobox_alpha_large.png",
+    "image": "assets/fencyboy.png",
     "category": "devices",
     "vendor": "fencyboy"
   },
