@@ -141,30 +141,48 @@
             {
               "property": "dashboard",
               "value": {
+                "name": "Restotracker_scd18",
+                "placeholders": {
+                  "sources": []
+                },
+                "properties": {
+                  "accent_color": "#2E93fA",
+                  "background_image": "#0a0e17",
+                  "description": "Premium Tracker GPS/BLE/WIFI Monitoring Dashboard",
+                  "template": true,
+                  "theme": "dark",
+                  "title": "Real-Time Location Tracking"
+                },
                 "tabs": [
                   {
-                    "name": "Tracker Overview",
+                    "icon": "fas fa-map-marker-alt",
+                    "name": "📍 Real-Time Location",
                     "widgets": [
                       {
                         "layout": {
                           "col": 0,
+                          "posX": 0,
+                          "posY": 0,
                           "row": 0,
                           "sizeX": 6,
                           "sizeY": 12
                         },
                         "panel": {
-                          "color": "#1976D2",
-                          "currentColor": "#1976D2",
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(46, 147, 250, 0.3)",
+                          "color": "#1a2332",
+                          "currentColor": "#2E93fA",
                           "showOffline": {
                             "type": "last_sample"
                           },
-                          "title": "Device Location Map"
+                          "title": "🗺️ Location Map"
                         },
                         "properties": {
                           "center": [
                             0,
                             0
                           ],
+                          "mapType": "roadmap",
                           "mode": "geojson",
                           "zoom": 15
                         },
@@ -191,73 +209,66 @@
                       },
                       {
                         "layout": {
-                          "col": 6,
-                          "row": 0,
-                          "sizeX": 3,
-                          "sizeY": 6
+                          "col": 0,
+                          "posX": 6,
+                          "posY": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
                         },
                         "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(76, 175, 80, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
                           "showOffline": {
                             "type": "none"
                           },
-                          "title": "Battery Status"
+                          "title": "Battery"
                         },
                         "properties": {
-                          "color": "#4CAF50",
-                          "max": 4.2,
-                          "min": 2.8,
-                          "unit": "V"
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#2ecc71",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "12px",
+                          "extraTextWeight": "font-semibold",
+                          "icon": "fas fa-battery-full",
+                          "iconColor": "#4caf50",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "12px",
+                          "iconPosition": "before-value",
+                          "iconSize": "48px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#4caf50",
+                          "textColorConditions": [],
+                          "textSize": "56px",
+                          "textWeight": "font-bold",
+                          "unit": "V",
+                          "unitSize": "20px"
                         },
                         "sources": [
                           {
                             "bucket": {
                               "backend": "mongodb",
                               "id": "restotracker_scd18_location_data",
-                              "mapping": "battery",
+                              "mapping": "battery_voltage",
                               "tags": {
                                 "device": [],
                                 "group": []
                               }
                             },
-                            "color": "#4CAF50",
-                            "name": "Battery",
+                            "color": "#4caf50",
+                            "name": "Battery Voltage",
                             "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 9,
-                          "row": 0,
-                          "sizeX": 3,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Positioning Mode"
-                        },
-                        "properties": {
-                          "source": "code",
-                          "template": "<div style=\"width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px;\">\r\n  <div style=\"font-size: 48px; margin-bottom: 10px;\">\r\n    <i ng-if=\"value.mode === 'GPS'\" class=\"fa fa-satellite\" style=\"color: #2E93fA;\"></i>\r\n    <i ng-if=\"value.mode === 'BLE'\" class=\"fa fa-bluetooth\" style=\"color: #66DA26;\"></i>\r\n    <i ng-if=\"value.mode === 'WIFI'\" class=\"fa fa-wifi\" style=\"color: #ff8800;\"></i>\r\n    <i ng-if=\"!value.mode || value.mode === 'unknown'\" class=\"fa fa-question-circle\" style=\"color: #999;\"></i>\r\n  </div>\r\n  <div style=\"font-size: 20px; font-weight: bold;\">\r\n    {{ value.mode || 'Unknown' }}\r\n  </div>\r\n</div>"
-                        },
-                        "sources": [
-                          {
-                            "device_property": {
-                              "device": "{{device}}",
-                              "property": "restotracker_scd18_last_location"
-                            },
-                            "name": "Mode",
-                            "source": "device_property",
                             "timespan": {
                               "mode": "latest"
                             }
@@ -267,187 +278,327 @@
                       },
                       {
                         "layout": {
-                          "col": 6,
-                          "row": 6,
-                          "sizeX": 6,
-                          "sizeY": 12
+                          "col": 2,
+                          "posX": 8,
+                          "posY": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
                         },
                         "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(46, 147, 250, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
                           "showOffline": {
                             "type": "none"
                           },
-                          "title": "Location History"
+                          "title": "Positioning Mode"
                         },
                         "properties": {
-                          "source": "code",
-                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Timestamp</th>\r\n        <th>Latitude</th>\r\n        <th>Longitude</th>\r\n        <th>Altitude</th>\r\n        <th>Mode</th>\r\n        <th>Battery</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.latitude || entry.lat || '—' }}</td>\r\n        <td>{{ entry.longitude || entry.lon || '—' }}</td>\r\n        <td>{{ entry.altitude || entry.alt || '—' }} m</td>\r\n        <td>\r\n          <span ng-if=\"entry.mode === 'GPS'\" style=\"color: #2E93fA;\">GPS</span>\r\n          <span ng-if=\"entry.mode === 'BLE'\" style=\"color: #66DA26;\">BLE</span>\r\n          <span ng-if=\"entry.mode === 'WIFI'\" style=\"color: #ff8800;\">WIFI</span>\r\n          <span ng-if=\"!entry.mode\">—</span>\r\n        </td>\r\n        <td>{{ entry.battery || entry.bat || '—' }} V</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>"
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#2ecc71",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "12px",
+                          "extraTextWeight": "font-semibold",
+                          "icon": "fas fa-satellite",
+                          "iconColor": "#2E93fA",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "12px",
+                          "iconPosition": "before-value",
+                          "iconSize": "48px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#2E93fA",
+                          "textColorConditions": [],
+                          "textSize": "48px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "16px"
                         },
                         "sources": [
                           {
-                            "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
                               "id": "restotracker_scd18_location_data",
-                              "mapping": "ts",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#1abc9c",
-                            "name": "timestamp",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "restotracker_scd18_location_data",
-                              "mapping": "latitude",
+                              "mapping": "work_mode",
                               "tags": {
                                 "device": [],
                                 "group": []
                               }
                             },
                             "color": "#2E93fA",
-                            "name": "latitude",
+                            "name": "Positioning Mode",
                             "source": "bucket",
                             "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "restotracker_scd18_location_data",
-                              "mapping": "longitude",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#66DA26",
-                            "name": "longitude",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "restotracker_scd18_location_data",
-                              "mapping": "altitude",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#ff8800",
-                            "name": "altitude",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "restotracker_scd18_location_data",
-                              "mapping": "mode",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#9b59b6",
-                            "name": "mode",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "restotracker_scd18_location_data",
-                              "mapping": "battery",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#4CAF50",
-                            "name": "battery",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "day",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 7
+                              "mode": "latest"
                             }
                           }
                         ],
-                        "type": "html_time"
+                        "type": "text"
                       },
                       {
                         "layout": {
-                          "col": 0,
-                          "row": 12,
-                          "sizeX": 6,
-                          "sizeY": 6
+                          "col": 3,
+                          "posX": 6,
+                          "posY": 4,
+                          "row": 16,
+                          "sizeX": 3,
+                          "sizeY": 4
                         },
                         "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(255, 152, 0, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
                           "showOffline": {
                             "type": "none"
                           },
-                          "title": "Battery Voltage History"
+                          "title": "Latitude"
                         },
                         "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": false
+                          "decimalPlaces": 6,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#ff9800",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "11px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-map-pin",
+                          "iconColor": "#ff9800",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "10px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#ff9800",
+                          "textColorConditions": [],
+                          "textSize": "40px",
+                          "textWeight": "font-bold",
+                          "unit": "°",
+                          "unitSize": "16px"
                         },
                         "sources": [
                           {
                             "bucket": {
                               "backend": "mongodb",
                               "id": "restotracker_scd18_location_data",
-                              "mapping": "battery",
+                              "mapping": "lat",
                               "tags": {
                                 "device": [],
                                 "group": []
                               }
                             },
-                            "color": "#4CAF50",
-                            "name": "Battery Voltage",
+                            "color": "#ff9800",
+                            "name": "Latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "posX": 8,
+                          "posY": 4,
+                          "row": 16,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(76, 175, 80, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Longitude"
+                        },
+                        "properties": {
+                          "decimalPlaces": 6,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#66DA26",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "11px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-map-pin",
+                          "iconColor": "#66DA26",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "10px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#66DA26",
+                          "textColorConditions": [],
+                          "textSize": "40px",
+                          "textWeight": "font-bold",
+                          "unit": "°",
+                          "unitSize": "16px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "lon",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#66DA26",
+                            "name": "Longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "posX": 8,
+                          "posY": 8,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(156, 39, 176, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PDOP"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#9c27b0",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "11px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-crosshairs",
+                          "iconColor": "#9c27b0",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "10px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#9c27b0",
+                          "textColorConditions": [],
+                          "textSize": "40px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "16px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "pdop",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9c27b0",
+                            "name": "PDOP",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  {
+                    "icon": "fas fa-chart-line",
+                    "name": "📊 Analytics & Trends",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "posX": 0,
+                          "posY": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(46, 147, 250, 0.3)",
+                          "color": "#1a2332",
+                          "currentColor": "#2E93fA",
+                          "showOffline": {
+                            "type": "last_sample"
+                          },
+                          "title": "🗺️ Location History - Last 7 Days"
+                        },
+                        "properties": {
+                          "center": [
+                            0,
+                            0
+                          ],
+                          "mapType": "roadmap",
+                          "mode": "geojson",
+                          "zoom": 15
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "location",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "Location History",
                             "source": "bucket",
                             "timespan": {
                               "magnitude": "day",
@@ -457,7 +608,111 @@
                             }
                           }
                         ],
-                        "type": "chart"
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "posX": 6,
+                          "posY": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(76, 175, 80, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "🔋 Battery Voltage - 7 Days"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "chart_type": "area",
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    fill: {\n        type: 'gradient',\n        gradient: {\n            shadeIntensity: 1,\n            opacityFrom: 0.45,\n            opacityTo: 0.05\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(2) + 'V';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM HH:mm'\n        },\n        y: {\n            formatter: function(val) {\n                return val.toFixed(2) + 'V';\n            }\n        }\n    }\n};"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "battery_voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#4caf50",
+                            "name": "Voltage (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "posX": 6,
+                          "posY": 6,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "borderRadius": "16px",
+                          "boxShadow": "0 20px 60px rgba(46, 147, 250, 0.25)",
+                          "color": "#1a2332",
+                          "currentColor": "#1a2332",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "🎯 PDOP Accuracy - 7 Days"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "chart_type": "area",
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    fill: {\n        type: 'gradient',\n        gradient: {\n            shadeIntensity: 1,\n            opacityFrom: 0.45,\n            opacityTo: 0.05\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(1);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM HH:mm'\n        },\n        y: {\n            formatter: function(val) {\n                return val.toFixed(2);\n            }\n        }\n    }\n};"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "restotracker_scd18_location_data",
+                              "mapping": "pdop",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2E93fA",
+                            "name": "PDOP",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
                       }
                     ]
                   }
