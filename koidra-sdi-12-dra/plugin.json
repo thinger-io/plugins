@@ -1,0 +1,504 @@
+{
+  "name": "koidra_sdi_12_dra",
+  "version": "1.0.0",
+  "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "koidra-sdi-12-dra"
+  },
+  "metadata": {
+    "name": "Koidra SDI-12-DRA",
+    "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+    "image": "assets/sdi-12-dra.jpg",
+    "category": "devices",
+    "vendor": "koidra"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+        "enabled": true,
+        "name": "Koidra SDI-12-DRA",
+        "product": "koidra_sdi_12_dra",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "koidra-sdi-.*"
+              },
+              "enabled": false
+            }
+          },
+          "buckets": {
+            "koidra_sdi_12_dra_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "telemetry",
+                "soil_sensor"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n// Only for AT+DATAUP=0 & AT+ALLDATAMOD=0\nfunction Decoder(bytes, port) { \n    if(port==5)\n    {\n        var freq_band;\n        var sub_band;\n      var sensor;\n      \n      if(bytes[0]==0x17)\n        sensor= \"SDI12-LB\";\n        \n        var firm_ver= (bytes[1]&0x0f)+'.'+(bytes[2]>>4&0x0f)+'.'+(bytes[2]&0x0f);\n        \n      if(bytes[3]==0x01)\n          freq_band=\"EU868\";\n        else if(bytes[3]==0x02)\n          freq_band=\"US915\";\n        else if(bytes[3]==0x03)\n          freq_band=\"IN865\";\n        else if(bytes[3]==0x04)\n          freq_band=\"AU915\";\n        else if(bytes[3]==0x05)\n          freq_band=\"KZ865\";\n        else if(bytes[3]==0x06)\n          freq_band=\"RU864\";\n        else if(bytes[3]==0x07)\n          freq_band=\"AS923\";\n        else if(bytes[3]==0x08)\n          freq_band=\"AS923_1\";\n        else if(bytes[3]==0x09)\n          freq_band=\"AS923_2\";\n        else if(bytes[3]==0x0A)\n          freq_band=\"AS923_3\";\n        else if(bytes[3]==0x0F)\n          freq_band=\"AS923_4\";\n        else if(bytes[3]==0x0B)\n          freq_band=\"CN470\";\n        else if(bytes[3]==0x0C)\n          freq_band=\"EU433\";\n        else if(bytes[3]==0x0D)\n          freq_band=\"KR920\";\n        else if(bytes[3]==0x0E)\n          freq_band=\"MA869\";\n        \n      if(bytes[4]==0xff)\n        sub_band=\"NULL\";\n        else\n        sub_band=bytes[4];\n  \n      var bat= (bytes[5]<<8 | bytes[6])/1000;\n      \n        return {\n          SENSOR_MODEL:sensor,\n        FIRMWARE_VERSION:firm_ver,\n        FREQUENCY_BAND:freq_band,\n        SUB_BAND:sub_band,\n        BAT:bat,\n        }\n    }\n    else if(port==100)\n    {\n        var datas_sum={};\n        for(var j=0;j<bytes.length;j++)\n        {\n          var datas= String.fromCharCode(bytes[j]);\n          if(j=='0')\n            datas_sum.datas_sum=datas;\n          else\n            datas_sum.datas_sum+=datas;\n        }\n        \n        return datas_sum;\n    }\n    else  \n    {\n        var decode={};\n        var garbage = 0;\n        const Suppose_Len = 18;\n        decode.msg_length = bytes.length;\n        decode.EXTI_Trigger= (bytes[0] & 0x80)? \"TRUE\":\"FALSE\";    \n        decode.BatV= ((bytes[0]<<8 | bytes[1])&0x7FFF)/1000;\n        decode.Payver= bytes[2];\n        \n        // for(var i=3;i<bytes.length;i++)\n        // {\n        //   var data= String.fromCharCode(bytes[i]);\n        //   if(i=='3')\n        //     decode.data_sum=data;\n        //   else\n        //     decode.data_sum+=data;\n        // }\n        decode.data_sum = String.fromCharCode(...bytes.slice(3));\n        data_sum_infos = decode.data_sum.split('+');\n        \n        if (!isNaN(parseFloat(data_sum_infos[0]))) {\n          // 2626.96+21.8+38\n          wc_Root = parseFloat(data_sum_infos[0]);\n          decode.wc_Root = 6.771*Math.pow(10, -10) * Math.pow(wc_Root, 3) - 5.105*Math.pow(10, -6) * Math.pow(wc_Root, 2) + 1.302*Math.pow(10, -2) * wc_Root - 10.848;\n      } else if (!isNaN(parseFloat(data_sum_infos[1])) && bytes.length > Suppose_Len) {\n          // ñ\\u00170+2574.78+22.2+637JZL\\r\\n\n          garbage = 1;\n          tempWc = parseFloat(data_sum_infos[1]);\n          decode.wc_Root = 6.771*Math.pow(10, -10) * Math.pow(tempWc, 3) - 5.105*Math.pow(10, -6) * Math.pow(tempWc, 2) + 1.302*Math.pow(10, -2) * tempWc - 10.848;\n      } else {\n          decode.wc_Root = null;\n      } \n        \n      if (garbage) {\n          decode.T_Root = !isNaN(parseFloat(data_sum_infos[2])) ? parseFloat(data_sum_infos[2]) : null;\n          const numberRegex = /\\d+/g;\n          const numberMatches = data_sum_infos[3].match(numberRegex);\n          tempEc = numberMatches % 100;\n          decode.ec_Root = numberMatches ? (parseInt(tempEc) / 1000) : null;\n      } else {\n          decode.T_Root = !isNaN(parseFloat(data_sum_infos[1])) ? parseFloat(data_sum_infos[1]) : null;\n          const numberRegex = /\\d+/g;\n          const numberMatches = data_sum_infos[2].match(numberRegex);\n          decode.ec_Root = numberMatches ? (parseInt(numberMatches.join(\"\")) / 1000) : null;\n      }\n        \n        return decode;\n    }\n  }",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Soil Moisture & Temperature History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "wc_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Water Content",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "T_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Electrical Conductivity History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "ec_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "EC",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Content"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "wc_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 50,
+                          "min": -10,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "T_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4,
+                          "min": 2.5,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latest Sensor Readings"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Water Content (%)</th>\n        <th>Temperature (°C)</th>\n        <th>EC (mS/cm)</th>\n        <th>Battery (V)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.wc_Root !== null ? (entry.wc_Root | number:2) : '—' }}</td>\n        <td>{{ entry.T_Root !== null ? (entry.T_Root | number:2) : '—' }}</td>\n        <td>{{ entry.ec_Root !== null ? (entry.ec_Root | number:3) : '—' }}</td>\n        <td>{{ entry.BatV !== null ? (entry.BatV | number:2) : '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "wc_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "water_content",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "T_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "ec_Root",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "ec",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "koidra_sdi_12_dra_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
