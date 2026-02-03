@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "n-fuse-sta"
+    "directory": "n-fuse-stx"
   },
   "metadata": {
     "name": "N-Fuse STX",
