@@ -1,5 +1,5 @@
 {
-  "name": "imbuildings_imbuildings_moodbox",
+  "name": "imbuildings-imbuildings-moodbox",
   "version": "1.0.0",
   "description": "Get user feedback",
   "author": "Thinger.io",
@@ -64,7 +64,7 @@
             }
           },
           "buckets": {
-            "device_data": {
+            "imb_moodbox_data": {
               "backend": "mongodb",
               "data": {
                 "payload": "{{payload}}",
@@ -76,13 +76,10 @@
               },
               "enabled": true,
               "retention": {
-                "period": 6,
+                "period": 3,
                 "unit": "months"
               },
-              "tags": [
-                "button_feedback",
-                "user_satisfaction"
-              ]
+              "tags": []
             }
           },
           "code": {
@@ -150,7 +147,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "button.a",
                               "tags": {
                                 "device": [],
@@ -172,7 +169,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "button.b",
                               "tags": {
                                 "device": [],
@@ -194,7 +191,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "button.c",
                               "tags": {
                                 "device": [],
@@ -216,7 +213,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "button.d",
                               "tags": {
                                 "device": [],
@@ -238,7 +235,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "button.e",
                               "tags": {
                                 "device": [],
@@ -287,7 +284,7 @@
                             "aggregation": {},
                             "bucket": {
                               "backend": "mongodb",
-                              "id": "device_data",
+                              "id": "imb_moodbox_data",
                               "mapping": "battery_voltage",
                               "tags": {
                                 "device": [],
@@ -326,16 +323,24 @@
                         "properties": {
                           "color": "#2B2B2B",
                           "size": 24,
-                          "text": "Moodbox User Feedback Device\\n\\nMonitoring 5 button inputs (A-E) for user satisfaction tracking.\\n\\nData retention: 6 months\\nUpdate interval: Event-driven",
+                          "text": "Moodbox User Feedback Device\n\nMonitoring 5 button inputs (A-E) for user satisfaction tracking.\n\nData retention: 6 months\nUpdate interval: Event-driven",
                           "unit": "",
                           "unitpost": false,
                           "val": ""
                         },
                         "sources": [
                           {
-                            "bucket": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "imb_moodbox_data",
+                              "mapping": "battery_voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
                             "color": "#1abc9c",
-                            "name": "Source 1",
+                            "name": "Status Source",
                             "source": "bucket",
                             "timespan": {
                               "mode": "latest"
