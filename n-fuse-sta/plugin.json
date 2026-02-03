@@ -1,0 +1,114 @@
+{
+  "name": "n_fuse_sta",
+  "version": "1.0.0",
+  "description": "Action Button with tactile feedback in a very compact Form Factor",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "n-fuse-sta"
+  },
+  "metadata": {
+    "name": "N-Fuse STA",
+    "description": "Action Button with tactile feedback in a very compact Form Factor",
+    "image": "assets/sta.png",
+    "category": "devices",
+    "vendor": "n-fuse"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Action Button with tactile feedback in a very compact Form Factor",
+        "enabled": true,
+        "name": "N-Fuse STA",
+        "product": "n_fuse_sta",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "n-fuse-sta-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "n_fuse_sta_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nconst trigger_type = [\n  {val: 0, type: 'rtc',     str: 'Scheduled time interval'},\n  {val: 1, type: 'action',  str: 'Single Press'},\n  {val: 2, type: 'action',  str: 'Double Press'},\n  {val: 3, type: 'action',  str: 'Long Press'},\n]\n\nfunction decodeUplink(input) {\n  // assert frame port 1\n  if(input.fPort != 1) return {errors: ['unknown FPort']};\n  // assert protocol version 01\n  if(input.bytes[0] & 0xc0 != 0x40) return {errors: ['unknown format version']};\n\n  // Simplify trigger\n  const trigger = (input.bytes[0] & 0x01) && ((input.bytes[1] >> 6 & 0x02 | input.bytes[0] >> 1 & 0x01) + 1);\n\n  return {\n    data: {\n      mcu: {\n        temperature: /* °C */ input.bytes[2] / 255 * 165 - 40,\n      },\n      info: {\n        version: 0x01,\n        battery: /* Voltage     */ (input.bytes[1] & 0x7f) / 100 + 2,\n        txpower: /* rp002 index */ input.bytes[0] >> 2 & 0x0f,\n        trigger: trigger_type[trigger],\n        ...(trigger && {gesture_count: input.bytes[3]}),\n      }\n    }\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
