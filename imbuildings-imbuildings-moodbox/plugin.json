@@ -1,5 +1,5 @@
 {
-  "name": "imbuildings_imbuildings_moodbox",
+  "name": "imbuildings-imbuildings-moodbox",
   "version": "1.0.0",
   "description": "Get user feedback",
   "author": "Thinger.io",
@@ -64,7 +64,7 @@
             }
           },
           "buckets": {
-            "device_data": {
+            "imb_moodbox_data": {
               "backend": "mongodb",
               "data": {
                 "payload": "{{payload}}",
@@ -76,13 +76,10 @@
               },
               "enabled": true,
               "retention": {
-                "period": 6,
+                "period": 3,
                 "unit": "months"
               },
-              "tags": [
-                "button_feedback",
-                "user_satisfaction"
-              ]
+              "tags": []
             }
           },
           "code": {
