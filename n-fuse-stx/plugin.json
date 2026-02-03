@@ -1,0 +1,846 @@
+{
+  "name": "n_fuse_stx",
+  "version": "1.0.0",
+  "description": "Multisensor variant with five sensor measurements. HDC2080 (Temperature, Humidity), BMA400 (accelerometer), SFH7776 (luminance), Reed switch (magnet sensing switch).",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "n-fuse-sta"
+  },
+  "metadata": {
+    "name": "N-Fuse STX",
+    "description": "Multisensor variant with five sensor measurements. HDC2080 (Temperature, Humidity), BMA400 (accelerometer), SFH7776 (luminance), Reed switch (magnet sensing switch).",
+    "image": "assets/stx.png",
+    "category": "devices",
+    "vendor": "n-fuse"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Multisensor variant with five sensor measurements. HDC2080 (Temperature, Humidity), BMA400 (accelerometer), SFH7776 (luminance), Reed switch (magnet sensing switch).",
+        "enabled": true,
+        "name": "N-Fuse STX",
+        "product": "n_fuse_stx",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "n-fuse-stx.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "n_fuse_stx_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nconst trigger_type = [\n  {val: 0, type: 'rtc',     str: 'Scheduled time interval'},\n  {val: 1, type: 'bma400',  str: 'Motion above threshold'},\n  {val: 2, type: 'sfh7776', str: 'Light intensity above threshold'},\n  {val: 3, type: 'sfh7776', str: 'Light intensity below threshold'},\n  {val: 4, type: 'hdc2080', str: 'Temperature above threshold'},\n  {val: 5, type: 'hdc2080', str: 'Temperature below threshold'},\n  {val: 6, type: 'hdc2080', str: 'Humidity above threshold'},\n  {val: 7, type: 'hdc2080', str: 'Humidity below threshold'},\n  {val: 8, type: 'action',  str: 'Reed switch'},\n]\n\nfunction decodeUplink(input) {\n  // assert frame port 1\n  if(input.fPort != 1) return {errors: ['unknown FPort']};\n  // assert protocol version 01\n  if(input.bytes[0] & 0xc0 != 0x40) return {errors: ['unknown format version']};\n\n  return {\n    data: {\n      bma400: {\n        x_axis:           /* m/s² */ (input.bytes[2] / 128.0) * (2 * 9.80665),\n        y_axis:           /* m/s² */ (input.bytes[3] / 128.0) * (2 * 9.80665),\n        z_axis:           /* m/s² */ (input.bytes[4] / 128.0) * (2 * 9.80665),\n        x_axis_reference: /* m/s² */ (input.bytes[5] / 128.0) * (2 * 9.80665),\n        y_axis_reference: /* m/s² */ (input.bytes[6] / 128.0) * (2 * 9.80665),\n        z_axis_reference: /* m/s² */ (input.bytes[7] / 128.0) * (2 * 9.80665),\n      },\n      hdc2080: {\n        temperature: /*  °C */ (input.bytes[9] << 1 & 0x100 | input.bytes[8]) / 512 * 165 - 40,\n        humidity:    /* %rH */ (input.bytes[9] & 0x7f),\n      },\n      sfh7776: {\n        luminance:   /* lx */ input.bytes[11] << 8 & 0x3f00 | input.bytes[10],\n      },\n      info: {\n        version: 0x01,\n        battery: /* Voltage     */ (input.bytes[1] & 0x7f) / 100 + 2,\n        txpower: /* rp002 index */ input.bytes[0] >> 2 & 0x0f,\n        trigger: trigger_type[input.bytes[11] >> 3 & 0x18 | input.bytes[1] >> 5 & 0x40 | input.bytes[0] & 0x03],\n      }\n    }\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 60,
+                          "min": -20,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "hdc2080.temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%RH"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "hdc2080.humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Luminance"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 10000,
+                          "min": 0,
+                          "unit": "lx"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "sfh7776.luminance",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Luminance",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "max": 3.6,
+                          "min": 2,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "info.battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature & Humidity History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "hdc2080.temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "hdc2080.humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Luminance History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "sfh7776.luminance",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Luminance",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Measurements"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Temp (°C)</th>\n        <th>Humidity (%)</th>\n        <th>Light (lx)</th>\n        <th>Battery (V)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'HH:mm:ss' }}</td>\n        <td>{{ (entry.hdc2080 && entry.hdc2080.temperature !== undefined ? entry.hdc2080.temperature : '—') }}</td>\n        <td>{{ (entry.hdc2080 && entry.hdc2080.humidity !== undefined ? entry.hdc2080.humidity : '—') }}</td>\n        <td>{{ (entry.sfh7776 && entry.sfh7776.luminance !== undefined ? entry.sfh7776.luminance : '—') }}</td>\n        <td>{{ (entry.info && entry.info.battery !== undefined ? entry.info.battery : '—') }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "hdc2080",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "hdc2080",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "sfh7776",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "sfh7776",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "info",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "info",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Accelerometer",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Acceleration History (Current)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.x_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "X-axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.y_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Y-axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.z_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Z-axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Acceleration History (Reference)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.x_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#c0392b",
+                            "name": "X-axis Reference",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.y_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Y-axis Reference",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.z_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2980b9",
+                            "name": "Z-axis Reference",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latest Acceleration (m/s²)"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"padding: 20px; font-family: monospace;\">\n  <h4>Current Values</h4>\n  <p><strong>X-axis:</strong> {{ value[0] | number:2 }} m/s²</p>\n  <p><strong>Y-axis:</strong> {{ value[1] | number:2 }} m/s²</p>\n  <p><strong>Z-axis:</strong> {{ value[2] | number:2 }} m/s²</p>\n  <hr>\n  <h4>Reference Values</h4>\n  <p><strong>X-axis:</strong> {{ value[3] | number:2 }} m/s²</p>\n  <p><strong>Y-axis:</strong> {{ value[4] | number:2 }} m/s²</p>\n  <p><strong>Z-axis:</strong> {{ value[5] | number:2 }} m/s²</p>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.x_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "x_axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.y_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "y_axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.z_axis",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "z_axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.x_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "x_axis_ref",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.y_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "y_axis_ref",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "bma400.z_axis_reference",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "z_axis_ref",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Trigger Information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"padding: 20px;\">\n  <h4>Last Trigger</h4>\n  <p><strong>Type:</strong> {{ (value[0] && value[0].trigger && value[0].trigger.type) || '—' }}</p>\n  <p><strong>Description:</strong> {{ (value[0] && value[0].trigger && value[0].trigger.str) || '—' }}</p>\n  <p><strong>TX Power Index:</strong> {{ (value[0] && value[0].txpower !== undefined ? value[0].txpower : '—') }}</p>\n  <p><strong>Protocol Version:</strong> {{ (value[0] && value[0].version !== undefined ? value[0].version : '—') }}</p>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "n_fuse_stx_data_bucket",
+                              "mapping": "info",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "info",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
