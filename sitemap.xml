@@ -481,6 +481,18 @@
          <lastmod>2026-02-03</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/</loc>
+         <lastmod>2026-02-03</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/changelog/</loc>
+         <lastmod>2026-02-03</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/plugin_file/</loc>
+         <lastmod>2026-02-03</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/plugins/devices/opensource-esp32-paxcounter/</loc>
          <lastmod>2026-02-03</lastmod>
     </url>
