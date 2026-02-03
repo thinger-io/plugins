@@ -1,0 +1,748 @@
+{
+    "name": "slscorp-volc2180",
+    "version": "1.0.0",
+    "description": "Lora-based Outdoor Street light controller, Suitable for Smart Street Light applications such as monitoring, controlling, alarms notification, Smart City, Smart Lighting, and suitable for Pole mount.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "slscorp-volc2180"
+    },
+    "metadata": {
+        "name": "Slscorp VOLC2180",
+        "description": "Lora-based Outdoor Street light controller, Suitable for Smart Street Light applications such as monitoring, controlling, alarms notification, Smart City, Smart Lighting, and suitable for Pole mount.",
+        "image": "assets/volc2180.png",
+        "category": "devices",
+        "vendor": "slscorp"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "Lora-based Outdoor Street light controller, Suitable for Smart Street Light applications such as monitoring, controlling, alarms notification, Smart City, Smart Lighting, and suitable for Pole mount.",
+                "enabled": true,
+                "name": "Slscorp VOLC2180",
+                "product": "slscorp_volc2180",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "volc2180.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "slscorp_volc2180_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": [
+                                "streetlight",
+                                "telemetry"
+                            ]
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n\tvar data = Parse_Receive_MIB(input.bytes);\n\treturn {\n\t\tdata: data,\n\t\twarnings: [],\n\t\terrors: []\n\t};\n}\n\nvar loraparameter = {\n\tOnGetMeterDataCallback: function(data) {\n\t\tdata.notification = 'meterdata';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetMeterTrapCallback: function(data) {\n\t\tdata.notification = 'metertrap';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetJoinIntervalCallback: function(data) {\n\t\tdata.notification = 'joinIntervalTrap';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetEEPEraseCallback: function(data) {\n\t\tdata.notification = 'EepEraseTrap';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetEnableDisableADRCallback: function(data) {\n\t\tdata.notification = 'EnableDisableADR';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetCombinedCommissioningCallback: function(data) {\n\t\tdata.notification = 'CombinedCommissioning';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetLDRCountCallback: function(data) {\n\t\tdata.notification = 'LDRCount';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnSetNodeRFPropertyCallback: function(data) {\n\t\tdata.notification = 'noderfproperty';\n\t\treturn LoraTrapGet(data);\n\t},\n\tOnGetNodeRFPropertyCallback: function(data) {\n\t\tdata.notification = 'noderfproperty';\n\t\treturn LoraTrapGet(data);\n\t},\n};\n\nvar G_APP_PORTDATA = {\n\tLightOnOff: {\n\t\tGetRequest: '10',\n\t\tGetResponse: '11',\n\t\tSetRequest: '12',\n\t},\n\tBrightnessLevel: {\n\t\tGetRequest: '13',\n\t\tGetResponse: '14',\n\t\tSetRequest: '15',\n\t},\n\tDeviceProperty: {\n\t\tGetRequest: '0d',\n\t\tGetResponse: '0e',\n\t},\n\tMeterDataUplink: {\n\t\tGetRequest: '57',\n\t\tGetResponse: '58',\n\t},\n\tMeterDataTrap: {\n\t\tGet: '00'\n\t},\n\tLoraRFProperty: {\n\t\tGetRequest: '04',\n\t\tSetRequest: '06',\n\t\tGetResponse: '05',\n\t\tSetResponse: '07'\n\t},\n\tGetSetJoinInterval: {\n\t\tSetRequest: '40',\n\t\tGetRequest: '3e',\n\t\tGetResponse: '3f',\n\t\tSetResponse: '41'\n\t},\n\tEpromErase: {\n\t\tSetRequest: '5d',\n\t\tSetResponse: '5e'\n\t},\n\tEnableDisableADR: {\n\t\tSetRequest: '28',\n\t\tGetRequest: '26',\n\t\tGetResponse: '27',\n\t\tSetResponse: '29'\n\t},\n\tCombinedCommissioning: {\n\t\tSetRequest: '38',\n\t\tGetRequest: '36',\n\t\tGetResponse: '37',\n\t\tSetResponse: '39'\n\t},\n\tLDRCount: {\n\t\tGetRequest: '69',\n\t\tGetResponse: '6a',\n\t}\n};\n\nfunction LoraTrapGet(trap) {\n\tvar data = {};\n\tif (trap.notification == \"meterdata\") {\n\t\tdata = {};\n\t\tdata.dimmer = trap.data.DimmingValue;\n\t\tdata.power = trap.data.Power;\n\t\tdata.energy = trap.data.Energy;\n\t\tdata.powerfactor = trap.data.PowerFactor;\n\t\tdata.irms = trap.data.IRMS;\n\t\tdata.vrms = trap.data.VRMS;\n\t\treturn data;\n\t} else if (trap.notification == \"metertrap\") {\n\t\tdata = {};\n\t\tdata.dimmer = trap.data.DimmingValue;\n\t\tdata.power = trap.data.Power;\n\t\tdata.energy = trap.data.Energy;\n\t\tdata.powerfactor = trap.data.PowerFactor;\n\t\tdata.irms = trap.data.IRMS;\n\t\tdata.vrms = trap.data.VRMS;\n\t\tdata.temperature = trap.data.Temperature;\n\t\treturn data;\n\t} else if (trap.notification == \"joinIntervalTrap\") {\n\t\tdata = {};\n\t\tdata.joinacceptuplinkinterval = trap.data.joinacceptuplinkinterval;\n\t\treturn data;\n\t} else if (trap.notification == \"EepEraseTrap\") {\n\t\tdata = {};\n\t\tdata.epromerase = trap.data.epromerase;\n\t\treturn data;\n\t} else if (trap.notification == \"EnableDisableADR\") {\n\t\tdata = {};\n\t\tdata.adaptivedatarate = trap.data.adaptivedatarate;\n\t\treturn data;\n\t} else if (trap.notification == \"CombinedCommissioning\") {\n\t\tdata = {};\n\t\tdata = trap.data;\n\t\treturn data;\n\t} else if (trap.notification == \"LDRCount\") {\n\t\tdata = {};\n\t\tdata.adccount = trap.data.ADCCount;\n\t\treturn data;\n\t} else if (trap.notification == \"noderfproperty\") {\n\t\tdata = {};\n\t\tdata.TransmitPower = trap.data.TransmitPower;\n\t\tdata.DataRate = trap.data.DataRate;\n\t\treturn data;\n\t}\n}\n\nvar Parse_Receive_MIB = function(response) {\n\tvar hexString = byteArraytoHexString(response);\n\treturn iot_mib_for_nodeV2(response, hexString);\n}\n\nfunction iot_mib_for_nodeV2(rx_buffer, hexString) {\n\tvar dd = parseInt(G_APP_PORTDATA.GetSetJoinInterval.GetResponse, 16);\n\tif (rx_buffer[0] == parseInt(G_APP_PORTDATA.MeterDataUplink.GetResponse, 16)) {\n\t\treturn notify_meter_properties(rx_buffer, hexString);\n\t} else if (rx_buffer[0] == parseInt(G_APP_PORTDATA.MeterDataTrap.Get, 16)) {\n\t\treturn notify_metertrap(rx_buffer, hexString);\n\t} else if ((rx_buffer[0] == parseInt(G_APP_PORTDATA.LoraRFProperty.GetResponse, 16)) || (rx_buffer[0] == parseInt(G_APP_PORTDATA.LoraRFProperty.SetResponse, 16))) {\n\t\treturn notify_rf_node_properties(rx_buffer, hexString);\n\t} else if ((rx_buffer[0] == parseInt(G_APP_PORTDATA.GetSetJoinInterval.GetResponse, 16)) || rx_buffer[0] == parseInt(G_APP_PORTDATA.GetSetJoinInterval.SetResponse, 16)) {\n\t\treturn notify_joinReqInterval_properties(rx_buffer, hexString);\n\t} else if (rx_buffer[0] == parseInt(G_APP_PORTDATA.EpromErase.SetResponse, 16)) {\n\t\treturn notify_eepRomErase_properties(rx_buffer, hexString);\n\t} else if ((rx_buffer[0] == parseInt(G_APP_PORTDATA.EnableDisableADR.GetResponse, 16)) || rx_buffer[0] == parseInt(G_APP_PORTDATA.EnableDisableADR.SetResponse, 16)) {\n\t\treturn notify_EnableDisableADR_properties(rx_buffer, hexString);\n\t} else if ((rx_buffer[0] == parseInt(G_APP_PORTDATA.CombinedCommissioning.GetResponse, 16)) || rx_buffer[0] == parseInt(G_APP_PORTDATA.CombinedCommissioning.SetResponse, 16)) {\n\t\treturn notify_CombinedCommissioning_properties(rx_buffer, hexString);\n\t} else if (rx_buffer[0] == parseInt(G_APP_PORTDATA.LDRCount.GetResponse, 16)) {\n\t\treturn notify_LDRCount_properties(rx_buffer, hexString);\n\t}\n}\n\nfunction map_to_property(data) {\n\tif (data.type == \"get_meter_properties\") {\n\t\treturn loraparameter.OnGetMeterDataCallback(data.data);\n\t} else if (data.type == \"get_metertrap\") {\n\t\treturn loraparameter.OnGetMeterTrapCallback(data.data);\n\t} else if (data.type == \"get_joinReqInterval_properties\") {\n\t\treturn loraparameter.OnGetJoinIntervalCallback(data.data);\n\t} else if (data.type == \"get_eepRomErase_properties\") {\n\t\treturn loraparameter.OnGetEEPEraseCallback(data.data);\n\t} else if (data.type == \"get_EnableDisableADR_properties\") {\n\t\treturn loraparameter.OnGetEnableDisableADRCallback(data.data);\n\t} else if (data.type == \"get_CombinedCommissioning_properties\") {\n\t\treturn loraparameter.OnGetCombinedCommissioningCallback(data.data);\n\t} else if (data.type == \"get_LDRCount_properties\") {\n\t\treturn loraparameter.OnGetLDRCountCallback(data.data);\n\t} else if (data.type == \"get_node_rf_properties\") {\n\t\treturn loraparameter.OnSetNodeRFPropertyCallback(data.data);\n\t}\n}\n\nfunction notify_metertrap(rx_buffer, hexString) {\n\tshifter = 1;\n\tvar payload = {\n\t\ttype: 'get_metertrap',\n\t\tdata: {\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tDimmingValue: null,\n\t\tPower: null,\n\t\tEnergy: null,\n\t\tPowerFactor: null,\n\t\tIRMS: null,\n\t\tVRMS: null,\n\t\tTemperature: null\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.DimmingValue = (parseInt(takeHexvaluebyBytes(data_array, 1)) / 2.5).toString();\n\tdata.Power = parseInt(takeHexvaluebyBytes(data_array, 2)).toString();\n\tdata.Energy = (parseInt(takeHexvaluebyBytes(data_array, 3)) / 1000).toString();\n\tdata.PowerFactor = (parseInt(takeHexvaluebyBytes(data_array, 2)) / 1000).toString();\n\tdata.IRMS = (parseInt(takeHexvaluebyBytes(data_array, 2)) / 1000).toString();\n\tdata.VRMS = (parseInt(takeHexvaluebyBytes(data_array, 4)) / 1000).toString();\n\tdata.Temperature = parseInt(takeHexvaluebyBytes(data_array, 1)).toString();\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_meter_properties(rx_buffer, hexString) {\n\tshifter = 1;\n\tvar payload = {\n\t\ttype: 'get_meter_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tpayload.type = 'get_meter_properties';\n\tvar data = {\n\t\tDimmingValue: null,\n\t\tPower: null,\n\t\tEnergy: null,\n\t\tPowerFactor: null,\n\t\tIRMS: null,\n\t\tVRMS: null\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.DimmingValue = (parseInt(takeHexvaluebyBytes(data_array, 1)) / 2.5).toString();\n\tdata.Power = parseInt(takeHexvaluebyBytes(data_array, 2)).toString();\n\tdata.Energy = (parseInt(takeHexvaluebyBytes(data_array, 3)) / 1000).toString();\n\tdata.PowerFactor = (parseInt(takeHexvaluebyBytes(data_array, 2)) / 1000).toString();\n\tdata.IRMS = (parseInt(takeHexvaluebyBytes(data_array, 2)) / 1000).toString();\n\tdata.VRMS = (parseInt(takeHexvaluebyBytes(data_array, 4)) / 1000).toString();\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_rf_node_properties(iot_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_node_rf_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tTransmitPower: '',\n\t\tDataRate: ''\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.TransmitPower = parseInt(takeHexvaluebyBytes(data_array, 1)).toString();\n\tdata.DataRate = parseInt(takeHexvaluebyBytes(data_array, 1)).toString();\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_joinReqInterval_properties(iot_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_joinReqInterval_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tjoinacceptuplinkinterval: ''\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.joinacceptuplinkinterval = parseInt(takeHexvaluebyBytes(data_array, 2)).toString();\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_eepRomErase_properties(iot_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_eepRomErase_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tepromerase: ''\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.epromerase = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_EnableDisableADR_properties(iot_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_EnableDisableADR_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tadaptivedatarate: ''\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.adaptivedatarate = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction notify_CombinedCommissioning_properties(rx_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_CombinedCommissioning_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tlat: null,\n\t\tlong: null,\n\t\toperationmode: null,\n\t\tdevice_mode: null,\n\t\talarmmask: null,\n\t\thighvoltagealarmthreshold: null,\n\t\tlowvoltagealarmthreshold: null,\n\t\thighcurrentalarmthreshold: null,\n\t\tlowcurrentalarmthreshold: null,\n\t\tlowpowerfactoralarmthreshold: null,\n\t\tmaxlightburnhouralarmthreshold: null,\n\t\ttemperaturealarmthreshold: null,\n\t\ttimezone: null,\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.lat = parseInt(takeHexvaluebyBytes(data_array, 4));\n\tdata.long = parseInt(takeHexvaluebyBytes(data_array, 4));\n\tdata.operationmode = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tdata.device_mode = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tdata.timezone = parseInt(takeHexvaluebyBytes(data_array, 4));\n\tdata.alarmmask = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.highvoltagealarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.lowvoltagealarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.highcurrentalarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.lowcurrentalarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.lowpowerfactoralarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tdata.maxlightburnhouralarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tdata.temperaturealarmthreshold = parseInt(takeHexvaluebyBytes(data_array, 1));\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\n\nfunction notify_LDRCount_properties(rx_buffer, hexString) {\n\tvar payload = {\n\t\ttype: 'get_LDRCount_properties',\n\t\tdata: {\n\t\t\ttype: \"lora_trap\",\n\t\t\tdata: \"\"\n\t\t}\n\t};\n\tpayload.data.data = [];\n\tvar data = {\n\t\tADCCount: null\n\t}\n\tvar byteValues = JSON.parse(JSON.stringify(hexString));\n\tvar data_array = Array.from(byteValues);\n\tvar appport = takeHexvaluebyBytes(data_array, 1);\n\tdata.ADCCount = parseInt(takeHexvaluebyBytes(data_array, 2));\n\tpayload.data.data = data;\n\treturn map_to_property(payload);\n}\n\nfunction decimalToHexString(number) {\n\tif (number < 0) {\n\t\tnumber = 0xFFFFFFFF + number + 1;\n\t}\n\treturn number.toString(16).toUpperCase();\n}\n\nfunction byteArraytoHexString(response) {\n\tvar result = \"\";\n\tresponse.forEach(element => {\n\t\tvar r = decimalToHexString(element);\n\t\tif (r.length <= 1) {\n\t\t\tr = '0' + r;\n\t\t}\n\t\tresult += r;\n\t});\n\treturn result;\n}\n\nfunction takeHexvaluebyBytes(data, byte) {\n\tvar result = \"\";\n\tfor (let index = 0; index < byte; index++) {\n\t\tresult += data.shift();\n\t\tresult += data.shift();\n\t}\n\tvar r = parseInt(result, 16);\n\treturn r;\n}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Dimmer Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#ffa500",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "dimmer",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ffa500",
+                                                        "name": "Dimmer",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Power"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 300,
+                                                    "min": 0,
+                                                    "unit": "W"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "power",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Power",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Voltage RMS"
+                                                },
+                                                "properties": {
+                                                    "color": "#3498db",
+                                                    "max": 260,
+                                                    "min": 200,
+                                                    "unit": "V"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "vrms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Current RMS"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 2,
+                                                    "min": 0,
+                                                    "unit": "A"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "irms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Current",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Power Factor"
+                                                },
+                                                "properties": {
+                                                    "color": "#1abc9c",
+                                                    "max": 1,
+                                                    "min": 0,
+                                                    "unit": ""
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "powerfactor",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "PF",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#e67e22",
+                                                    "max": 80,
+                                                    "min": 0,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "Temp",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Power & Energy"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "power",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Power (W)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "energy",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "Energy (kWh)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Dimmer Control"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "dimmer",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Dimmer Level (%)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Voltage & Current"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "vrms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Voltage (V)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "irms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Current (A)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 24,
+                                                    "sizeX": 6,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Latest Telemetry Data"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Timestamp</th>\r\n        <th>Dimmer (%)</th>\r\n        <th>Power (W)</th>\r\n        <th>Energy (kWh)</th>\r\n        <th>Voltage (V)</th>\r\n        <th>Current (A)</th>\r\n        <th>PF</th>\r\n        <th>Temp (°C)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'short' }}</td>\r\n        <td>{{ entry.dimmer || '—' }}</td>\r\n        <td>{{ entry.power || '—' }}</td>\r\n        <td>{{ entry.energy || '—' }}</td>\r\n        <td>{{ entry.vrms || '—' }}</td>\r\n        <td>{{ entry.irms || '—' }}</td>\r\n        <td>{{ entry.powerfactor || '—' }}</td>\r\n        <td>{{ entry.temperature || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "dimmer",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "dimmer",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "power",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "power",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "energy",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "energy",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "vrms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "vrms",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "irms",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "irms",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "powerfactor",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "powerfactor",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "slscorp_volc2180_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
