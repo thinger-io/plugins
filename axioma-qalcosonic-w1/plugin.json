@@ -1,0 +1,111 @@
+{
+  "name": "axioma_qalcosonic_w1",
+  "version": "1.0.0",
+  "description": "Ultrasonic water meter QALCOSONIC W1 is designed for accurate measurement of cold and hot water consumption in households, apartment buildings and small commercial premises.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "axioma-qalcosonic-w1"
+  },
+  "metadata": {
+    "name": "Axioma QALCOSONIC-W1",
+    "description": "Ultrasonic water meter QALCOSONIC W1 is designed for accurate measurement of cold and hot water consumption in households, apartment buildings and small commercial premises.",
+    "image": "assets/qalcosonicw1.png",
+    "category": "devices",
+    "vendor": "axioma"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Ultrasonic water meter QALCOSONIC W1 is designed for accurate measurement of cold and hot water consumption in households, apartment buildings and small commercial premises.",
+        "enabled": true,
+        "name": "Axioma QALCOSONIC-W1",
+        "product": "axioma_qalcosonic_w1",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "axioma-qalcosonic.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "axioma_qalcosonic_w1_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 12,
+                "unit": "months"
+              },
+              "tags": [
+                "water_meter",
+                "telemetry"
+              ]
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
