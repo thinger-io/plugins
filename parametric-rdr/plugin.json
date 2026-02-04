@@ -1,0 +1,118 @@
+{
+  "name": "parametric_rdr",
+  "version": "1.0.0",
+  "description": "The device reads NFC tags, stores the content together with a timestamp in an internal data buffer. The data is transmitted via a standard LoRaWAN network. The small and stylish device can be mounted on a wall or used as a table top device. The unit is po",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "parametric-rdr"
+  },
+  "metadata": {
+    "name": "Parametric RDR",
+    "description": "The device reads NFC tags, stores the content together with a timestamp in an internal data buffer. The data is transmitted via a standard LoRaWAN network. The small and stylish device can be mounted on a wall or used as a table top device. The unit is po",
+    "image": "assets/rdr.png",
+    "category": "devices",
+    "vendor": "parametric"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The device reads NFC tags, stores the content together with a timestamp in an internal data buffer. The data is transmitted via a standard LoRaWAN network. The small and stylish device can be mounted on a wall or used as a table top device. The unit is po",
+        "enabled": true,
+        "name": "Parametric RDR",
+        "product": "parametric_rdr",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "parametric_rdr_autoprovision": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "rdr-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "parametric_rdr_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "nfc",
+                "rfid",
+                "scans"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * RDR Payload Decoders\n *\n * THIS SOFTWARE IS PROVIDED BY PARAMETRIC GMBH AND ITS CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES,\n * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.\n * IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,\n * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;\n * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,\n * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n *\n */\n\nfunction app_payload_r0_decoder(bytes) {\n  var obj = {};\n\n  // check for Parametric RDR R0 Payload\n  if (bytes[0] == 0xbe && bytes[1] == 0x05 && bytes[2] === 0x00) {\n    // Uplink Timestamp (Linux Epoche)\n    var timestampUL = bytes[3] << 24;\n    timestampUL += bytes[4] << 16;\n    timestampUL += bytes[5] << 8;\n    timestampUL += bytes[6];\n    var ULInMs = new Date(timestampUL * 1000).getTime();\n    var nowInMs = new Date().getTime();\n    var diffUL = nowInMs - ULInMs;\n    var actualULTIME = new Date(ULInMs + diffUL);\n    obj.ULTIME = actualULTIME.toISOString();\n\n    // Number of scan records\n    obj.RECCNT = bytes[7];\n\n    // Number of records still in device buffer\n    obj.BUFF = bytes[8];\n\n    obj.Records = [];\n\n    // scan records\n    var nextRecPos = 9; // scan position\n    for (var i = 0; i < obj.RECCNT; i++) {\n      var rec = {};\n\n      // scan timestamp\n      var timestampSCAN = bytes[nextRecPos] << 24;\n      timestampSCAN += bytes[nextRecPos + 1] << 16;\n      timestampSCAN += bytes[nextRecPos + 2] << 8;\n      timestampSCAN += bytes[nextRecPos + 3];\n      var diff = ULInMs - new Date(timestampSCAN * 1000).getTime();\n      var actualSCANTIME = new Date(nowInMs - diff);\n      rec.SCANTIME = actualSCANTIME.toISOString();\n\n      // nfc serial\n      rec.SERIAL = bytes.slice(nextRecPos + 4, nextRecPos + 12);\n      rec.LEN = bytes[nextRecPos + 12];\n      rec.DATA = bytes.slice(nextRecPos + 12, nextRecPos + 13 + rec.LEN);\n      obj.Records.push(rec);\n\n      nextRecPos = nextRecPos + 12 + rec.LEN + 2;\n    }\n  }\n  return obj;\n}\n\nfunction bin16dec(bin) {\n  var num = bin & 0xffff;\n  if (0x8000 & num) num = -(0x010000 - num);\n  return num;\n}\n\nfunction hexToBytes(hex) {\n  hex = hex.replace(/\\s+/g, '');\n  hex = hex.toLowerCase();\n  for (var bytes = [], c = 0; c < hex.length; c += 2) bytes.push(parseInt(hex.substr(c, 2), 16));\n  return bytes;\n}\n\nfunction decodeUplink(input) {\n  var bytes = input.bytes;\n  var port = input.fPort;\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x05 && port == 5) {\n    if (bytes[2] === 0x00) {\n      // it's the application payload v0\n      obj = app_payload_r0_decoder(bytes, port);\n    }\n  } else if (port != 5) {\n    obj.error = 'ERROR: Wrong port! RDR devices are using port 5 for application payloads.';\n  } else {\n    obj.error = 'ERROR: RDR application payload R0 should start with be0500..  ';\n  }\n\n  return {\n    data: obj,\n  };\n}\n\n//Example Payload: BE05005F9BEB2C01005F9BAB2C9EAF5126002302E0010C\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
