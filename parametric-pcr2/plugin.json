@@ -1,0 +1,109 @@
+{
+  "name": "parametric_pcr2",
+  "version": "1.0.0",
+  "description": "Parametric‘s PCR2 people counter uses radar signals to provide a camera-less solution. Utilising LoRaWAN™ technology, these sensors transmit data at regular intervals. With bi-directional counting, the Parametric PCR2 people counter registers people passi",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "parametric-pcr2"
+  },
+  "metadata": {
+    "name": "Parametric PCR2",
+    "description": "Parametric‘s PCR2 people counter uses radar signals to provide a camera-less solution. Utilising LoRaWAN™ technology, these sensors transmit data at regular intervals. With bi-directional counting, the Parametric PCR2 people counter registers people passi",
+    "image": "assets/pcr2.png",
+    "category": "devices",
+    "vendor": "parametric"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Parametric‘s PCR2 people counter uses radar signals to provide a camera-less solution. Utilising LoRaWAN™ technology, these sensors transmit data at regular intervals. With bi-directional counting, the Parametric PCR2 people counter registers people passi",
+        "enabled": true,
+        "name": "Parametric PCR2",
+        "product": "parametric_pcr2",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "buckets": {
+            "parametric_pcr2_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "people_counter",
+                "radar",
+                "lorawan"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n *  PCR2 Payload Decoder\n *\n * THIS SOFTWARE IS PROVIDED BY PARAMETRIC GMBH AND ITS CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES,\n * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.\n * IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,\n * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;\n * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,\n * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n *\n * */\n\n// Version 2\n\n/**\n * Elsys payload decoder\n * @param {byteArray} bytes\n * @param {int} port\n */\nfunction decode_elsys_pl(bytes) {\n  var obj = {};\n\n  for (var i = 0; i < bytes.length; i++) {\n    switch (bytes[i]) {\n      case 0x01: // cpu temperature\n        var temp = (bytes[i + 1] << 8) | bytes[i + 2];\n        temp = bin16dec(temp);\n        obj.TEMP = Math.floor(temp / 10);\n        i += 2;\n        break;\n      case 0x0a: // left-to-right counter\n        obj.LTR = (bytes[i + 1] << 8) | bytes[i + 2];\n        i += 2;\n        break;\n      case 0x16: // right-to-left counter\n        obj.RTL = (bytes[i + 1] << 8) | bytes[i + 2];\n        i += 2;\n        break;\n      default:\n        // data is not correct\n        i = bytes.length;\n        break;\n    }\n  }\n  return obj;\n}\n\n/**\n * Configuration payload decoder v2\n * @param {byteArray} bytes\n * @param {int} port\n */\nfunction decode_v2_config_payload(bytes) {\n  var obj = {};\n\n  obj.DeviceType = bytes[0];\n  obj.Firmware = bytes[1] + '.' + bytes[2] + '.' + bytes[3]; // version string\n  obj.OperationMode = bytes[4];\n  obj.PayloadType = bytes[5];\n  obj.UplinkType = bytes[6];\n  obj.UplinkInterval = (bytes[7] << 8) | bytes[8];\n  obj.LinkCheckInterval = (bytes[9] << 8) | bytes[10];\n  obj.HoldoffTime = (bytes[11] << 8) | bytes[12];\n  obj.RadarSensitivity = bytes[13];\n\n  return obj;\n}\n\n// Version 3\n\n/**\n * Extended application payload decoder v3\n * @param {bytearray} bytes\n * @param {int} port\n */\nfunction decode_extended_v3(bytes) {\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x03) {\n    obj.LTR = (bytes[3] << 8) | bytes[4]; // left-to-right counter\n    obj.RTL = (bytes[5] << 8) | bytes[6]; // right-to-left counter\n    obj.LTR_SUM = (bytes[7] << 8) | bytes[8]; // sum of left-to-right counts since device power up\n    obj.RTL_SUM = (bytes[9] << 8) | bytes[10]; // sum of right-to-left counts since device power up\n    obj.SBX_BATT = bytes[11]; // battery gauge when equiped with an SBX solar charger\n    obj.SBX_PV = (bytes[12] << 8) | bytes[13]; // solar power when equiped with an SBX solar charger [mW]\n    obj.DIFF = Math.abs(obj.LTR_SUM - obj.RTL_SUM); // Calculated difference between LTR_SUM and RTL_SUM\n\n    var temp = (bytes[14] << 8) | bytes[15];\n    obj.TEMP = Math.floor(bin16dec(temp) / 10); // CPU Temperature\n  } else {\n    obj.error = 'ERROR: PCR2 application payload should start with be0103..  ';\n  }\n  return obj;\n}\n\n/**\n * Configuration payload decoder v3\n * @param {byteArray} bytes\n * @param {int} port\n */\nfunction decode_v3_config_payload(bytes) {\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x03) {\n    obj.DeviceType = bytes[3];\n    obj.Firmware = bytes[4] + '.' + bytes[5] + '.' + bytes[6]; // version string\n    obj.OperatingMode = bytes[7];\n    obj.PayloadType = bytes[8];\n    obj.DeviceClass = bytes[9];\n    obj.UplinkType = bytes[10];\n    obj.UplinkInterval = (bytes[11] << 8) | bytes[12];\n    obj.LinkCheckInterval = (bytes[13] << 8) | bytes[14];\n    obj.CapacityLimit = (bytes[15] << 8) | bytes[16];\n    obj.HoldoffTime = (bytes[17] << 8) | bytes[18];\n    obj.RadarSensitivity = bytes[19];\n  } else {\n    obj.error = 'ERROR: PCR2 configuration payload V3 should start with be0103..  ';\n  }\n  return obj;\n}\n\n/**\n * Application payload decoder v4\n *\n * @param {byteArray} bytes\n * @param {int} port\n */\nfunction decode_extended_v4(bytes) {\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x04) {\n    obj.LTR = (bytes[3] << 8) | bytes[4]; // left-to-right counter\n    obj.RTL = (bytes[5] << 8) | bytes[6]; // right-to-left counter\n    obj.LTR_SUM = (bytes[7] << 8) | bytes[8]; // sum of left-to-right counts since device power up\n    obj.RTL_SUM = (bytes[9] << 8) | bytes[10]; // sum of right-to-left counts since device power up\n    obj.SBX_BATT = (bytes[11] << 8) | bytes[12]; // battery voltage when equiped with an SBX solar charger\n    obj.SBX_PV = (bytes[13] << 8) | bytes[14]; // solar power when equiped with an SBX solar charger [mW]\n    obj.DIFF = Math.abs(obj.LTR_SUM - obj.RTL_SUM); // Calculated difference between LTR_SUM and RTL_SUM\n\n    var temp = (bytes[15] << 8) | bytes[16];\n    temp = bin16dec(temp);\n    obj.TEMP = Math.floor(temp / 10); // CPU Temperature\n  } else {\n    obj.error = 'ERROR: PCR2 application payload should start with be0104..';\n  }\n  return obj;\n}\n\n/**\n * Configuration payload decoder v4\n *\n * @param {byteArray} bytes\n * @param {int} port\n */\nfunction decode_v4_config_payload(bytes) {\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x04) {\n    obj.DeviceType = bytes[3];\n    obj.Firmware = bytes[4] + '.' + bytes[5] + '.' + bytes[6]; // version string\n    obj.OperationMode = bytes[7];\n    obj.PayloadType = bytes[8];\n    obj.DeviceClass = bytes[9];\n    obj.UplinkType = bytes[10];\n    obj.UplinkInterval = (bytes[11] << 8) | bytes[12];\n    obj.LinkCheckInterval = (bytes[13] << 8) | bytes[14];\n    obj.CapacityLimit = (bytes[15] << 8) | bytes[16];\n    obj.HoldoffTime = (bytes[17] << 8) | bytes[18];\n    obj.InactivityTimeout = (bytes[19] << 8) | bytes[20];\n    obj.MountingDirection = bytes[21];\n    obj.MountingTilt = bytes[22];\n    obj.DetectionAngle = bytes[23];\n    obj.MinDist = (bytes[24] << 8) | bytes[25];\n    obj.MaxDist = (bytes[26] << 8) | bytes[27];\n    obj.MinSpeed = bytes[28];\n    obj.MaxSpeed = bytes[29];\n    obj.RadarSensitivity = bytes[30];\n  } else {\n    obj.error = 'ERROR: PCR2 configuration payload V4 should start with be0104..';\n  }\n  return obj;\n}\n\nfunction decode_v5_config_payload(bytes) {\n  var obj = {};\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x05) {\n    obj.DeviceType = bytes[3];\n    obj.Firmware = bytes[4] + '.' + bytes[5] + '.' + bytes[6]; // Firmware Version\n    obj.OperationMode = bytes[7];\n    obj.PayloadType = bytes[8];\n    obj.DeviceClass = bytes[9];\n    obj.UplinkType = bytes[10];\n    obj.UplinkInterval = (bytes[11] << 8) | bytes[12];\n    obj.LinkCheckInterval = (bytes[13] << 8) | bytes[14];\n    obj.CapacityLimit = (bytes[15] << 8) | bytes[16];\n    obj.HoldoffTime = (bytes[17] << 8) | bytes[18];\n    obj.InactivityTimeout = (bytes[19] << 8) | bytes[20];\n    obj.RadarEnabled = bytes[21];\n    obj.BeamAngle = bytes[22];\n    obj.MinDist = (bytes[23] << 8) | bytes[24];\n    obj.MaxDist = (bytes[25] << 8) | bytes[26];\n    obj.MinSpeed = bytes[27];\n    obj.MaxSpeed = bytes[28];\n    obj.RadarAutotune = bytes[29];\n    obj.RadarSensitivity = bytes[30];\n    obj.SBXVersion = bytes[31] + '.' + bytes[32] + '.' + bytes[33]; // SBX Solar Charger Firmware Version\n  } else {\n    obj.error = 'ERROR: PCR2 configuration payload V5 should start with be0105..  ';\n  }\n  return obj;\n}\n\n\nfunction decode_v6_config_payload(bytes, port) {\n  var obj = {};\n\n  if (port != 190) {\n      console.log(\"ERROR: Wrong port! PCR2 devices are using port 190 for application payloads.\");\n      return obj;\n  }\n\n  if (bytes.length != 35) {\n      console.log(\"ERROR: Wrong payload length\");\n      return obj;\n  }\n\n  if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x06) {\n      obj.DeviceType = bytes[3];\n      obj.Firmware = bytes[4] + \".\" + bytes[5] + \".\" + bytes[6];  // Firmware Version\n      obj.OperationMode = bytes[7];\n      obj.PayloadType = bytes[8];\n      obj.DeviceClass = bytes[9];\n      obj.UplinkType = bytes[10];\n      obj.UplinkInterval = (bytes[11] << 8) | (bytes[12]);\n      obj.LinkCheckInterval = (bytes[13] << 8) | (bytes[14]);\n      obj.CapacityLimit = (bytes[15] << 8) | (bytes[16]);\n      obj.HoldoffTime = (bytes[17] << 8) | (bytes[18]);\n      obj.InactivityTimeout = (bytes[19] << 8) | (bytes[20]);\n      obj.RadarEnabled = bytes[21];     \n      obj.BeamAngle = bytes[22];\n      obj.MinDist = (bytes[23] << 8) | (bytes[24]);\n      obj.MaxDist = (bytes[25] << 8) | (bytes[26]);\n      obj.MinSpeed = bytes[27];\n      obj.MaxSpeed = bytes[28];\n      obj.RadarAutotune = bytes[29];\n      obj.RadarSensitivity = bytes[30];\n      obj.SBXVersion = bytes[31] + \".\" + bytes[32] + \".\" + bytes[33];  // SBX Solar Charger Firmware Version\n      obj.RadarChannel = bytes[34];\n  }\n  else {\n      console.log(\"ERROR: PCR2 configuration payload V6 should start with be0106..  \");\n  }\n  return obj;\n}\n\n/**\n * Two's complement\n * @param {int} bin\n */\nfunction bin16dec(bin) {\n  var num = bin & 0xffff;\n  if (0x8000 & num) num = -(0x010000 - num);\n  return num;\n}\n\n/**\n * Generic decoder which make use of the decoders above\n * @param {String} payload\n * @param {int} port\n */\nfunction decodeUplink(input) {\n  var bytes = input.bytes;\n  var port = input.fPort;\n  var obj = {};\n\n  if (port == 14) {\n    // pcr2 application pl\n    if (bytes[0] == 0x0a) {\n      // decode default payload\n      obj = decode_elsys_pl(bytes, port);\n    } else if (bytes[0] == 0 && bytes[1] == 102) {\n      // decode lpp payload\n    } else if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x03) {\n      // decode extended payload V3\n      obj = decode_extended_v3(bytes, port);\n    } else if (bytes[0] == 0xbe && bytes[1] == 0x01 && bytes[2] == 0x04) {\n      // decode extended payload v4\n      obj = decode_extended_v4(bytes, port);\n    } else {\n      obj.error = 'ERROR: No decoder for config payload. Check Payload length!';\n    }\n  } else if (port == 190) {\n    // pcr2 configuration pl\n    if (bytes.length == 14) {\n      // v2\n      obj = decode_v2_config_payload(bytes, port);\n    } else if (bytes.length == 20) {\n      // v3\n      obj = decode_v3_config_payload(bytes, port);\n    } else if (bytes.length == 31) {\n      // v4\n      obj = decode_v4_config_payload(bytes, port);\n    } else if (bytes.length == 34) {\n      // v5\n      obj = decode_v5_config_payload(bytes, port);\n    } else if (bytes.length == 35) {\n      // v6\n      obj = decode_v6_config_payload(bytes, port);\n\n    } else {\n      obj.error = 'ERROR: No decoder for config payload. Check Payload length!';\n    }\n  } else {\n    obj.error = 'ERROR: Wrong port! PCR2 devices are using port 14 or port 190 for application payloads.';\n  }\n  return {\n    data: obj,\n  };\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
