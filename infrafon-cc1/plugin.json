@@ -1,0 +1,114 @@
+{
+  "name": "infrafon_cc1",
+  "version": "1.0.0",
+  "description": "Tiny smart badge with a highres 600x400 pixel interactive e-paper screen and remote management capabilities of smartphone-like functions and user interactions with DataView tasks, while maintaining stability and efficiency by restricting users access to f",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "infrafon-cc1"
+  },
+  "metadata": {
+    "name": "Infrafon CC1",
+    "description": "Tiny smart badge with a highres 600x400 pixel interactive e-paper screen and remote management capabilities of smartphone-like functions and user interactions with DataView tasks, while maintaining stability and efficiency by restricting users access to f",
+    "image": "assets/cc1.png",
+    "category": "devices",
+    "vendor": "infrafon"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Tiny smart badge with a highres 600x400 pixel interactive e-paper screen and remote management capabilities of smartphone-like functions and user interactions with DataView tasks, while maintaining stability and efficiency by restricting users access to f",
+        "enabled": true,
+        "name": "Infrafon CC1",
+        "product": "infrafon_cc1",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "cc1-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "infrafon_cc1_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nlet downlinkId = 0; // Global downlink id that increments with each new packet\r\n\r\n/**\r\n * \r\n * @param {string} hexString \r\n * @description Parse the hexString payload\r\n * @returns Decoded representation of the payload as an array of TLV objects\r\n */\r\nfunction parsePayload (hexString) {\r\n  var decodedPayload = [];\r\n\r\n  var b0 = parseInt('0x' + hexString[0] + hexString[1]);\r\n\r\n  //DlId, last downlink id received\r\n  decodedPayload.push({ \"t\": 'dlId', \"l\": 0, \"v\": b0 & 15 });\r\n\r\n  //PayloadVersion -> 01\r\n  decodedPayload.push({ \"t\": 'payloadVersion', \"l\": 0, \"v\": (b0 & 48) >> 4 });\r\n\r\n  //Will listen always 1 + parity bit\r\n  decodedPayload.push({ \"t\": 'willListen', \"l\": 0, \"v\": ((b0 & 64)) });\r\n\r\n  // the number of TLV elements present in the subsequent data block (0-255)\r\n  var payloadLength = parseInt('0x' + hexString[2] + hexString[3]);\r\n\r\n  if (payloadLength !== (hexString.length / 2) - 2) {\r\n    decodedPayload.push({ \"t\": 'payloadLength', \"l\": -1, \"v\": 'payload length incoherence detected' });\r\n  }\r\n\r\n  var i = 4;\r\n  while (i < hexString.length) {\r\n    var tVal, lVal = 0;\r\n    var valVal = \"\";\r\n    // extracting tag value\r\n    tVal = hexString[i] + hexString[i + 1] + \"\";\r\n    // extracting length value\r\n    lVal = parseInt(\"0x\" + hexString[i + 2] + hexString[i + 3]);\r\n    // extracting data\r\n    for (var j = i + 4; j < i + 4 + (lVal * 2); j = j + 2) {\r\n      valVal += \"\" + hexString[j] + hexString[j + 1];\r\n    }\r\n    decodedPayload.push({ \"t\": tVal, \"l\": lVal, \"v\": parseHexString(valVal) });\r\n    i = i + 4 + (lVal * 2);\r\n  }\r\n  return decodedPayload;\r\n}\r\n\r\n/**\r\n * Interprets an array of TLV objects using a given mapping.\r\n * \r\n * @param {object} tlvmap - A mapping of descriptions to TLV tags.\r\n * @param {Array} tlvs - Array of TLV objects with properties `t` (tag) and `v` (value).\r\n * @returns {object} - An object mapping descriptions to their corresponding values.\r\n */\r\nfunction interpretTlv(tlvmap, tlvs) {\r\n  // Reverse the tlvmap to map numbers to descriptions\r\n  const numToDescription = {};\r\n  for (const key in tlvmap) {\r\n      if (tlvmap.hasOwnProperty(key)) {\r\n          numToDescription[tlvmap[key]] = key;\r\n      }\r\n  }\r\n  \r\n  // Initialize the result object\r\n  const result = {};\r\n  \r\n  // Iterate over the decodedPayload\r\n  tlvs.forEach(entry => {\r\n      if (entry.l > 0) {\r\n          const tagNum = entry.t;\r\n          const value = entry.v;\r\n          \r\n          // Get the description from the tlvmap\r\n          const description = numToDescription[parseHexString(tagNum)];\r\n          \r\n          if (description) {\r\n              result[description] = value;\r\n          }\r\n      }\r\n  });\r\n  \r\n  return result;\r\n}\r\n\r\n/**\r\n * Converts a hex string to a byte array.\r\n * \r\n * @param {string} hex - The hex string to convert.\r\n * @returns {Uint8Array} - The byte array representation of the hex string.\r\n */\r\nfunction hexToBytes(hexString) {\r\n  // Convert a hex string to a byte array\r\n  let bytes = [];\r\n  for (let i = 0; i < hexString.length; i += 2) {\r\n      bytes.push(parseInt(hexString.substr(i, 2), 16));\r\n  }\r\n  return new Uint8Array(bytes);\r\n}\r\n/**\r\n * Decodes a byte array based on specific encoding rules.\r\n * \r\n * @param {Uint8Array} data - The byte array to decode.\r\n * @returns {number | string | object} - The decoded value:\r\n *   - A number for single-byte or 16-bit little-endian integers.\r\n *   - A boolean as 0 or 1.\r\n *   - A string or object for UTF-8 encoded JSON.\r\n * @throws {Error} - If JSON decoding fails.\r\n */\r\nfunction decodeValue(data) {\r\n  // Decode the value based on the given length rules\r\n  if (data.length < 3) {\r\n      // Handle 16-bit integers (little-endian format) or 1-byte integers\r\n      if (data.length === 1) {\r\n          // Single byte integer\r\n          return data[0];\r\n      } else if (data.length === 2) {\r\n          // Two bytes integer (16-bit)\r\n          return data[0] | (data[1] << 8);\r\n      }\r\n  } else {\r\n      // Handle UTF-8 encoded JSON string\r\n      try {\r\n          const text = new TextDecoder('utf-8').decode(data);\r\n          return JSON.parse(text);\r\n      } catch (e) {\r\n          throw new Error(\"Failed to decode JSON string\");\r\n      }\r\n  }\r\n}\r\n\r\n/**\r\n * Encode a value to its hex representation.\r\n * \r\n * @param {any} value - The value to encode.\r\n * @returns {string} - The encoded value as a hex string.\r\n */\r\nfunction encodeValueToHex(value) {\r\n    if (typeof value === 'number') {\r\n        if (Number.isInteger(value) && value >= 0 && value <= 65535) {\r\n            if (value < 256) {\r\n                // Single byte integer\r\n                return value.toString(16).padStart(2, '0').toUpperCase();\r\n            } else {\r\n                // Two bytes integer (16-bit, little-endian)\r\n                let byte1 = (value & 0xFF).toString(16).padStart(2, '0').toUpperCase();          // Least significant byte\r\n                let byte2 = ((value >> 8) & 0xFF).toString(16).padStart(2, '0').toUpperCase();  // Most significant byte\r\n                return byte1 + byte2;\r\n            }\r\n        }\r\n    }\r\n    \r\n    if (typeof value === 'boolean') {\r\n        // Boolean as single byte (00 or 01)\r\n        return value ? '01' : '00';\r\n    }\r\n    \r\n    // Encode as UTF-8 JSON string for other data types\r\n    let jsonString = JSON.stringify(value);\r\n    let encoder = new TextEncoder();  // Use TextEncoder to convert string to UTF-8 bytes\r\n    let utf8Array = encoder.encode(jsonString);\r\n    \r\n    // Convert each byte to a two-character hex string\r\n    let hexString = Array.from(utf8Array, byte => byte.toString(16).padStart(2, '0').toUpperCase()).join('');\r\n    return hexString;\r\n}\r\n\r\n/**\r\n * Parses a hex string according to the specified rules.\r\n * \r\n * This function takes a hex string and processes it to decode the value according to specific encoding rules:\r\n * - Integers (0 to 65535) are encoded directly in little-endian format.\r\n * - Booleans are treated as 1-byte integers with values 0 or 1.\r\n * - Strings and other complex types are encoded as UTF-8 JSON strings.\r\n * \r\n * @param {string} hexString - The hex string to be parsed. Each pair of characters in the string represents a byte.\r\n * @returns {number | string | object} - The decoded value, which can be:\r\n *   - A number (integer or boolean) if the input represents an integer or boolean.\r\n *   - A string or an object if the input represents a UTF-8 encoded JSON string.\r\n */\r\nfunction parseHexString(hexString) {\r\n  // Parse a hex string according to the specified rules\r\n  const byteData = hexToBytes(hexString);\r\n  return decodeValue(byteData);\r\n}\r\n\r\n/**\r\n * Recursively flattens a nested JSON object.\r\n * \r\n * @param {object} obj - The object to flatten.\r\n * @param {string} parentKey - The base key string to prepend to each key.\r\n * @param {object} res - The result object to accumulate flattened values.\r\n * @returns {object} - The flattened object.\r\n */\r\nfunction flattenObject(obj, parentKey = '', res = {}) {\r\n  for (const [key, value] of Object.entries(obj)) {\r\n      const newKey = parentKey ? `${parentKey}-${key}` : key;\r\n      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {\r\n          flattenObject(value, newKey, res);\r\n      } else {\r\n          // Special case for 'msg' key to provide specific value\r\n          if (newKey === 'pager-data-msg') {\r\n              res[newKey] = 'Help is on the way!';\r\n          } else {\r\n              res[newKey] = value;\r\n          }\r\n      }\r\n  }\r\n  return res;\r\n}\r\n\r\n/**\r\n * Transforms the input object based on the TLV map to produce an output object.\r\n * \r\n * @param {object} inputObject - The object with keys in the format \"prefix-key\" and values to be transformed.\r\n * @param {object} tlvMap - The TLV map containing the mapping from key to TLV value.\r\n * @returns {object} - The resulting output object with TLV values as keys and corresponding input values.\r\n */\r\nfunction transformBasedOnTLV(inputObject, tlvMap) {\r\n  const output = {};\r\n\r\n  for (const [inputKey, value] of Object.entries(inputObject)) {\r\n      // Extract the key part from the input key (e.g., \"app-dev-power-gauge\" => \"dev-power-gauge\")\r\n      const keyPart = inputKey.split('-').slice(1).join('-');\r\n\r\n      // Look up the TLV value for the key part\r\n      const tlvKey = tlvMap[keyPart];\r\n\r\n      if (tlvKey !== undefined) {\r\n          // Map the TLV key to the corresponding value from the input object\r\n          output[tlvKey] = value;\r\n      } else {\r\n          console.warn(`Key \"${keyPart}\" not found in TLV map.`);\r\n      }\r\n  }\r\n\r\n  return output;\r\n}\r\n\r\n/**\r\n * Calculates the parity bit for a given byte to ensure even parity.\r\n *\r\n * @param {number} byte - The byte for which to calculate the parity bit.\r\n * @returns {number} - The parity bit (0 or 1).\r\n */\r\nfunction calculateParity(byte) {\r\n    let parity = 0;\r\n    while (byte) {\r\n        parity ^= (byte & 1);\r\n        byte >>= 1;\r\n    }\r\n    return parity;\r\n}\r\n\r\n/**\r\n * Creates the first byte (Byte 0) for the packet with the specified downlink ID.\r\n *\r\n * @param {number} downlinkId - The current downlink ID (0-15).\r\n * @returns {number} - The constructed Byte 0.\r\n */\r\nfunction createByte0(downlinkId) {\r\n    let byte0 = (downlinkId & 0x0F) | (1 << 4); // bits 0-3 for downlinkId, bits 4-5 for protocolVersion (1)\r\n    byte0 &= ~(1 << 6); // bit 6 is RFU and set to 0\r\n    let parityBit = calculateParity(byte0) % 2 === 0 ? 0 : 1; // Ensure even parity\r\n    byte0 |= (parityBit << 7); // bit 7 for parity bit\r\n    return byte0;\r\n}\r\n\r\n/**\r\n * Converts an input array into a hex byte string suitable for sending to a device.\r\n *\r\n * @param {Object} data - The input array containing key-value pairs where keys are tags and values are the data.\r\n * @returns {string} - The resulting hex byte string.\r\n */\r\nfunction arrayToHexBytes(data) {\r\n    let byte0 = createByte0(downlinkId);\r\n    let byte1 = Object.keys(data).length; // Number of TLV elements\r\n\r\n    let tlvData = [];\r\n    for (const [key, value] of Object.entries(data)) {\r\n        let tag = parseInt(key);\r\n        let valueBytes;\r\n        if (typeof value === 'string') {\r\n            valueBytes = Array.from(value).map(c => c.charCodeAt(0));\r\n        } else if (typeof value === 'number') {\r\n            valueBytes = [value];\r\n        } else {\r\n            throw new Error('Unsupported value type');\r\n        }\r\n        let length = valueBytes.length;\r\n        tlvData.push(tag, length, ...valueBytes);\r\n    }\r\n\r\n    // Increment downlinkId for next packet\r\n    downlinkId = (downlinkId + 1) & 0x0F; // Keep downlinkId within 4 bits\r\n\r\n    // Combine all parts into a single byte array\r\n    let resultBytes = [byte0, byte1, ...tlvData];\r\n\r\n    // Convert byte array to hex string\r\n    let hexString = resultBytes.map(byte => byte.toString(16).padStart(2, '0')).join('');\r\n    return hexString;\r\n}\r\n\r\n/**\r\n * Takes a JSON object, flattens it, transforms it based on a TLV map, and converts it to a hex byte string.\r\n *\r\n * @param {Object} jsonObj - The JSON object to be processed.\r\n * @param {Object} tlvMap - The map defining how to transform the flattened object.\r\n * @returns {string} - The resulting hex byte string.\r\n */\r\nfunction downlink(jsonObj, tlvMap) {\r\n    return arrayToHexBytes(transformBasedOnTLV(flattenObject(jsonObj), tlvMap));;\r\n}\r\n\r\n/**\r\n * Takes a hex byte string, parses it using `parsePayload`, and interprets the TLV data using `interpretTlv` to return a JSON object.\r\n *\r\n * @param {string} hexString - The input hex byte string to be processed.\r\n * @returns {Object} - The resulting JSON object after parsing and interpreting the TLV data.\r\n */\r\nfunction uplink(hexString) {\r\n    return interpretTlv(tlvMap, parsePayload(hexString));\r\n}\r\n\r\n\r\n\r\n/**\r\n * Encoding of the value part of the TLV (Type-Length-Value) structure.\r\n * \r\n * - If the value is `null`, it is encoded with a length of 0, and no value bits are present.\r\n * - For integers between 0 and 65535:\r\n *   - Values less than 256 are encoded as a single byte.\r\n *   - Values 256 or greater are encoded as two bytes in little-endian format (least significant byte first).\r\n * - For booleans:\r\n *   - Encoded as a single byte with values `0` (false) or `1` (true).\r\n * - For all other value types:\r\n *   - Encoded as a UTF-8 JSON string. The entire JSON string is included within the TLV.\r\n *   - Note: The TLV cannot be split across multiple packets due to message size limits.\r\n *\r\n\r\n Example JSON message\r\n\r\nconst jsonTestMessage = {\r\n  \"app\": {\r\n      \"dev\": {\r\n          \"power\": {\r\n              \"tempC\": 33.29999,\r\n              \"ext\": true,\r\n              \"charging\": false,\r\n              \"voltage\": 3.814,\r\n              \"gauge\": 40\r\n          }\r\n      },\r\n      \"pager\": {\r\n          \"data\": {\r\n              \"msg\": \"Help is on the way!\"\r\n          },\r\n          \"actions\": {\r\n              \"gotoPage\": 2\r\n          }\r\n      }\r\n  }\r\n};\r\n\r\n Example TLV map\r\nconst tlvMap = {\r\n  \"dev-power-gauge\": 1,\r\n  \"pager-data-msg\": 2,\r\n  \"pager-actions-gotoPage\": 3\r\n}; */",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
