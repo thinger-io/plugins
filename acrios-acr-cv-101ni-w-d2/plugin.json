@@ -1,0 +1,118 @@
+{
+  "name": "acrios_acr_cv_101ni_w_d2",
+  "version": "1.0.0",
+  "description": "Wireless M-Bus to LoRaWAN converter is used to retrofit ANY Wireless M-Bus meter with LoRaWAN communication",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "acrios-acr-cv-101ni-w-d2"
+  },
+  "metadata": {
+    "name": "Acrios ACR-CV-101NI-W-D2",
+    "description": "Wireless M-Bus to LoRaWAN converter is used to retrofit ANY Wireless M-Bus meter with LoRaWAN communication",
+    "image": "assets/acr-cv-101ni-w-d2.png",
+    "category": "devices",
+    "vendor": "acrios"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Wireless M-Bus to LoRaWAN converter is used to retrofit ANY Wireless M-Bus meter with LoRaWAN communication",
+        "enabled": true,
+        "name": "Acrios ACR-CV-101NI-W-D2",
+        "product": "acrios_acr_cv_101ni_w_d2",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "acr-cv-101ni.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "acrios_acr_cv_101ni_w_d2_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
