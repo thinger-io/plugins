@@ -1,0 +1,108 @@
+{
+  "name": "acrios_acr_cv_101l_r_eac",
+  "version": "1.0.0",
+  "description": "RS-485 to LoRaWAN converter is used to retrofit ANY RS-485 meter with LoRaWAN communication",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "acrios-acr-cv-101l-r-eac"
+  },
+  "metadata": {
+    "name": "Acrios ACR-CV-101L-R-EAC",
+    "description": "RS-485 to LoRaWAN converter is used to retrofit ANY RS-485 meter with LoRaWAN communication",
+    "image": "assets/acr-cv-101l-x-eac.png",
+    "category": "devices",
+    "vendor": "acrios"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "RS-485 to LoRaWAN converter is used to retrofit ANY RS-485 meter with LoRaWAN communication",
+        "enabled": true,
+        "name": "Acrios ACR-CV-101L-R-EAC",
+        "product": "acrios_acr_cv_101l_r_eac",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "acr-cv-101l.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "acrios_acr_cv_101l_r_eac_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
