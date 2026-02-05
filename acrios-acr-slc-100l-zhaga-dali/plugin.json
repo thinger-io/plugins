@@ -1,0 +1,121 @@
+{
+  "name": "acrios_acr_slc_100l_zhaga_dali",
+  "version": "1.0.0",
+  "description": "Smart street lighting module with ZHAGA socket based on the STM32WL with the 40mm enclosure in diameter is DALI and DALI-2 compatible. We can provide you with just a hardware or both with the complex solution or just a backend with API access.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "acrios-acr-slc-100l-zhaga-dali"
+  },
+  "metadata": {
+    "name": "Acrios ACR-SLC-100L-ZHAGA-DALI",
+    "description": "Smart street lighting module with ZHAGA socket based on the STM32WL with the 40mm enclosure in diameter is DALI and DALI-2 compatible. We can provide you with just a hardware or both with the complex solution or just a backend with API access.",
+    "image": "assets/acr-slc-100l-zhaga-dali.png",
+    "category": "devices",
+    "vendor": "acrios"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Smart street lighting module with ZHAGA socket based on the STM32WL with the 40mm enclosure in diameter is DALI and DALI-2 compatible. We can provide you with just a hardware or both with the complex solution or just a backend with API access.",
+        "enabled": true,
+        "name": "Acrios ACR-SLC-100L-ZHAGA-DALI",
+        "product": "acrios_acr_slc_100l_zhaga_dali",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "acr-slc.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "street_light",
+                "telemetry"
+              ]
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
