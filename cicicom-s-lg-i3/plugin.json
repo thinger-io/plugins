@@ -1,0 +1,402 @@
+{
+  "name": "cicicom_s_lg_i3",
+  "version": "1.0.0",
+  "description": "Cicicom's LoRaWAN smart parking sensor SL-G-I3 accurately detects parking events, by utilizing cutting-edge triple detection technology (magnetic sensor, motion sensor, radar). All sensors and algorithms are tuned and optimized for ultra-low power consump",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "cicicom-s-lg-i3"
+  },
+  "metadata": {
+    "name": "Cicicom S-LG-I3",
+    "description": "Cicicom's LoRaWAN smart parking sensor SL-G-I3 accurately detects parking events, by utilizing cutting-edge triple detection technology (magnetic sensor, motion sensor, radar). All sensors and algorithms are tuned and optimized for ultra-low power consump",
+    "image": "assets/s-lg-i3.png",
+    "category": "devices",
+    "vendor": "cicicom"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Cicicom's LoRaWAN smart parking sensor SL-G-I3 accurately detects parking events, by utilizing cutting-edge triple detection technology (magnetic sensor, motion sensor, radar). All sensors and algorithms are tuned and optimized for ultra-low power consump",
+        "enabled": true,
+        "name": "Cicicom S-LG-I3",
+        "product": "cicicom_s_lg_i3",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "cicicom-slgi3-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "cicicom_s_lg_i3_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "parking",
+                "uplink"
+              ]
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Parking Status",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Parking Occupancy"
+                        },
+                        "properties": {
+                          "color": "#00ff00",
+                          "max": 1,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "occupied",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Occupied",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Magnetic Field Strength"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": "μT"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "magnetic",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Magnetic",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4,
+                          "min": 2.5,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 3,
+                          "sizeY": 10
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Parking Occupancy History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "occupied",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Occupied",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 8,
+                          "sizeX": 3,
+                          "sizeY": 10
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Events"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Timestamp</th>\r\n        <th>Status</th>\r\n        <th>Magnetic (μT)</th>\r\n        <th>Battery (V)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'short' }}</td>\r\n        <td><span ng-class=\"{'label label-danger': entry.occupied == 1, 'label label-success': entry.occupied == 0}\">{{ entry.occupied == 1 ? 'OCCUPIED' : 'FREE' }}</span></td>\r\n        <td>{{ entry.magnetic || '—' }}</td>\r\n        <td>{{ entry.battery || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "occupied",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "occupied",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "magnetic",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "magnetic",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "cicicom_s_lg_i3_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
