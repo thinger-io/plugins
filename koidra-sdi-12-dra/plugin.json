@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Koidra SDI-12-DRA",
     "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
-    "image": "assets/sdi-12-dra.jpg",
+    "image": "assets/sdi-12-dra.png",
     "category": "devices",
     "vendor": "koidra"
   },
@@ -70,7 +70,7 @@
                 "mode": "pattern",
                 "pattern": "koidra-sdi-.*"
               },
-              "enabled": false
+              "enabled": true
             }
           },
           "buckets": {
