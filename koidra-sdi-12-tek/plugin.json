@@ -7,12 +7,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "koidra-sdi-12-dra"
+    "directory": "koidra-sdi-12-tek"
   },
   "metadata": {
     "name": "Koidra SDI-12-TEK",
     "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
-    "image": "assets/sdi-12-tek.jpg",
+    "image": "assets/sdi-12-tek.png",
     "category": "devices",
     "vendor": "koidra"
   },
@@ -60,7 +60,7 @@
                 "mode": "pattern",
                 "pattern": "koidra-sdi-12-.*"
               },
-              "enabled": false
+              "enabled": true
             }
           },
           "buckets": {
