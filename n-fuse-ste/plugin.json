@@ -7,12 +7,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "n-fuse-sta"
+    "directory": "n-fuse-ste"
   },
   "metadata": {
     "name": "N-Fuse STE",
     "description": "Environment sensor. BME680 (IAQ, CO2-e, bVOC-e, pressure, temperature, humidity).",
-    "image": "assets/stx.png",
+    "image": "assets/ste.png",
     "category": "devices",
     "vendor": "n-fuse"
   },
