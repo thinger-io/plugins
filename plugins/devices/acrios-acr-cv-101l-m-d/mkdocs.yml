@@ -1,0 +1,7 @@
+site_name: plugins/devices/acrios-acr-cv-101l-m-d
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
