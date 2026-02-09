@@ -1,0 +1,991 @@
+{
+    "name": "sting-pengy",
+    "version": "1.0.0",
+    "description": "Device for monitoring of the air quality parameters like air temperature and relative humidity, atmospheric pressure, environmental noise and particulate matter mass concetration.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "sting-pengy"
+    },
+    "metadata": {
+        "name": "Sting PENGY",
+        "description": "Device for monitoring of the air quality parameters like air temperature and relative humidity, atmospheric pressure, environmental noise and particulate matter mass concetration.",
+        "image": "assets/pengy.png",
+        "category": "devices",
+        "vendor": "sting"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "Device for monitoring of the air quality parameters like air temperature and relative humidity, atmospheric pressure, environmental noise and particulate matter mass concetration.",
+                "enabled": true,
+                "name": "Sting PENGY",
+                "product": "sting_pengy",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "pengy-.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "sting_pengy_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseOrDecodeIncomingData",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction getEAQI(pm1, pm25, pm10) {\n    var eaqi = \"NaN\";\n    if (pm25 >= 75 || pm10 >= 150) { eaqi = \"Extremely poor\" } else  \n    if (pm25 >= 50 && pm25 < 75 || pm10 >= 100 && pm10 < 150) { eaqi = \"Very poor\" } else\n    if (pm25 >= 25 && pm25 < 50 || pm10 >= 50 && pm10 < 100) { eaqi = \"Poor\" } else\n    if (pm25 >= 20 && pm25 < 25 || pm10 >= 40 && pm10 < 50) { eaqi = \"Moderate\" } else\n    if (pm25 >= 10 && pm25 < 20 || pm10 >= 20 && pm10 < 40) { eaqi = \"Fair\" } else\n    if (pm25 >= 0 && pm25 < 10 || pm10 >= 0 && pm10 < 20) { eaqi = \"Good\" } else { eaqi = \"Unknown\" };\n    return eaqi;\n}\n\nfunction decodeUplink(input) {\n    var bytes = input.bytes;\n\n    var data = {};\n    var warnings = [];\n\n    // firmware version 1.0\n    // firmware version 1.5\n    if (input.fPort == 1 || input.fPort == 2) {\n        var hum = bytes[0] << 8 | bytes[1]; hum = 0.1 * hum; hum = Number(hum.toFixed(1));\n        var tem = bytes[2] << 24 >> 16 | bytes[3]; tem = 0.1 * tem; tem = Number(tem.toFixed(1));\n        var rpm = bytes[4] << 8 | bytes[5]; rpm = 0.1 * rpm; rpm = Number(rpm.toFixed(0));\n        var fpm = bytes[6] << 8 | bytes[7]; fpm = 0.1 * fpm; fpm = Number(fpm.toFixed(0));\n\n        if (hum > 100.0) {\n            warnings.push(\"Humidity out of range (\" + hum + \")\");\n            hum = 100.0;\n        }\n\n        if (hum < 0.0 || hum > 100.0) hum = null;\n        if (tem < -50.0 || tem > 100.0) tem = null;\n        if (rpm < 0 || rpm > 5000) rpm = null;\n        if (fpm < 0 || fpm > 5000) fpm = null;\n\n        data.Humidity = hum;\n        data.Temperature = tem;\n        data.FPM = fpm;\n        data.RPM = rpm;\n\n        data.EAQI = getEAQI(null, fpm, rpm);\n\n        data.Version = \"1.0\";\n    }\n\n    // firmware version 1.5\n    if (input.fPort == 2) {\n        var pre = bytes[8] << 8 | bytes[9]; pre = Number(pre.toFixed(0));\n        var co = bytes[10] << 8 | bytes[11]; co = 1.0 * co; co = Number(co.toFixed(0));\n        var nh3 = bytes[12] << 8 | bytes[13]; nh3 = 1.0 * nh3; nh3 = Number(nh3.toFixed(0));\n        var no2 = bytes[14] << 8 | bytes[15]; no2 = 0.01 * no2; no2 = Number(no2.toFixed(2));\n        var noise = bytes[16] << 8 | bytes[17]; noise = 0.01 * noise; noise = Number(noise.toFixed(2));\n\n        if (pre < 0.0 || pre > 1000000.0) pre = null;\n        if (co < 0.0 || co > 10000) co = null;\n        if (nh3 < 0.0 || nh3 > 10000) nh3 = null;\n        if (no2 < 0.0 || no2 > 10000) no2 = null;\n\n        data.Pressure = pre;\n        data.CO = co;\n        data.NH3 = nh3;\n        data.NO2 = no2;\n        data.Noise = noise;\n\n        data.Version = \"1.5\";\n    }\n\n    // firmware version 2.0\n    if (input.fPort == 3) {\n        var hum = bytes[0] << 8 | bytes[1]; hum = 0.1 * hum; hum = Number(hum.toFixed(1));\n        var tem = bytes[2] << 24 >> 16 | bytes[3]; tem = 0.1 * tem; tem = Number(tem.toFixed(1));\n        var pre = bytes[4] << 8 | bytes[5]; pre = Number(pre.toFixed(0));\n\n        var pm1 = bytes[6] << 8 | bytes[7]; pm1 = 0.1 * pm1; pm1 = Number(pm1.toFixed(0));\n        var pm25 = bytes[8] << 8 | bytes[9]; pm25 = 0.1 * pm25; pm25 = Number(pm25.toFixed(0));\n        var pm10 = bytes[10] << 8 | bytes[11]; pm10 = 0.1 * pm10; pm10 = Number(pm10.toFixed(0));\n\n        var noise = bytes[12] << 8 | bytes[13]; noise = 0.01 * noise; noise = Number(noise.toFixed(2));\n\n        if (hum > 100.0) hum = 100.0;\n        if (hum < 0.0 || hum > 100.0) hum = null;\n        if (tem < -50.0 || tem > 100.0) tem = null;\n\n        if (pre < 0.0 || pre > 1000000.0) pre = null;\n\n        if (pm1 < 0 || pm1 > 5000) pm1 = null;\n        if (pm25 < 0 || pm25 > 5000) pm25 = null;\n        if (pm10 < 0 || pm10 > 5000) pm10 = null;\n\n        data.Humidity = hum;\n        data.Temperature = tem;\n        data.Pressure = pre;\n\n        data.UPM = pm1;\n        data.FPM = pm25;\n        data.RPM = pm10;\n\n        data.Noise = noise;\n\n        data.EAQI = getEAQI(pm1, pm25, pm10);\n\n        data.Version = \"2.0\";\n    }\n\n    return {\n        data: data,\n        warnings: warnings\n    };\n}",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Air Quality Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Air Quality Index"
+                                                },
+                                                "properties": {
+                                                    "color": "#1abc9c",
+                                                    "decimal_places": 0,
+                                                    "unit": ""
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "EAQI",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "EAQI",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 50,
+                                                    "min": -20,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#3498db",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%RH"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Pressure"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 1100,
+                                                    "min": 900,
+                                                    "unit": "hPa"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Noise Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 120,
+                                                    "min": 30,
+                                                    "unit": "dB"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Noise",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Noise",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 5,
+                                                    "sizeX": 3,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Particulate Matter (PM)"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "UPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "PM1.0",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "FPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "PM2.5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "RPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "PM10",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 5,
+                                                    "sizeX": 3,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature & Humidity Trends"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 13,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "PM2.5"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "µg/m³"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "FPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "PM2.5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 13,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "PM10"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 150,
+                                                    "min": 0,
+                                                    "unit": "µg/m³"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "RPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "PM10",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 13,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "PM1.0"
+                                                },
+                                                "properties": {
+                                                    "color": "#2ecc71",
+                                                    "max": 50,
+                                                    "min": 0,
+                                                    "unit": "µg/m³"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "UPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "PM1.0",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 13,
+                                                    "sizeX": 3,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Recent Air Quality Data"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\"><table class=\"table table-striped table-condensed\"><thead><tr><th>Timestamp</th><th>Temp (°C)</th><th>Humidity (%)</th><th>PM2.5</th><th>PM10</th><th>Noise (dB)</th><th>EAQI</th></tr></thead><tbody><tr ng-repeat=\"entry in value\"><td>{{ entry.ts | date:'short' }}</td><td>{{ entry.Temperature || '—' }}</td><td>{{ entry.Humidity || '—' }}</td><td>{{ entry.FPM || '—' }}</td><td>{{ entry.RPM || '—' }}</td><td>{{ entry.Noise || '—' }}</td><td>{{ entry.EAQI || '—' }}</td></tr></tbody></table></div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "FPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "FPM",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "RPM",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "RPM",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "Noise",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Noise",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "EAQI",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "EAQI",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "name": "Gas Sensors",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Carbon Monoxide (CO)"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 1000,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "CO",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "CO",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Ammonia (NH3)"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 500,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "NH3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "NH3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Nitrogen Dioxide (NO2)"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 50,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "NO2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "NO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 6,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Gas Sensor Trends"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "CO",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "CO",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "NH3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "NH3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "sting_pengy_data",
+                                                            "mapping": "NO2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "NO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
