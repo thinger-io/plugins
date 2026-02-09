@@ -1,0 +1,409 @@
+{
+  "name": "iot_factory_m_bus_gateway",
+  "version": "1.0.0",
+  "description": "M-BUS Master Gateway and LORAWAN Converter",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "iot-factory-m-bus-gateway"
+  },
+  "metadata": {
+    "name": "Iot-Factory M-BUS-GATEWAY",
+    "description": "M-BUS Master Gateway and LORAWAN Converter",
+    "image": "assets/m-bus-gateway-lorawan-by-iot-factory.png",
+    "category": "devices",
+    "vendor": "iot-factory"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "M-BUS Master Gateway and LORAWAN Converter",
+        "enabled": true,
+        "name": "Iot-Factory M-BUS-GATEWAY",
+        "product": "iot_factory_m_bus_gateway",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "mbus-gw-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "iot_factory_m_bus_gateway_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//-----------------------------------------------------\n// Packet parser\n//-----------------------------------------------------\n//Port to which the packet was received for LoRaWAN servers (in other cases, you must specify 10)\n//bytes -  Data buffer\nfunction Decode (fPort, bytes, variables) \n{\n  var result = {\n    status_decode: false,\n    raw: bytes\n  };\n  if( fPort === 10 )\n  {\n    var offset = 0;\n    setpowerInformation(bytes,offset,result);\n    offset++;\n    setProtocolInformation(bytes,offset,result);\n    offset++;\n    if( result.is_sn ) \n    {\n      result.sn = toUInt32LE(bytes,offset);\n      offset += 4;\n    }\n    if( result.is_payload_size )\n    {\n      result.payload_size = toUInt16LE(bytes,offset);\n      offset += 2;\n    }\n    delete result.is_sn;\n    delete result.is_payload_size;\n    var ts = new Date();\n    //result.server_isotime = ts.toISOString();\n    //result.server_unixtime = Math.floor(ts.getTime()/1000);\n    parseFrames(bytes,offset,result);\n    if( !!result.error == false) result.status_decode = true;\n  }\n  return result;\n}\n//-----------------------------------------------------\n// Frame type parser\n//-----------------------------------------------------\nfunction parseFrames(buf,offset,obj) \n{\n  if( buf[offset] === undefined || buf[offset+1] === undefined ) return;\n  var frameHeader = buf[offset] | ( buf[ offset+1 ] << 8 );\n  var MASK_TYPE_FRAME   = 0x0fff; //0b0000111111111111\n  var MASK_REASON_FRAME = 0xf000; //0b1111000000000000\n  var typeFrame   = ( frameHeader & MASK_TYPE_FRAME )   >> 0;\n  var reasonFrame = ( frameHeader & MASK_REASON_FRAME ) >> 12;\n  offset +=2;\n  if(obj.frames === undefined) obj.frames = [];\n\n  if ( typeFrame == 0x00 ) parseFramesDeviceInfo(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x16 ) parseFramesMBUS(buf,offset,obj,reasonFrame); \n  else unknownFrame(obj,typeFrame,offset-2);\n}\n//-----------------------------------------------------\n// Frame parsers\n//-----------------------------------------------------\nfunction unknownFrame(obj,type,offset)\n{\n  obj.error = 'unknown_frame';\n  obj.error_debug_info = 'type='+type+'|offset='+offset;\n}\nfunction parseFramesMBUS(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'MBUS';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  \n  var rsp_ud = buf[offset];\n  offset++;\n  var sn = toHex(buf,offset,4);\n  offset += 4;\n  if( sn < 0x00000000 || sn > 0x99999999 ) sn = 'unknown';\n  var medium = buf[offset];\n  offset++;\n\n  var MASK_STATUS = 0x03; //0b00000011\n  var status = ( buf[offset] & MASK_STATUS ) >> 0;\n  var textStatus = 'unknown';\n  if( status === 0 ) textStatus = 'no_error';\n  else if( status === 1 ) textStatus = 'application_buse';\n  else if( status === 2 ) textStatus = 'any_application_error';\n  offset++;\n  frame.medium = getTextMediumMBUS(medium);\n  frame.status = textStatus;\n  frame.meter_serial_number = sn;\n  var dif_raw = buf[offset];\n  frame.dif = parseDif(dif_raw);\n  if(frame.dif.type === undefined )\n  {\n    frame.error = 'unknown_dif_in_frame_mbus';\n    frame.error_debug_info = 'type='+frame.type+'|offset='+offset;\n  }\n  else if( frame.dif.type ==='selection_readout' || frame.dif.type ==='veriable_length' || frame.dif.type ==='special_function'  )\n  {\n    frame.error = 'unsupported_dif_in_frame_mbus';\n    frame.error_debug_info = 'type='+frame.type+'|offset='+offset+'|dif_type='+frame.dif.type;\n  }\n  else\n  {\n    offset++;\n    if( frame.dif.extension_bit === 1 ) setDife(buf,offset,frame);\n    if( frame.dife_list && frame.dife_list.length > 0 ) offset += frame.dife_list.length;\n    var vif_raw = buf[offset];\n    frame.vif = parseVif(vif_raw);\n    offset++;\n    if( frame.vif.value === 0xfd || frame.vif.value === 0xfb )\n    {\n      frame.vif.value = buf[offset];\n      offset++;\n      //if(frame.vif.value === 0xfd ) frame.vif.data=findVife( frame.vif.value+256 );\n      //if(frame.vif.value === 0xfb ) frame.vif.data=findVife( frame.vif.value+512 );\n    }\n    else if( frame.vif.value === 0x7c )\n    {\n      frame.error = 'unsupported_vif_in_frame_mbus';\n      frame.error_debug_info = 'type='+frame.type+'|offset='+(offset-1)+'|vif_type=plain_text';\n    }\n    else if( frame.vif.value === 0x7f )\n    {\n      frame.error = 'unsupported_vif_in_frame_mbus';\n      frame.error_debug_info = 'type='+frame.type+'|offset='+(offset-1)+'|vif_type=manufacturer_specific_coding';\n    }\n    else\n    {\n      frame.vif.data = findVife( frame.vif.value );\n    }\n    if(frame.vif.extension_bit === 1 && frame.error === undefined)\n    {\n      setVife(buf,offset,frame,vif_raw);\n      if( frame.countByteVife !== undefined ) offset += frame.countByteVife; \n    }\n\n\n    if( frame.vife_list &&  frame.vife_list.length > 0 )\n    {\n      frame.units = frame.vife_list[frame.vife_list.length-1].data;\n    }\n    else\n    {\n      frame.units = frame.vif.data;\n    }\n    if( !isNaN(offset) && frame.error === undefined )\n    {\n      frame.measurement = {};\n      if(frame.dif.type == 'no_data')\n      {\n        frame.measurement.value_raw = 'no_data';\n      }\n      else if ( frame.dif.countByte )\n      {\n        frame.measurement.raw = buf.slice(offset,offset+frame.dif.countByte);\n        offset+=frame.dif.countByte;\n        if(frame.dif.type === 'int')\n        {\n          frame.measurement.value_raw = toIntLE (frame.measurement.raw, 0, frame.dif.countByte);\n        }\n        else if(frame.dif.type === 'bcd')\n        {\n          frame.measurement.value_raw = toBcdLE(frame.measurement.raw);\n        }\n        else if(frame.dif.type === 'real')\n        {\n          frame.measurement.value_raw = to32Real(frame.measurement.raw)\n        }\n        else \n        {\n          frame.error = 'error_parse_frame_mbus';\n          frame.error_debug_info = 'type='+frame.type+'|offset='+(offset)+'|unknown_type_data';\n        }\n\n        if( frame.error === undefined && frame.units !== undefined )\n        {\n          // frame.units\n          frame.measurement.value = frame.measurement.value_raw * frame.units[1];\n          frame.measurement.desc = frame.units[3];\n          frame.measurement.unit = frame.units[2];\n          frame.measurement.dataType = frame.dif.function_field_desc;\n        }\n      }\n      else \n      {\n        frame.error = 'error_parse_frame_mbus';\n        frame.error_debug_info = 'type='+frame.type+'|offset='+(offset)+'';\n      }\n    }\n  }\n  obj.frames.push(frame);\n  if( obj.error === undefined ) parseFrames(buf,offset,obj);\n}\nfunction parseFramesDeviceInfo(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'device_info';\n  if( reason == 0x00 ) frame.reason = 'boot';\n  else if( reason == 0x01 ) frame.reason = 'result_request';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.model_id = toUInt16LE(buf, offset);\n  frame.model_name = getModelNameById(frame.model_id);\n  offset += 2;\n  setDeviceFirmwareVersion(buf[offset],frame);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n//-----------------------------------------------------\n// Converters\n//-----------------------------------------------------\nfunction hexToBuffer( hex )\n{\n  var buffer=[];\n  for ( var i = 0; i < hex.length - 1; i = i + 2 )\n  {\n     var item = hex.substring( i, i + 2 );\n     var value = parseInt(item,16);\n     if(isNaN(value)) return false;\n     buffer.push( value );\n  }\n  return buffer;\n}\nfunction toInt8 (buf, offset) {\n  offset = offset >>> 0;\n  if (!(buf[offset] & 0x80)) return (buf[offset]);\n  return ((0xff - buf[offset] + 1) * -1);\n} \nfunction to32Real(bytes)\n{\n    var bits = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | (bytes[3]);\n    var sign = ((bits >>> 31) == 0) ? 1.0 : -1.0;\n    var e = ((bits >>> 23) & 0xff);\n    var m = (e == 0) ? (bits & 0x7fffff) << 1 : (bits & 0x7fffff) | 0x800000;\n    var f = sign * m * Math.pow(2, e - 150);\n    return f;\n}\nfunction toUInt8 (buf, offset) \n{\n  offset = offset >>> 0;\n  return (buf[offset]);\n}\nfunction toMac(arr)\n{\n  var res = '';\n  for ( var i = 0; i<arr.length; i++ )\n  {\n    var byte = arr[i].toString(16);\n    if( byte.length < 2 ) byte = '0'+byte;\n    if(i==0) res += byte;\n    else res += ':'+byte;\n  }\n  return res;\n}\nfunction toUInt16LE (buf, offset) \n{\n  offset = offset >>> 0;\n  return  buf[offset] | \n        ( buf[offset + 1] << 8 );\n}\n\nfunction toInt16LE (buf, offset) \n{\n    offset = offset >>> 0;\n    var val = buf[offset] | (buf[offset + 1] << 8);\n    return (val & 0x8000) ? val | 0xFFFF0000 : val;\n}\nfunction toUInt32LE (buf, offset) \n{\n  offset = offset >>> 0;\n  return ((buf[offset]) |\n          (buf[offset + 1] << 8) |\n          (buf[offset + 2] << 16)) +\n          (buf[offset + 3] * 0x1000000);\n}\nfunction toBcdLE (buf) \n{\n  //v_2\n  var MASK_1 = 0xf0; //0b11110000\n  var MASK_2 = 0x0f; //0b00001111\n  var z = 0;\n  var res = 0;\n  for( var i = 0; i < buf.length; i++ )\n  {\n    var t1 = ( buf[i] & MASK_1 ) >> 4;\n    var t2 = ( buf[i] & MASK_2 ) >> 0;\n    res += t2*Math.pow(10,z);\n    z++;\n    res += t1*Math.pow(10,z);\n    z++;\n  }\n  return res;\n}\nfunction toIntLE (buf, offset, length) \n{\n  offset = offset >>> 0;\n  length = length >>> 0;\n\n  var result = buf[offset];\n  var i = 0;\n  var mul = 1;\n  \n  while ( ++i < length && (mul *= 0x100) ) \n  {\n    var byte = buf[offset + i];\n    result += byte * mul;\n  }\n  \n  mul *= 0x80;\n  \n  if (result >= mul) \n  {\n    result -= Math.pow(2, 8 * length);\n  }\n\n  return result;\n}\nfunction toASCII(buf,offset,countByte)\n{\n  offset = offset >>> 0;\n  countByte = countByte >>> 0;\n  var result = '';\n  for (var i = offset; i < (offset+countByte); i++ )\n  {\n    result+=String.fromCharCode(buf[i]);\n  }\n  return result;\n}\nfunction toHex(buf,offset,countByte)\n{\n  offset = offset >>> 0;\n  countByte = countByte >>> 0;\n  var result = '';\n  for (var i = offset; i < (offset+countByte); i++ )\n  {\n    var byte = buf[i].toString(16);\n    if( byte.length == 1 ) byte = '0'+byte;\n    result = byte + result ;\n  }\n  return result;\n}\n//-----------------------------------------------------\n// Auxiliaries Functions\n//-----------------------------------------------------\nfunction setpowerInformation(buf,offset,obj)\n{\n    var MASK_TYPE_POWER     = 0x01; //0b00000001\n    var MASK_BATTERY_CHARGE = 0xfe; //0b11111110\n    var type_power = ( buf[offset] & MASK_TYPE_POWER ) >> 0;\n    if( type_power === 0 ) \n    {\n        obj.type_power = 'battery';\n    }\n    else \n    {\n        obj.type_power = 'external';\n    }\n    var charge = ( buf[offset] & MASK_BATTERY_CHARGE ) >> 1;\n    if( charge >= 0 )\n    {\n        obj.battery_pct = charge;\n    }\n}\nfunction setProtocolInformation(buf,offset,obj) \n{\n    var MASK_SI_SN              = 0x01; //0b00000001\n    var MASK_VERSION_W_PROTOCOL = 0x0e; //0b00001110\n    var MASK_IS_PAYLOAD_SIZE    = 0x10; //0b00010000\n    var MASK_RFU                = 0xe0; //0b11100000\n    var isSN             = ( buf[offset] & MASK_SI_SN )              >> 0;\n    var versionWProtocol = ( buf[offset] & MASK_VERSION_W_PROTOCOL ) >> 1;\n    var isPayloadSize    = ( buf[offset] & MASK_IS_PAYLOAD_SIZE )    >> 4;\n    var rfu              = ( buf[offset] & MASK_RFU )                >> 5;\n    obj.is_sn = !!isSN;\n    obj.version_protocol = versionWProtocol;\n    obj.is_payload_size = !!isPayloadSize;\n    // obj.rfu = rfu;\n}\n\n\nfunction setDeviceFirmwareVersion(byte,obj)\n{\n  var MASK_MAJOR = 0x0f; //0b00001111\n  var MASK_MINOR = 0xf0; //0b11110000\n  var major = ( byte & MASK_MAJOR ) >> 0;\n  var minor = ( byte & MASK_MINOR ) >> 4;\n  obj.version = major+'.'+minor;\n}\n\nfunction getNameModbusFunction(id)\n{\n  if( id == 0x00 ) return 'read_coil_status';\n  else if( id == 0x01 ) return 'read_discrete_inputs';\n  else if( id == 0x02 ) return 'read_hlding_registers';\n  else if( id == 0x03 ) return 'input_registers';\n  else return 'unknown';\n} \nfunction getModelNameById(id)\n{\n  id = parseInt(id);\n  if( id === 1 ) return 'Airbit light controller';\n  else if( id === 200 ) return 'IXOCAT-LW-FULL';\t\n  else if( id === 201 ) return 'IXOCAT-LW-LIGHT';\t\n  else if( id === 3 ) return 'Betar LoRaWAN water meter LC';\t\n  else if( id === 4 ) return 'Betar Nb-IoT water meter LC';\t\n  else if( id === 500 ) return 'IXOCAT-NB-FULL';\t\n  else if( id === 501 ) return 'IXOCAT-NB-LIGHT';\t\n  else if( id === 7 ) return 'ERTX-L01';\t\n  else if( id === 8 ) return 'Construtag';\t\n  else if( id === 9 ) return 'MTBO-01-Nb';\t\n  else if( id === 10 ) return 'TaigaBikeTracker';\t\n  else if( id === 11 ) return 'MTBO-01-2G';\t\n  else if( id === 12 ) return 'SST_GAS_radio_module';\t\n  else if( id === 13 ) return 'NbIoT Button';\t\n  else if( id === 14 ) return 'МКРС-02';\t\n  else if( id === 15 ) return 'BS controller';\t\n  else if( id === 16 ) return 'Airbit light controller NbIoT';\t\n  else if( id === 17 ) return 'IoT node';\t\n  else if( id === 18 ) return 'NIS_METER';\t\n  else if( id === 19 ) return 'RoadsignTracker-LW-FULL';\t\n  else if( id === 21 ) return 'Stels Smoke Sensor';\t\n  else if( id === 22 ) return 'Betar LoRaWAN water meter HALL';\t\n  else if( id === 23 ) return 'Betar Nb-IoT water meter HALL';\t\n  else if( id === 24 ) return 'NodeG';\t\n  else if( id === 25 ) return 'TaigaTracker LoRaWAN';\t\n  else if( id === 26 ) return 'TaigaTracker Nb-IoT';\t\n  else if( id === 27 ) return 'TaigaBeacon';\t\n  else if( id === 28 ) return 'ERTX-ODK-2CH';\t\n  else if( id === 29 ) return 'ERTX crypto kit';\t\n  else if( id === 30 ) return 'TaigaPersonalTracker LW';\t\n  else if( id === 31 ) return 'TaigaPersonalTracker NB';\t\n  else if( id === 32 ) return 'TaigaPersonalTracker 2G';\t\n  else if( id === 33 ) return 'TaigaNode Lw';\t\n  else if( id === 34 ) return 'TaigaNode Nb';\t\n  else if( id === 35 ) return 'TaigaTracker2G';\t\n  else if( id === 36 ) return 'AirbitSensorHub-LW';\t\n  else if( id === 37 ) return 'AuroraNodeODK';\t\n  else if( id === 38 ) return 'TaigaBigTracker';\t\n  else if( id === 39 ) return 'NhrsPersonalTracker';\t\n  else if( id === 40 ) return 'WasteSensor-UKS';\t\n  else if( id === 41 ) return 'TaigaBikeTrackerE';\t\n  else if( id === 42 ) return 'ClickButton';\t\n  else if( id === 43 ) return 'FannaConcentrator';\t\n  else if( id === 44 ) return 'MyLogger';\t\n  else if( id === 45 ) return 'TaigaCartTracker';\t\n  else if( id === 46 ) return 'NtmPulseNB';\t\n  else if( id === 47 ) return 'SoftControl-Pass';\t\n  else if( id === 48 ) return 'TempButton';\t\n  else if( id === 49 ) return 'Uveos';\t\n  else if( id === 50 ) return 'McsmPulseNB';\t\n  else if( id === 51 ) return 'FannaConcentrator IN PWR';\t\n  else if( id === 52 ) return 'AuroraNodeOdkBoard';\t\n  else if( id === 53 ) return 'Siltrack V1 EXT ANT';\t\n  else if( id === 54 ) return 'RaceAnalyse';\t\n  else if( id === 55 ) return 'MaximaContainerTracker';\t\n  else if( id === 56 ) return 'FannaEframe';\t\n  else if( id === 57 ) return 'MaximaWasteSensorV2';\t\n  else if( id === 58 ) return 'Module SGMB-USPD-NB-1';\t\n  else if( id === 59 ) return 'AuroraNodeLTE';\t\n  else if( id === 60 ) return 'AuroraNodeNB';\t\n  else if( id === 61 ) return 'AuroraNodeETH';\t\n  else if( id === 62 ) return 'TaigaPulseCounterNb';\t\n  else if( id === 63 ) return 'FannaAnchor';\t\n  else if( id === 64 ) return 'AuroraNodeExtBoards';\t\n  else if( id === 65 ) return 'TaigaPersonalTracker LW_without GNSS';\t\n  else if( id === 66 ) return 'TaigaPersonalTracker NB_without GNSS';\t\n  else if( id === 67 ) return 'AuroraNodeGTS';\t\n  else if( id === 68 ) return 'TetronTrackerLight';\t\n  else if( id === 69 ) return 'SGMB-NB-2G';\t\n  else if( id === 70 ) return 'TaigaPulseCounterLW';\n  else if( id === 71 ) return 'AnalogPCBBoard';\t\n  else if( id === 75 ) return 'ErtxTermologgerNb';\t\n  else return 'unknown';\n}\n\nfunction getTextMediumMBUS(code)\n{\n  if( code === 0x00 ) return 'Other';\n  else if( code === 0x01 ) return 'Oil';\t\n  else if( code === 0x02 ) return 'Electricity';\t\n  else if( code === 0x03 ) return 'Gas';\t\n  else if( code === 0x04 ) return 'Heat (volume measured at return temperature: outlet)';\t\n  else if( code === 0x05 ) return 'Steam';\t\n  else if( code === 0x06 ) return 'Hot Water';\t\n  else if( code === 0x07 ) return 'Water';\t\n  else if( code === 0x08 ) return 'Heat Cost Allocator.';\t\n  else if( code === 0x09 ) return 'Compressed Air';\t\n  else if( code === 0x0A ) return 'Cooling load meter (volume measured at return temperature: outlet)';\t\n  else if( code === 0x0B ) return 'Cooling load meter (volume measured at flow temperature: inlet)';\t\n  else if( code === 0x0C ) return 'Heat (volume measured at flow temperature: inlet)';\t\n  else if( code === 0x0D ) return 'Heat / Cooling load meter';\t\n  else if( code === 0x0E ) return 'Bus / System';\t\n  else if( code === 0x0F ) return 'Unknown Medium';\t\n  else if( code >= 0x10 && code <= 0x15 ) return 'Reserved';\t\n  else if( code === 0x16 ) return 'Cold Water';\t\n  else if( code === 0x17 ) return 'Dual Water';\t\n  else if( code === 0x18 ) return 'Pressure';\t\n  else if( code === 0x19 ) return 'A/D Converter';\t\n  else if( code >= 0x20 && code <= 0xFF ) return 'Reserved';\t\n  else return 'unknown';\n}\nfunction getTextFuncFieldDif(val)\n{\n  if( 0x00 === val ) return 'instantaneous_value';           //0b00\n  else if( 0x02 === val ) return 'minimum_value';            //0b10\n  else if( 0x01 === val ) return 'maximum_value';            //0b01\n  else if( 0x03 === val ) return 'value_during_error_state'; //0b11\n  return undefined;\n}\nfunction parseVif( vif )\n{\n  var result = {\n    raw: vif\n  };\n  var MASK_UNIT          = 0x7f; //0b01111111\n  var MASK_EXTENSION_BIT = 0x80; //0b10000000\n  var unit         = ( vif & MASK_UNIT )          >> 0;\n  var extensionBit = ( vif & MASK_EXTENSION_BIT ) >> 7;\n\n  result.extension_bit = extensionBit;\n  result.value = unit;\n\n  return result;\n}\nfunction parseDif( dif )\n{\n  var result = {\n    raw: dif\n  };\n  var MASK_DATA_FIELD         = 0x0f; //0b00001111\n  var MASK_FUNCTION_FIELD     = 0x30; //0b00110000\n  var MASK_LSB_STORAGE_NUMBER = 0x40; //0b01000000\n  var MASK_EXTENSION_BIT      = 0x80; //0b10000000\n  var dataField      = ( dif & MASK_DATA_FIELD )         >> 0;\n  var functionField  = ( dif & MASK_FUNCTION_FIELD )     >> 4;\n  var lsbStorageNumb = ( dif & MASK_LSB_STORAGE_NUMBER ) >> 6;\n  var extensionBit   = ( dif & MASK_EXTENSION_BIT )      >> 7;\n\n  result.extension_bit = extensionBit;\n  result.lsb_storage_number = lsbStorageNumb;\n  result.function_field = functionField;\n  result.function_field_desc = getTextFuncFieldDif( result.function_field );\n\n  if( dataField === 0x00 )      //0b0000\n  {\n    result.type = 'no_data';\n    result.countByte = 0;\n  }\n  else if( dataField === 0x01 ) //0b0001\n  {\n    result.type = 'int';\n    result.countByte = 1;\n  }\n  else if( dataField === 0x02 ) //0b0010\n  {\n    result.type = 'int';\n    result.countByte = 2;\n  }\n  else if( dataField === 0x03 ) //0b0011\n  {\n    result.type = 'int';\n    result.countByte = 3;\n  }\n  else if( dataField === 0x04 ) //0b0100 \n  {\n    result.type = 'int';\n    result.countByte = 4;\n  }\n  else if( dataField === 0x05 ) //0b0101\n  {\n    result.type = 'real';\n    result.countByte = 4;\n  }\n  else if( dataField === 0x06 ) //0b0110 \n  {\n    result.type = 'int';\n    result.countByte = 6;\n  }\n  else if( dataField === 0x07 ) //0b0111\n  {\n    result.type = 'int';\n    result.countByte = 8;\n  }\n  else if( dataField === 0x08 ) //0b1000\n  {\n    result.type = 'selection_readout';\n    result.countByte = undefined;\n  }\n  else if( dataField === 0x09 ) //0b1001\n  {\n    result.type = 'bcd';\n    result.countByte = 1;\n  }\n  else if( dataField === 0x0a ) //0b1010\n  {\n    result.type = 'bcd';\n    result.countByte = 2;\n  }\n  else if( dataField === 0x0b ) //0b1011\n  {\n    result.type = 'bcd';\n    result.countByte = 3;\n  }\n  else if( dataField === 0x0c ) //0b1100\n  {\n    result.type = 'bcd';\n    result.countByte = 4;\n  }\n  else if( dataField === 0x0d ) //0b1101\n  {\n    result.type = 'veriable_length';\n    result.countByte = undefined;\n  }\n  else if( dataField === 0x0e ) //0b1110\n  {\n    result.type = 'bcd';\n    result.countByte = 12;\n  }\n  else if( dataField === 0x0f ) //0b1111\n  {\n    result.type = 'special_function';\n    result.countByte = undefined;\n  }\n  return result;\n}\nfunction findVife(val)\n{\n  for(var key in mbus_variable_vif_table)\n  {\n    var vif = mbus_variable_vif_table[key];\n    if(val === vif[0]) return vif;\n  }\n  return [val,1.0e0,'','unknown'];\n} \nfunction setVife(buf,offset,frame,oldVif)\n{\n  if( frame.vife_list === undefined ) frame.vife_list = [];\n  if( frame.countByteVife === undefined ) frame.countByteVife = 0;\n  frame.countByteVife++;\n  var vif = {\n    raw: buf[offset]\n  };\n  var MASK_UNIT          = 0x7f; //0b01111111\n  var MASK_EXTENSION_BIT = 0x80; //0b10000000\n  vif.value         = ( buf[offset] & MASK_UNIT )          >> 0;\n  vif.extension_bit = ( buf[offset] & MASK_EXTENSION_BIT ) >> 7;\n  if( vif.value === 0xfd || vif.value === 0xfb )\n  {\n    offset++;\n    frame.countByteVife++;\n    vif.value = buf[offset];\n    //if(vif.value === 0xfd ) vif.data=findVife( vif.value+256 );\n    //if(vif.value === 0xfb ) vif.data=findVife( vif.value+512 );\n  }\n  else\n  {\n    if( oldVif ===  0xfd ) vif.data=findVife( vif.value+256 );\n    else if( oldVif ===  0xfb ) vif.data=findVife( vif.value+512 );\n    else vif.data = findVife( vif.value )\n  }\n  frame.vife_list.push(vif);\n  if( frame.vif.value === 0x7c )\n  {\n    frame.error = 'unsupported_vif_in_frame_mbus';\n    frame.error_debug_info = 'type='+frame.type+'|offset='+(offset-1)+'|vif_type=plain_text';\n  }\n  else if( frame.vif.value === 0x7f )\n  {\n    frame.error = 'unsupported_vif_in_frame_mbus';\n    frame.error_debug_info = 'type='+frame.type+'|offset='+(offset-1)+'|vif_type=manufacturer_specific_coding';\n  }\n  if( frame.error === undefined && vif.extension_bit === 1 )\n  {\n    offset++;\n    setVife(buf,offset,frame,vif.raw);\n  }\n}\nfunction setDife(buf,offset,frame)\n{\n  if( frame.dife_list === undefined ) frame.dife_list = [];\n  var dife = {};\n  var MASK_STORAGE_NUMBER = 0x0f; //0b00001111\n  var MASK_TARIF          = 0x30; //0b00110000\n  var MASK_UNIT           = 0x40; //0b01000000\n  var MASK_EXTENSION_BIT  = 0x80; //0b10000000\n  var storageNumber = ( buf[offset] & MASK_STORAGE_NUMBER ) >> 0;\n  var tarif         = ( buf[offset] & MASK_TARIF )          >> 4;\n  var unit          = ( buf[offset] & MASK_UNIT )           >> 6;\n  var extensionBit  = ( buf[offset] & MASK_EXTENSION_BIT )  >> 7;\n  dife.storage_number = storageNumber;\n  dife.tarif          = tarif;\n  dife.unit           = unit;\n  dife.extensionBit   = extensionBit;\n  frame.dife_list.push(dife);\n  if( dife.extensionBit === 1 )\n  {\n    offset++;\n    setDife(buf,offset,frame);\n  }\n}\n\n//-----------------------------------------------------\n// A table of VIF values for the analysis of mbus frames\n//-----------------------------------------------------\nvar mbus_variable_vif_table = [\n  /*  Primary VIFs (main table), range 0x00 - 0xFF */\n  /*  E000 0nnn    energy Wh (0.001Wh to 10000Wh) */\n  [0x00, 1.0e-3, \"Wh\", \"energy\"],\n  [0x01, 1.0e-2, \"Wh\", \"energy\"],\n  [0x02, 1.0e-1, \"Wh\", \"energy\"],\n  [0x03, 1.0e0, \"Wh\", \"energy\"],\n  [0x04, 1.0e1, \"Wh\", \"energy\"],\n  [0x05, 1.0e2, \"Wh\", \"energy\"],\n  [0x06, 1.0e3, \"Wh\", \"energy\"],\n  [0x07, 1.0e4, \"Wh\", \"energy\"],\n\n  /* E000 1nnn    energy  J (0.001kJ to 10000kJ) */\n  [0x08, 1.0e0, \"J\", \"energy\"],\n  [0x09, 1.0e1, \"J\", \"energy\"],\n  [0x0A, 1.0e2, \"J\", \"energy\"],\n  [0x0B, 1.0e3, \"J\", \"energy\"],\n  [0x0C, 1.0e4, \"J\", \"energy\"],\n  [0x0D, 1.0e5, \"J\", \"energy\"],\n  [0x0E, 1.0e6, \"J\", \"energy\"],\n  [0x0F, 1.0e7, \"J\", \"energy\"],\n\n  /* E001 0nnn    volume m^3 (0.001l to 10000l) */\n  [0x10, 1.0e-6, \"m^3\", \"volume\"],\n  [0x11, 1.0e-5, \"m^3\", \"volume\"],\n  [0x12, 1.0e-4, \"m^3\", \"volume\"],\n  [0x13, 1.0e-3, \"m^3\", \"volume\"],\n  [0x14, 1.0e-2, \"m^3\", \"volume\"],\n  [0x15, 1.0e-1, \"m^3\", \"volume\"],\n  [0x16, 1.0e0, \"m^3\", \"volume\"],\n  [0x17, 1.0e1, \"m^3\", \"volume\"],\n\n  /* E001 1nnn    mass kg (0.001kg to 10000kg) */\n  [0x18, 1.0e-3, \"kg\", \"mass\"],\n  [0x19, 1.0e-2, \"kg\", \"mass\"],\n  [0x1A, 1.0e-1, \"kg\", \"mass\"],\n  [0x1B, 1.0e0, \"kg\", \"mass\"],\n  [0x1C, 1.0e1, \"kg\", \"mass\"],\n  [0x1D, 1.0e2, \"kg\", \"mass\"],\n  [0x1E, 1.0e3, \"kg\", \"mass\"],\n  [0x1F, 1.0e4, \"kg\", \"mass\"],\n\n  /* E010 00nn    On Time s */\n  [0x20, 1.0, \"s\", \"on_time\"],     /* seconds */\n  [0x21, 60.0, \"s\", \"on_time\"],    /* minutes */\n  [0x22, 3600.0, \"s\", \"on_time\"],  /* hours   */\n  [0x23, 86400.0, \"s\", \"on_time\"], /* days    */\n\n  /* E010 01nn    Operating Time s */\n  [0x24, 1.0, \"s\", \"operating_time\"],     /* seconds */\n  [0x25, 60.0, \"s\", \"operating_time\"],    /* minutes */\n  [0x26, 3600.0, \"s\", \"operating_time\"],  /* hours   */\n  [0x27, 86400.0, \"s\", \"operating_time\"], /* days    */\n\n  /* E010 1nnn    power W (0.001W to 10000W) */\n  [0x28, 1.0e-3, \"W\", \"power\"],\n  [0x29, 1.0e-2, \"W\", \"power\"],\n  [0x2A, 1.0e-1, \"W\", \"power\"],\n  [0x2B, 1.0e0, \"W\", \"power\"],\n  [0x2C, 1.0e1, \"W\", \"power\"],\n  [0x2D, 1.0e2, \"W\", \"power\"],\n  [0x2E, 1.0e3, \"W\", \"power\"],\n  [0x2F, 1.0e4, \"W\", \"power\"],\n\n  /* E011 0nnn    power J/h (0.001kJ/h to 10000kJ/h) */\n  [0x30, 1.0e0, \"J/h\", \"power\"],\n  [0x31, 1.0e1, \"J/h\", \"power\"],\n  [0x32, 1.0e2, \"J/h\", \"power\"],\n  [0x33, 1.0e3, \"J/h\", \"power\"],\n  [0x34, 1.0e4, \"J/h\", \"power\"],\n  [0x35, 1.0e5, \"J/h\", \"power\"],\n  [0x36, 1.0e6, \"J/h\", \"power\"],\n  [0x37, 1.0e7, \"J/h\", \"power\"],\n\n  /* E011 1nnn    volume Flow m3/h (0.001l/h to 10000l/h) */\n  [0x38, 1.0e-6, \"m^3/h\", \"volume_flow\"],\n  [0x39, 1.0e-5, \"m^3/h\", \"volume_flow\"],\n  [0x3A, 1.0e-4, \"m^3/h\", \"volume_flow\"],\n  [0x3B, 1.0e-3, \"m^3/h\", \"volume_flow\"],\n  [0x3C, 1.0e-2, \"m^3/h\", \"volume_flow\"],\n  [0x3D, 1.0e-1, \"m^3/h\", \"volume_flow\"],\n  [0x3E, 1.0e0, \"m^3/h\", \"volume_flow\"],\n  [0x3F, 1.0e1, \"m^3/h\", \"volume_flow\"],\n\n  /* E100 0nnn     volume Flow ext.  m^3/min (0.0001l/min to\n     1000l/min) */\n  [0x40, 1.0e-7, \"m^3/min\", \"volume_flow\"],\n  [0x41, 1.0e-6, \"m^3/min\", \"volume_flow\"],\n  [0x42, 1.0e-5, \"m^3/min\", \"volume_flow\"],\n  [0x43, 1.0e-4, \"m^3/min\", \"volume_flow\"],\n  [0x44, 1.0e-3, \"m^3/min\", \"volume_flow\"],\n  [0x45, 1.0e-2, \"m^3/min\", \"volume_flow\"],\n  [0x46, 1.0e-1, \"m^3/min\", \"volume_flow\"],\n  [0x47, 1.0e0, \"m^3/min\", \"volume_flow\"],\n\n  /* E100 1nnn     volume Flow ext.  m^3/s (0.001ml/s to 10000ml/s) */\n  [0x48, 1.0e-9, \"m^3/s\", \"volume_flow\"],\n  [0x49, 1.0e-8, \"m^3/s\", \"volume_flow\"],\n  [0x4A, 1.0e-7, \"m^3/s\", \"volume_flow\"],\n  [0x4B, 1.0e-6, \"m^3/s\", \"volume_flow\"],\n  [0x4C, 1.0e-5, \"m^3/s\", \"volume_flow\"],\n  [0x4D, 1.0e-4, \"m^3/s\", \"volume_flow\"],\n  [0x4E, 1.0e-3, \"m^3/s\", \"volume_flow\"],\n  [0x4F, 1.0e-2, \"m^3/s\", \"volume_flow\"],\n\n  /* E101 0nnn     mass_flow kg/h (0.001kg/h to 10000kg/h) */\n  [0x50, 1.0e-3, \"kg/h\", \"mass_flow\"],\n  [0x51, 1.0e-2, \"kg/h\", \"mass_flow\"],\n  [0x52, 1.0e-1, \"kg/h\", \"mass_flow\"],\n  [0x53, 1.0e0, \"kg/h\", \"mass_flow\"],\n  [0x54, 1.0e1, \"kg/h\", \"mass_flow\"],\n  [0x55, 1.0e2, \"kg/h\", \"mass_flow\"],\n  [0x56, 1.0e3, \"kg/h\", \"mass_flow\"],\n  [0x57, 1.0e4, \"kg/h\", \"mass_flow\"],\n\n  /* E101 10nn     flow_temperature В°C (0.001В°C to 1В°C) */\n  [0x58, 1.0e-3, \"°C\", \"flow_temperature\"],\n  [0x59, 1.0e-2, \"°C\", \"flow_temperature\"],\n  [0x5A, 1.0e-1, \"°C\", \"flow_temperature\"],\n  [0x5B, 1.0e0, \"°C\", \"flow_temperature\"],\n\n  /* E101 11nn return_temperature В°C (0.001В°C to 1В°C) */\n  [0x5C, 1.0e-3, \"°C\", \"return_temperature\"],\n  [0x5D, 1.0e-2, \"°C\", \"return_temperature\"],\n  [0x5E, 1.0e-1, \"°C\", \"return_temperature\"],\n  [0x5F, 1.0e0, \"°C\", \"return_temperature\"],\n\n  /* E110 00nn    temperature Difference  K   (mK to  K) */\n  [0x60, 1.0e-3, \"K\", \"temperature_difference\"],\n  [0x61, 1.0e-2, \"K\", \"temperature_difference\"],\n  [0x62, 1.0e-1, \"K\", \"temperature_difference\"],\n  [0x63, 1.0e0, \"K\", \"temperature_difference\"],\n\n  /* E110 01nn     External temperature В°C (0.001В°C to 1В°C) */\n  [0x64, 1.0e-3, \"°C\", \"external_temperature\"],\n  [0x65, 1.0e-2, \"°C\", \"external_temperature\"],\n  [0x66, 1.0e-1, \"°C\", \"external_temperature\"],\n  [0x67, 1.0e0, \"°C\", \"external_temperature\"],\n\n  /* E110 10nn     Pressure bar (1mbar to 1000mbar) */\n  [0x68, 1.0e-3, \"bar\", \"Pressure\"],\n  [0x69, 1.0e-2, \"bar\", \"Pressure\"],\n  [0x6A, 1.0e-1, \"bar\", \"Pressure\"],\n  [0x6B, 1.0e0, \"bar\", \"Pressure\"],\n\n  /* E110 110n     Time Point */\n  [0x6C, 1.0e0, \"-\",\n   \"time_point_date\"], /* n = 0        date, data type G */\n  [0x6D, 1.0e0, \"-\",\n   \"time_point_date_time\"], /* n = 1 time & date, data type F */\n\n  /* E110 1110     Units for H.C.A. dimensionless */\n  [0x6E, 1.0e0, \"Units for H.C.A.\", \"H_C_A\"],\n\n  /* E110 1111     Reserved */\n  [0x6F, 0.0, \"Reserved\", \"reserved\"],\n\n  /* E111 00nn     averaging_duration s */\n  [0x70, 1.0, \"s\", \"averaging_duration\"],     /* seconds */\n  [0x71, 60.0, \"s\", \"averaging_duration\"],    /* minutes */\n  [0x72, 3600.0, \"s\", \"averaging_duration\"],  /* hours   */\n  [0x73, 86400.0, \"s\", \"averaging_duration\"], /* days    */\n\n  /* E111 01nn     Actuality Duration s */\n  [0x74, 1.0, \"s\", \"averaging_duration\"],     /* seconds */\n  [0x75, 60.0, \"s\", \"averaging_duration\"],    /* minutes */\n  [0x76, 3600.0, \"s\", \"averaging_duration\"],  /* hours   */\n  [0x77, 86400.0, \"s\", \"averaging_duration\"], /* days    */\n\n  /* Fabrication No */\n  [0x78, 1.0, \"\", \"fabrication_no\"],\n\n  /* E111 1001 (Enhanced) Identification */\n  [0x79, 1.0, \"\", \"enhanced_identification\"],\n\n  /* E111 1010 Bus Address */\n  [0x7A, 1.0, \"\", \"bus_address\"],\n\n  /* Any VIF: 7Eh */\n  [0x7E, 1.0, \"\", \"any_vif\"],\n\n  /* manufacturer_specific: 7Fh */\n  [0x7F, 1.0, \"\", \"manufacturer_specific\"],\n\n  /* Any VIF: 7Eh */\n  [0xFE, 1.0, \"\", \"Any VIF\"],\n\n  /* manufacturer_specific: FFh */\n  [0xFF, 1.0, \"\", \"manufacturer_specific\"],\n\n  //VIF = FD START\n  //\n  //\n  /* Main VIFE-Code Extension table (following VIF=FDh for primary\n     VIF)\n     See 8.4.4 a, only some of them are here. Using range 0x100 -\n     0x1FF */\n\n  /* E000 00nn   credit of 10nn-3 of the nominal local legal currency\n     units */\n  [0x100, 1.0e-3, \"Currency units\", \"credit\"],\n  [0x101, 1.0e-2, \"Currency units\", \"credit\"],\n  [0x102, 1.0e-1, \"Currency units\", \"credit\"],\n  [0x103, 1.0e0, \"Currency units\", \"credit\"],\n\n  /* E000 01nn   debit of 10nn-3 of the nominal local legal currency\n     units */\n  [0x104, 1.0e-3, \"Currency units\", \"debit\"],\n  [0x105, 1.0e-2, \"Currency units\", \"debit\"],\n  [0x106, 1.0e-1, \"Currency units\", \"debit\"],\n  [0x107, 1.0e0, \"Currency units\", \"debit\"],\n\n  /* E000 1000 Access Number (transmission count) */\n  [0x108, 1.0e0, \"\", \"access_number_transmission_count\"],\n\n  /* E000 1001 Medium (as in fixed header) */\n  [0x109, 1.0e0, \"\", \"device_type\"],\n\n  /* E000 1010 Manufacturer (as in fixed header) */\n  [0x10A, 1.0e0, \"\", \"manufacturer\"],\n\n  /* E000 1011 Parameter set identification */\n  [0x10B, 1.0e0, \"\", \"parameter_set_identification\"],\n\n  /* E000 1100 Model / Version */\n  [0x10C, 1.0e0, \"\", \"device_type\"],\n\n  /* E000 1101 Hardware version # */\n  [0x10D, 1.0e0, \"\", \"hardware_version\"],\n\n  /* E000 1110 Firmware version # */\n  [0x10E, 1.0e0, \"\", \"firmware_version\"],\n\n  /* E000 1111 Software version # */\n  [0x10F, 1.0e0, \"\", \"software_version\"],\n\n  /* E001 0000 Customer location */\n  [0x110, 1.0e0, \"\", \"customer_location\"],\n\n  /* E001 0001 Customer */\n  [0x111, 1.0e0, \"\", \"customer\"],\n\n  /* E001 0010 Access Code User */\n  [0x112, 1.0e0, \"\", \"access_code_user\"],\n\n  /* E001 0011 Access Code Operator */\n  [0x113, 1.0e0, \"\", \"access_code_operator\"],\n\n  /* E001 0100 Access Code System Operator */\n  [0x114, 1.0e0, \"\", \"access_code_system_operator\"],\n\n  /* E001 0101 Access Code Developer */\n  [0x115, 1.0e0, \"\", \"access_code_developer\"],\n\n  /* E001 0110 Password */\n  [0x116, 1.0e0, \"\", \"password\"],\n\n  /* E001 0111 Error flags (binary) */\n  [0x117, 1.0e0, \"\", \"error_flags\"],\n\n  /* E001 1000 Error mask */\n  [0x118, 1.0e0, \"\", \"error_mask\"],\n\n  /* E001 1001 Reserved */\n  [0x119, 1.0e0, \"Reserved\", \"кeserved\"],\n\n  /* E001 1010 digital_output (binary) */\n  [0x11A, 1.0e0, \"\", \"digital_output\"],\n\n  /* E001 1011 Digital Input (binary) */\n  [0x11B, 1.0e0, \"\", \"digital_input\"],\n\n  /* E001 1100 Baudrate [Baud] */\n  [0x11C, 1.0e0, \"Baud\", \"baudrate\"],\n\n  /* E001 1101 Response delay time [bittimes] */\n  [0x11D, 1.0e0, \"Bittimes\", \"response_delay_time\"],\n\n  /* E001 1110 Retry */\n  [0x11E, 1.0e0, \"\", \"retry\"],\n\n  /* E001 1111 Reserved */\n  [0x11F, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 0000 First storage # for cyclic storage */\n  [0x120, 1.0e0, \"\", \"first_storage_for cyclic storage\"],\n\n  /* E010 0001 Last storage # for cyclic storage */\n  [0x121, 1.0e0, \"\", \"last_storage_for_cyclic_storage\"],\n\n  /* E010 0010 Size of storage block */\n  [0x122, 1.0e0, \"\", \"size_of_storage_block\"],\n\n  /* E010 0011 Reserved */\n  [0x123, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 01nn storage_interval [sec(s)..day(s)] */\n  [0x124, 1.0, \"s\", \"storage_interval\"],        /* second(s) */\n  [0x125, 60.0, \"s\", \"storage_interval\"],       /* minute(s) */\n  [0x126, 3600.0, \"s\", \"storage_interval\"],     /* hour(s)   */\n  [0x127, 86400.0, \"s\", \"storage_interval\"],    /* day(s)    */\n  [0x128, 2629743.83, \"s\", \"storage_interval\"], /* month(s)  */\n  [0x129, 31556926.0, \"s\", \"storage_interval\"], /* year(s)   */\n\n  /* E010 1010 Reserved */\n  [0x12A, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 1011 Reserved */\n  [0x12B, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 11nn duration_since_last_readout [sec(s)..day(s)] */\n  [0x12C, 1.0, \"s\", \"duration_since_last_readout\"],     /* seconds */\n  [0x12D, 60.0, \"s\", \"duration_since_last_readout\"],    /* minutes */\n  [0x12E, 3600.0, \"s\", \"duration_since_last_readout\"],  /* hours   */\n  [0x12F, 86400.0, \"s\", \"duration_since_last_readout\"], /* days    */\n\n  /* E011 0000 Start (date/time) of tariff  */\n  /* The information about usage of data type F (date and time) or\n     data type G (date) can */\n  /* be derived from the datafield (0010b: type G / 0100: type F). */\n  [0x130, 1.0e0, \"Reserved\", \"reserved\"], /* ???? */\n\n  /* E011 00nn Duration of tariff (nn=01 ..11: min to days) */\n  [0x131, 60.0, \"s\", \"storage_interval\"],    /* minute(s) */\n  [0x132, 3600.0, \"s\", \"storage_interval\"],  /* hour(s)   */\n  [0x133, 86400.0, \"s\", \"storage_interval\"], /* day(s)    */\n\n  /* E011 01nn period_of_tariff [sec(s) to day(s)]  */\n  [0x134, 1.0, \"s\", \"period_of_tariff\"],        /* seconds  */\n  [0x135, 60.0, \"s\", \"period_of_tariff\"],       /* minutes  */\n  [0x136, 3600.0, \"s\", \"period_of_tariff\"],     /* hours    */\n  [0x137, 86400.0, \"s\", \"period_of_tariff\"],    /* days     */\n  [0x138, 2629743.83, \"s\", \"period_of_tariff\"], /* month(s) */\n  [0x139, 31556926.0, \"s\", \"period_of_tariff\"], /* year(s)  */\n\n  /* E011 1010 dimensionless / no VIF */\n  [0x13A, 1.0e0, \"\", \"dimensionless\"],\n\n  /* E011 1011 Reserved */\n  [0x13B, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E011 11xx Reserved */\n  [0x13C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x13D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x13E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x13F, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E100 nnnn   Volts electrical units */\n  [0x140, 1.0e-9, \"V\", \"voltage\"],\n  [0x141, 1.0e-8, \"V\", \"voltage\"],\n  [0x142, 1.0e-7, \"V\", \"voltage\"],\n  [0x143, 1.0e-6, \"V\", \"voltage\"],\n  [0x144, 1.0e-5, \"V\", \"voltage\"],\n  [0x145, 1.0e-4, \"V\", \"voltage\"],\n  [0x146, 1.0e-3, \"V\", \"voltage\"],\n  [0x147, 1.0e-2, \"V\", \"voltage\"],\n  [0x148, 1.0e-1, \"V\", \"voltage\"],\n  [0x149, 1.0e0, \"V\", \"voltage\"],\n  [0x14A, 1.0e1, \"V\", \"voltage\"],\n  [0x14B, 1.0e2, \"V\", \"voltage\"],\n  [0x14C, 1.0e3, \"V\", \"voltage\"],\n  [0x14D, 1.0e4, \"V\", \"voltage\"],\n  [0x14E, 1.0e5, \"V\", \"voltage\"],\n  [0x14F, 1.0e6, \"V\", \"voltage\"],\n\n  /* E101 nnnn   A */\n  [0x150, 1.0e-12, \"A\", \"current\"],\n  [0x151, 1.0e-11, \"A\", \"current\"],\n  [0x152, 1.0e-10, \"A\", \"current\"],\n  [0x153, 1.0e-9, \"A\", \"current\"],\n  [0x154, 1.0e-8, \"A\", \"current\"],\n  [0x155, 1.0e-7, \"A\", \"current\"],\n  [0x156, 1.0e-6, \"A\", \"current\"],\n  [0x157, 1.0e-5, \"A\", \"current\"],\n  [0x158, 1.0e-4, \"A\", \"current\"],\n  [0x159, 1.0e-3, \"A\", \"current\"],\n  [0x15A, 1.0e-2, \"A\", \"current\"],\n  [0x15B, 1.0e-1, \"A\", \"current\"],\n  [0x15C, 1.0e0, \"A\", \"current\"],\n  [0x15D, 1.0e1, \"A\", \"current\"],\n  [0x15E, 1.0e2, \"A\", \"current\"],\n  [0x15F, 1.0e3, \"A\", \"current\"],\n\n  /* E110 0000 Reset counter */\n  [0x160, 1.0e0, \"\", \"reset_counter\"],\n\n  /* E110 0001 Cumulation counter */\n  [0x161, 1.0e0, \"\", \"cumulation_counter\"],\n\n  /* E110 0010 Control signal */\n  [0x162, 1.0e0, \"\", \"control_signal\"],\n\n  /* E110 0011 Day of week */\n  [0x163, 1.0e0, \"\", \"day_of_week\"],\n\n  /* E110 0100 Week number */\n  [0x164, 1.0e0, \"\", \"week_number\"],\n\n  /* E110 0101 Time point of day change */\n  [0x165, 1.0e0, \"\", \"time_point_of_day_change\"],\n\n  /* E110 0110 State of parameter activation */\n  [0x166, 1.0e0, \"\", \"state_of_parameter_activation\"],\n\n  /* E110 0111 Special supplier information */\n  [0x167, 1.0e0, \"\", \"special_supplier_information\"],\n\n  /* E110 10pp duration_since_last_cumulation [hour(s)..years(s)] */\n  [0x168, 3600.0, \"s\", \"duration_since_last_cumulation\"],     /* hours */\n  [0x169, 86400.0, \"s\", \"duration_since_last_cumulation\"],    /* days */\n  [0x16A, 2629743.83, \"s\", \"duration_since_last_cumulation\"], /* month(s) */\n  [0x16B, 31556926.0, \"s\", \"duration_since_last_cumulation\"], /* year(s)  */\n\n  /* E110 11pp operating_time battery [hour(s)..years(s)] */\n  [0x16C, 3600.0, \"s\", \"operating_time battery\"],     /* hours    */\n  [0x16D, 86400.0, \"s\", \"operating_time battery\"],    /* days     */\n  [0x16E, 2629743.83, \"s\", \"operating_time battery\"], /* month(s) */\n  [0x16F, 31556926.0, \"s\", \"operating_time battery\"], /* year(s)  */\n\n  /* E111 0000 Date and time of battery change */\n  [0x170, 1.0e0, \"\", \"date_and_time_of_battery_change\"],\n\n  /* E111 0001-1111 Reserved */\n  [0x171, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x172, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x173, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x174, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x175, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x176, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x177, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x178, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x179, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17B, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x17F, 1.0e0, \"Reserved\", \"reserved\"],\n  //VIF = FD END\n  //\n  //\n  //\n\n  //\n  //\n  //\n  //VIF = FB START\n  /* Alternate VIFE-Code Extension table (following VIF=0FBh for\n     primary VIF)\n     See 8.4.4 b, only some of them are here. Using range 0x200 -\n     0x2FF */\n\n  /* E000 000n energy 10(n-1) MWh 0.1MWh to 1MWh */\n  [0x200, 1.0e5, \"Wh\", \"energy\"],\n  [0x201, 1.0e6, \"Wh\", \"energy\"],\n\n  /* E000 001n Reserved */\n  [0x202, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x203, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E000 01nn Reserved */\n  [0x204, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x205, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x206, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x207, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E000 100n energy 10(n-1) GJ 0.1GJ to 1GJ */\n  [0x208, 1.0e8, \"Reserved\", \"energy\"],\n  [0x209, 1.0e9, \"Reserved\", \"energy\"],\n\n  /* E000 101n Reserved */\n  [0x20A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x20B, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E000 11nn Reserved */\n  [0x20C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x20D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x20E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x20F, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E001 000n volume 10(n+2) m3 100m3 to 1000m3 */\n  [0x210, 1.0e2, \"m^3\", \"volume\"],\n  [0x211, 1.0e3, \"m^3\", \"volume\"],\n\n  /* E001 001n Reserved */\n  [0x212, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x213, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E001 01nn Reserved */\n  [0x214, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x215, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x216, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x217, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E001 100n mass 10(n+2) t 100t to 1000t */\n  [0x218, 1.0e5, \"kg\", \"mass\"],\n  [0x219, 1.0e6, \"kg\", \"mass\"],\n\n  /* E001 1010 to E010 0000 Reserved */\n  [0x21A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x21B, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x21C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x21D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x21E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x21F, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x220, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 0001 volume 0,1 feet^3 */\n  [0x221, 1.0e-1, \"feet^3\", \"volume\"],\n\n  /* E010 001n volume 0,1-1 american gallon */\n  [0x222, 1.0e-1, \"American gallon\", \"volume\"],\n  [0x223, 1.0e-0, \"American gallon\", \"volume\"],\n\n  /* E010 0100    volume_flow 0,001 american gallon/min */\n  [0x224, 1.0e-3, \"American gallon/min\", \"volume_flow\"],\n\n  /* E010 0101 volume_flow 1 american gallon/min */\n  [0x225, 1.0e0, \"American gallon/min\", \"volume_flow\"],\n\n  /* E010 0110 volume_flow 1 american gallon/h */\n  [0x226, 1.0e0, \"American gallon/h\", \"volume_flow\"],\n\n  /* E010 0111 Reserved */\n  [0x227, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 100n power 10(n-1) MW 0.1MW to 1MW */\n  [0x228, 1.0e5, \"W\", \"power\"],\n  [0x229, 1.0e6, \"W\", \"power\"],\n\n  /* E010 101n Reserved */\n  [0x22A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x22B, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E010 11nn Reserved */\n  [0x22C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x22D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x22E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x22F, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E011 000n power 10(n-1) GJ/h 0.1GJ/h to 1GJ/h */\n  [0x230, 1.0e8, \"J\", \"power\"],\n  [0x231, 1.0e9, \"J\", \"power\"],\n\n  /* E011 0010 to E101 0111 Reserved */\n  [0x232, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x233, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x234, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x235, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x236, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x237, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x238, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x239, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23B, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x23F, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x240, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x241, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x242, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x243, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x244, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x245, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x246, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x247, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x248, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x249, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24B, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x24F, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x250, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x251, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x252, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x253, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x254, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x255, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x256, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x257, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E101 10nn flow_temperature 10(nn-3) В°F 0.001В°F to 1В°F */\n  [0x258, 1.0e-3, \"В°F\", \"flow_temperature\"],\n  [0x259, 1.0e-2, \"В°F\", \"flow_temperature\"],\n  [0x25A, 1.0e-1, \"В°F\", \"flow_temperature\"],\n  [0x25B, 1.0e0, \"В°F\", \"flow_temperature\"],\n\n  /* E101 11nn return_temperature 10(nn-3) В°F 0.001В°F to 1В°F */\n  [0x25C, 1.0e-3, \"В°F\", \"return_temperature\"],\n  [0x25D, 1.0e-2, \"В°F\", \"return_temperature\"],\n  [0x25E, 1.0e-1, \"В°F\", \"return_temperature\"],\n  [0x25F, 1.0e0, \"В°F\", \"return_temperature\"],\n\n  /* E110 00nn temperature Difference 10(nn-3) В°F 0.001В°F to 1В°F */\n  [0x260, 1.0e-3, \"В°F\", \"temperature_difference\"],\n  [0x261, 1.0e-2, \"В°F\", \"temperature_difference\"],\n  [0x262, 1.0e-1, \"В°F\", \"temperature_difference\"],\n  [0x263, 1.0e0, \"В°F\", \"temperature_difference\"],\n\n  /* E110 01nn External temperature 10(nn-3) В°F 0.001В°F to 1В°F */\n  [0x264, 1.0e-3, \"В°F\", \"external_temperature\"],\n  [0x265, 1.0e-2, \"В°F\", \"external_temperature\"],\n  [0x266, 1.0e-1, \"В°F\", \"external_temperature\"],\n  [0x267, 1.0e0, \"В°F\", \"external_temperature\"],\n\n  /* E110 1nnn Reserved */\n  [0x268, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x269, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26A, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26B, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26C, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26D, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26E, 1.0e0, \"Reserved\", \"reserved\"],\n  [0x26F, 1.0e0, \"Reserved\", \"reserved\"],\n\n  /* E111 00nn cold_or_warm_temperature_limit 10(nn-3) В°F 0.001В°F to\n     1В°F */\n  [0x270, 1.0e-3, \"В°F\", \"cold_or_warm_temperature_limit\"],\n  [0x271, 1.0e-2, \"В°F\", \"cold_or_warm_temperature_limit\"],\n  [0x272, 1.0e-1, \"В°F\", \"cold_or_warm_temperature_limit\"],\n  [0x273, 1.0e0, \"В°F\", \"cold_or_warm_temperature_limit\"],\n\n  /* E111 01nn cold_or_warm_temperature_limit 10(nn-3) В°C 0.001В°C to\n     1В°C */\n  [0x274, 1.0e-3, \"°C\", \"cold_or_warm_temperature_limit\"],\n  [0x275, 1.0e-2, \"°C\", \"cold_or_warm_temperature_limit\"],\n  [0x276, 1.0e-1, \"°C\", \"cold_or_warm_temperature_limit\"],\n  [0x277, 1.0e0, \"°C\", \"cold_or_warm_temperature_limit\"],\n\n  /* E111 1nnn cumul. count max power В§ 10(nnn-3) W 0.001W to 10000W\n     */\n  [0x278, 1.0e-3, \"W\", \"cumul_count_max_power\"],\n  [0x279, 1.0e-3, \"W\", \"cumul_count_max_power\"],\n  [0x27A, 1.0e-1, \"W\", \"cumul_count_max_power\"],\n  [0x27B, 1.0e0, \"W\", \"cumul_count_max_power\"],\n  [0x27C, 1.0e1, \"W\", \"cumul_count_max_power\"],\n  [0x27D, 1.0e2, \"W\", \"cumul_count_max_power\"],\n  [0x27E, 1.0e3, \"W\", \"cumul_count_max_power\"],\n  [0x27F, 1.0e4, \"W\", \"cumul_count_max_power\"],\n  //VIF = FB END\n\n  /* End of array */\n  [0xFFFF, 0.0, \"\", \"\"]\n];\n\n/*************************************************** */\n\n\nfunction decodeUplink(input) {\n  let data = {};\n  let error = {};\n  let errors = [];\n  \n  let buffer = input.bytes;\n\n  if(buffer !== false && buffer.length>0)\n  {\n  data = Decode(10,buffer); \n  delete data.raw;\n\n  if (data && data.error !== undefined){\n      error.error_type = data.error;\n      delete data.error;\n      error.debug_info = data.error_debug_info;\n      delete data.error_debug_info;\n      errors.push(error);\n  }\n\n}\n\n  return {\n  data,\n  warnings: [],\n  errors : errors\n  };\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "M-BUS Measurements History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "mapping": "frames[0].measurement.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Measurement Value",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latest Measurement"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 1000,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "mapping": "frames[0].measurement.value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Value",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 4,
+                          "sizeX": 1,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "mapping": "battery_pct",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent M-BUS Frames"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Meter S/N</th>\n        <th>Medium</th>\n        <th>Value</th>\n        <th>Unit</th>\n        <th>Status</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value | limitTo:20\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td>{{ entry.frames[0].meter_serial_number || '—' }}</td>\n        <td>{{ entry.frames[0].medium || '—' }}</td>\n        <td>{{ entry.frames[0].measurement.value || '—' }}</td>\n        <td>{{ entry.frames[0].measurement.unit || '—' }}</td>\n        <td>{{ entry.frames[0].status || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; padding: 15px; overflow-y:auto\">\n  <h4>Gateway Status</h4>\n  <dl class=\"dl-horizontal\">\n    <dt>Serial Number:</dt>\n    <dd>{{ value.sn || 'N/A' }}</dd>\n    <dt>Power Type:</dt>\n    <dd>{{ value.type_power || 'N/A' }}</dd>\n    <dt>Battery:</dt>\n    <dd>{{ value.battery_pct || 'N/A' }}%</dd>\n    <dt>Protocol Version:</dt>\n    <dd>{{ value.version_protocol || 'N/A' }}</dd>\n    <dt>Payload Size:</dt>\n    <dd>{{ value.payload_size || 'N/A' }} bytes</dd>\n    <dt>Decode Status:</dt>\n    <dd><span ng-class=\"{'label label-success': value.status_decode, 'label label-danger': !value.status_decode}\">{{ value.status_decode ? 'OK' : 'Error' }}</span></dd>\n  </dl>\n  <div ng-if=\"value.frames && value.frames.length > 0\">\n    <h4>Latest Frame Info</h4>\n    <dl class=\"dl-horizontal\">\n      <dt>Frame Type:</dt>\n      <dd>{{ value.frames[0].type || 'N/A' }}</dd>\n      <dt>Medium:</dt>\n      <dd>{{ value.frames[0].medium || 'N/A' }}</dd>\n      <dt>Meter S/N:</dt>\n      <dd>{{ value.frames[0].meter_serial_number || 'N/A' }}</dd>\n      <dt>Description:</dt>\n      <dd>{{ value.frames[0].measurement.desc || 'N/A' }}</dd>\n      <dt>Data Type:</dt>\n      <dd>{{ value.frames[0].measurement.dataType || 'N/A' }}</dd>\n    </dl>\n  </div>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "device_info",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 8,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Raw M-BUS Data"
+                        },
+                        "properties": {},
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_m_bus_gateway_data",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Raw Data",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
