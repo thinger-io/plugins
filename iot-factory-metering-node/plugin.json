@@ -1,0 +1,711 @@
+{
+  "name": "iot_factory_metering_node",
+  "version": "1.0.0",
+  "description": "M-BUS Master Gateway and LORAWAN Converter",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "iot-factory-metering-node"
+  },
+  "metadata": {
+    "name": "Iot-Factory METERING-NODE",
+    "description": "M-BUS Master Gateway and LORAWAN Converter",
+    "image": "assets/metering-node-lorawan-iot-factory.png",
+    "category": "devices",
+    "vendor": "iot-factory"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "M-BUS Master Gateway and LORAWAN Converter",
+        "enabled": true,
+        "name": "Iot-Factory METERING-NODE",
+        "product": "iot_factory_metering_node",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "metering-node-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "iot_factory_metering_node_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//-----------------------------------------------------\n// Packet parser\n//-----------------------------------------------------\n//Port to which the packet was received for LoRaWAN servers (in other cases, you must specify 10)\n//bytes -  Data buffer\nfunction Decode (fPort, bytes, variables) \n{\n  var result = {\n    status_decode: false,\n    raw: bytes\n  };\n  if( fPort === 10 )\n  {\n    var offset = 0;\n    setpowerInformation(bytes,offset,result);\n    offset++;\n    setProtocolInformation(bytes,offset,result);\n    offset++;\n    if( result.is_sn ) \n    {\n      result.sn = toUInt32LE(bytes,offset);\n      offset += 4;\n    }\n    if( result.is_payload_size )\n    {\n      result.payload_size = toUInt16LE(bytes,offset);\n      offset += 2;\n    }\n    delete result.is_sn;\n    delete result.is_payload_size;\n    //var ts = new Date();\n    //result.server_isotime = ts.toISOString();\n    //result.server_unixtime = Math.floor(ts.getTime()/1000);\n    parseFrames(bytes,offset,result);\n    if( !!result.error == false) result.status_decode = true;\n  }\n  return result;\n}\n//-----------------------------------------------------\n// Frame type parser\n//-----------------------------------------------------\nfunction parseFrames(buf,offset,obj) \n{\n  if( buf[offset] === undefined || buf[offset+1] === undefined ) return;\n  var frameHeader = buf[offset] | ( buf[ offset+1 ] << 8 );\n  var MASK_TYPE_FRAME   = 0x0fff; //0b0000111111111111\n  var MASK_REASON_FRAME = 0xf000; //0b1111000000000000\n  var typeFrame   = ( frameHeader & MASK_TYPE_FRAME )   >> 0;\n  var reasonFrame = ( frameHeader & MASK_REASON_FRAME ) >> 12;\n  offset +=2;\n  if(obj.frames === undefined) obj.frames = [];\n\n  if ( typeFrame == 0x00 ) parseFramesDeviceInfo(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x03 ) parseFramesGNSS(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x04 ) parseFramesWiFiGeo(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x05 ) parseFramesMotionActivity(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x06 ) parseFramesShock(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x07 ) parseFramesWasteSensor(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x08 ) parseFramesModbus(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x09 ) parseFramesIBeacon(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x0A ) parseFrames4_20mA(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x0B ) parseFramesDigitalInput(buf,offset,obj,reasonFrame); \n  else if ( typeFrame == 0x0C ) parseFramesAnalogInput(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x0D ) parseFramesPulseCounter(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x0E ) parseFramesLbsGeo(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x10 ) parseFramesRs485(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x11 ) parseFramesSOS(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x12 ) parseFramesTurn(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x13 ) parseFramesMovement(buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x14 ) parseFramesIMU(buf,offset,obj,reasonFrame); \n\n  else if ( typeFrame == 0x15 ) parseFramesODK(buf,offset,obj,reasonFrame); \n // else if ( typeFrame == 0x16 ) parseFramesMBUS(buf,offset,obj,reasonFrame); \n  else if ( typeFrame == 0x17 ) parseFramesModernState(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x18 ) parseFramesHumidity(buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x19 ) parseFramesIlluminance (buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x20 ) parseFramesAcceleration (buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x21 ) parseFramesGuard (buf,offset,obj,reasonFrame);\n  else if ( typeFrame == 0x22 ) parseFramesInclination  (buf,offset,obj,reasonFrame);\n\n  else if ( typeFrame == 0x0f ) parseFramestemperature(buf,offset,obj,reasonFrame);\n  else unknownFrame(obj,typeFrame,offset-2);\n}\n//-----------------------------------------------------\n// Frame parsers\n//-----------------------------------------------------\nfunction unknownFrame(obj,type,offset)\n{\n  obj.error = 'unknown_frame';\n  obj.error_debug_info = 'type='+type+'|offset='+offset;\n}\nfunction parseFramesIMU(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'IMU';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n\n  frame.roll = toInt16LE(buf,offset);\n  offset += 2;\n  frame.pith = toInt16LE(buf,offset);\n  offset += 2;\n  frame.yaw = toInt16LE(buf,offset);\n  offset += 2;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesDeviceInfo(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'device_info';\n  if( reason == 0x00 ) frame.reason = 'boot';\n  else if( reason == 0x01 ) frame.reason = 'result_request';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.model_id = toUInt16LE(buf, offset);\n  frame.model_name = getModelNameById(frame.model_id);\n  offset += 2;\n  setDeviceFirmwareVersion(buf[offset],frame);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesODK(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'ODK';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.channel_number = toUInt8(buf,offset);\n  offset++;\n  if( buf[offset] === 0x00 ) frame.state = 'NORMAL1';\n  else if( buf[offset] === 0x01 ) frame.state = 'NORMAL2';\n  else if( buf[offset] === 0x02 ) frame.state = 'NORMAL3';\n  else if( buf[offset] === 0x03 ) frame.state = 'NORMAL4';\n  else if( buf[offset] === 0x04 ) frame.state = 'NORMAL5';\n  else if( buf[offset] === 0x05 ) frame.state = 'WET';\n  else if( buf[offset] === 0x06 ) frame.state = 'BREAK';\n  else if( buf[offset] === 0x07 ) frame.state = 'WET_BREAK';\n  else if( buf[offset] === 0x08 ) frame.state = 'UNKNOWN';\n  else frame.state = 'unknown';\n  offset++;\n  frame.current_resistance = toUInt32LE(buf,offset);\n  offset += 4;\n  frame.min_resistance = toUInt32LE(buf,offset);\n  offset += 4;\n  frame.max_resistance = toUInt32LE(buf,offset);\n  offset += 4;\n  frame.middle_resistance = toUInt32LE(buf,offset);\n  offset += 4;\n  frame.current_conduct_resistance = toUInt32LE(buf,offset);\n  offset += 4;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesModernState(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'modern_state';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n\n  frame.iccid = toASCII(buf,offset,20);\n  offset += 20;\n  frame.rssi = toInt16LE(buf,offset);\n  offset += 2;\n  frame.iccid = toASCII(buf,offset,15);\n  offset += 15;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesHumidity(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'humidity';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.humidity_pct = toUInt16LE(buf,offset);\n  if( frame.humidity_pct > 1000 || frame.humidity_pct < 0 ) frame.humidity_pct= 'unknown';\n  else frame.humidity_pct = frame.humidity_pct/10;\n  offset += 2;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesIlluminance(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'illuminance';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.illuminance_lex = toUInt16LE(buf,offset);\n  offset += 2;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesAcceleration(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'acceleration';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.x_mG = toInt16LE(buf,offset);\n  offset += 2;\n  frame.y_mG = toInt16LE(buf,offset);\n  offset += 2;\n  frame.z_mG = toInt16LE(buf,offset);\n  offset += 2;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesWasteSensor(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'waste_sensor';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'waste_flush';\n  else if( reason == 0x02 ) frame.reason = 'temperature_alarm';\n  else if( reason == 0x03 ) frame.reason = 'open_alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  if( buf[offset] == 0x00 ) frame.position = 'horizontally';\n  else if( buf[offset] == 0x01 ) frame.position = 'vertically';\n  else frame.position = 'unknown';\n  offset++;\n  frame.distance_upper_sensor_cm = toUInt16LE(buf, offset);\n  if( frame.distance_upper_sensor_cm < 0 || frame.distance_upper_sensor_cm > 300 ) frame.distance_upper_sensor_cm = 'unknown';\n  offset += 2;\n  frame.distance_side_sensor_cm = toUInt16LE(buf, offset);\n  if( frame.distance_side_sensor_cm < 0 || frame.distance_side_sensor_cm > 300 ) frame.distance_side_sensor_cm = 'unknown';\n  offset += 2;\n  frame.temperature_cel = toInt8(buf, offset);\n  offset++;\n  frame.waste_pct = toUInt8(buf, offset);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesRs485(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'rs485';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.measurement_row_number = toUInt8(buf,offset);\n  offset++;\n  frame.command_number_row = toUInt8(buf,offset);\n  offset++;\n  frame.size_answer = toUInt8(buf,offset);\n  offset++;\n  frame.answer = toHex(buf,offset,frame.size_answer);\n  offset += frame.size_answer;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesModbus(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'modbus';\n\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.name = toASCII(buf,offset,8);\n  offset += 8;\n  frame.slave_address = toUInt8(buf,offset);\n  offset++;\n  frame.register_address = toUInt16LE(buf,offset);\n  offset += 2;\n  frame.modbus_function = getNameModbusFunction(buf[offset]);\n  offset++;\n  frame.register_counter = toUInt8(buf,offset);\n  if( frame.register_counter < 0 || frame.register_counter > 0x04 ) frame.register_counter = 'unknown'; \n  offset++;\n  if( buf[offset] === 0x00 ) frame.signed_flag = 'unsigned';\n  else if( buf[offset] === 0x01 ) frame.signed_flag = 'signed';\n  else frame.signed_flag = 'unknown';\n  offset++;\n  frame.register_value = toHex(buf,offset,8);\n  offset += 8;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesTurn(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'turn';\n  if( reason == 0x01 ) frame.reason = 'turn_detect';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesGuard(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'guard';\n  if( reason == 0x00 ) frame.reason = 'normal';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.pin_number = toUInt8(buf,offset);\n  offset++;\n  frame.pin_status = toUInt8(buf,offset);\n  offset++;\n  if(frame.pin_status===1) frame.pin_status = 'open';\n  else if(frame.pin_status===0) frame.pin_status = 'close';\n  else frame.pin_status = 'unknown';\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesInclination(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'inclination';\n  if( reason == 0x00 ) frame.reason = 'normal';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n\n  frame.x_axis_angle_pct = toUInt16LE(buf, offset) / 10;\n  offset += 2;\n  frame.y_axis_angle_pct = toUInt16LE(buf, offset) / 10;\n  offset += 2;\n  frame.z_axis_angle_pct = toUInt16LE(buf, offset) / 10;\n  offset += 2;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramestemperature(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'temperature';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n\n  frame.number_sensor = toUInt8(buf,offset);\n  offset++; \n\n  frame.temperature_cel = toInt16LE(buf,offset)/10;\n  offset += 2;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesMovement(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'movement';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  var isMovement = toUInt8(buf,offset);\n\n  if(isMovement === 0) frame.is_movement = false;\n  else if(isMovement === 1) frame.is_movement = true;\n  else  frame.is_movement = 'unknown';\n  offset++;\n\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesSOS(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'sos';\n  if( reason == 0x01 ) frame.reason = 'sos_1_detect';\n  else if( reason == 0x02 ) frame.reason = 'sos_2_detect';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesShock(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'shock';\n  if( reason == 0x01 ) frame.reason = 'shock_detect';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesMotionActivity(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'motion_activity';\n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'shock_detect';\n  else if( reason == 0x02 ) frame.reason = 'stop_movement';\n  else if( reason == 0x03 ) frame.reason = 'start_movement';\n  else frame.reason = 'unknown';\n\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.period_duration_min = toUInt8(buf,offset);\n  offset++;\n  frame.avg_index = toUInt8(buf,offset);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesIBeacon(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'ibeacon'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.ibeacons_list = [];\n\n  var major1 = toUInt16LE(buf, offset);\n  offset += 2;\n  var minor1 = toUInt16LE(buf, offset);\n  offset += 2;\n  var rssi1 = toInt8(buf, offset);\n  offset++;\n  var major2 = toUInt16LE(buf, offset);\n  offset += 2;\n  var minor2 = toUInt16LE(buf, offset);\n  offset += 2;\n  var rssi2 = toInt8(buf, offset);\n  offset++;\n  var major3 = toUInt16LE(buf, offset);\n  offset += 2;\n  var minor3 = toUInt16LE(buf, offset);\n  offset += 2;\n  var rssi3 = toInt8(buf, offset);\n  offset++;\n\n  if( validIBeacon(major1,minor1,rssi1) ) frame.ibeacons_list.push({\n    major: major1,\n    minor: minor1,\n    rssi: rssi1\n  });\n  if( validIBeacon(major2,minor2,rssi2) ) frame.ibeacons_list.push({\n    major: major2,\n    minor: minor2,\n    rssi: rssi2\n  });\n  if( validIBeacon(major3,minor3,rssi3) ) frame.ibeacons_list.push({\n    major: major3,\n    minor: minor3,\n    rssi: rssi3\n  });\n\n  setOldIBeaconByte(buf[offset],frame);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFrames4_20mA(buf,offset,obj,reason) \n{\n  var frame = {};\n  frame.type = '4_20mA'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n\n  frame.number_sensor = toUInt8(buf,offset);\n  offset++;\n\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.mA = toUInt32LE(buf,offset);\n  offset += 4;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesDigitalInput(buf,offset,obj,reason) \n{\n  var frame = {};\n  frame.type = 'digital_input'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.pin_number = toUInt8(buf,offset);\n  offset++;\n  if( buf[offset] === 0x00 ) frame.pin_state = 'low';\n  else if( buf[offset] === 0x01 ) frame.pin_state = 'high';\n  else frame.pin_state = 'unknown';\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesAnalogInput(buf,offset,obj,reason)  \n{\n  var frame = {};\n  frame.type = 'analog_input'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'alarm';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.pin_number = toUInt8(buf,offset);\n  offset++;\n  frame.mV = toUInt32LE(buf,offset);\n  offset += 4;\n  if( buf[offset] === 0x00 ) frame.input_status = 'ok';\n  else if( buf[offset] === 0x01 ) frame.input_status = 'overvoltage';\n  else if( buf[offset] === 0x02 ) frame.input_status = 'no_sensor';\n  else if( buf[offset] === 0x03 ) frame.input_status = 'input_error';\n  else frame.input_status = 'unknown';\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesPulseCounter(buf,offset,obj,reason)  \n{\n  var frame = {};\n  frame.type = 'pulse_counter'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.pin_number = toUInt8(buf,offset);\n  offset++;\n  frame.counter = toUInt32LE(buf,offset);\n  offset += 4;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesLbsGeo(buf,offset,obj,reason)  \n{\n  var frame = {};\n  frame.type = 'lbs_geolocation'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  \n  var mcc1 = toUInt16LE(buf,offset);\n  offset += 2;\n  var mnc1 = toUInt16LE(buf,offset);\n  offset += 2;\n  var lac1 = toUInt16LE(buf,offset);\n  offset += 2;\n  var cellid1 = toUInt32LE(buf,offset);\n  offset += 4;\n  var power1 = toInt16LE(buf,offset);\n  offset += 2;\n\n  var mcc2 = toUInt16LE(buf,offset);\n  offset += 2;\n  var mnc2 = toUInt16LE(buf,offset);\n  offset += 2;\n  var lac2 = toUInt16LE(buf,offset);\n  offset += 2;\n  var cellid2 = toUInt32LE(buf,offset);\n  offset += 4;\n  var power2 = toInt16LE(buf,offset);\n  offset += 2;\n\n  var mcc3 = toUInt16LE(buf,offset);\n  offset += 2;\n  var mnc3 = toUInt16LE(buf,offset);\n  offset += 2;\n  var lac3 = toUInt16LE(buf,offset);\n  offset += 2;\n  var cellid3 = toUInt32LE(buf,offset);\n  offset += 4;\n  var power3 = toInt16LE(buf,offset);\n  offset += 2;\n  if( validLbsData(mcc1,mnc1,lac1,cellid1,power1) ) frame.lbs_list.push({\n    mcc: mcc1,\n    mnc: mnc1,\n    lac: lac1,\n    cellid: cellid1,\n    power_dBm: power1\n  });\n  if( validLbsData(mcc2,mnc2,lac2,cellid2,power2) ) frame.lbs_list.push({\n    mcc: mcc2,\n    mnc: mnc2,\n    lac: lac2,\n    cellid: cellid2,\n    power_dBm: power2\n  });\n  if( validLbsData(mcc3,mnc3,lac3,cellid3,power3) ) frame.lbs_list.push({\n    mcc: mcc3,\n    mnc: mnc3,\n    lac: lac3,\n    cellid: cellid3,\n    power_dBm: power3\n  });\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\n\nfunction parseFramesWiFiGeo(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'wifi'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'change_mode';\n  else if( reason == 0x03 ) frame.reason = 'result_request';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n  frame.wifi_ap_list = [];\n  var bssid1 = buf.slice(offset,offset+6);\n  var mac1 = toMac(bssid1);\n  offset += 6;\n  var rssi1 = toInt8(buf,offset);\n  offset++;\n  \n  var bssid2 = buf.slice(offset,offset+6);\n  var mac2 = toMac(bssid2);\n  offset += 6;\n  var rssi2 = toInt8(buf,offset);\n  offset++;\n  \n  var bssid3 = buf.slice(offset,offset+6);\n  var mac3 = toMac(bssid3);\n  offset += 6;\n  var rssi3 = toInt8(buf,offset);\n  offset++;\n  \n  setOldWiFiGeoByte(buf[offset],frame);\n\n  if ( validBssid(bssid1) ) frame.wifi_ap_list.push({\n    mac: mac1,\n    rssi: rssi1,\n    is_home_network: frame.is_home_network_1\n  });\n  if ( validBssid(bssid2) ) frame.wifi_ap_list.push({\n    mac: mac2,\n    rssi: rssi2,\n    is_home_network: frame.is_home_network_2\n  });\n  if ( validBssid(bssid3) ) frame.wifi_ap_list.push({\n    mac: mac3,\n    rssi: rssi3,\n    is_home_network: frame.is_home_network_3\n  });\n\n  delete frame.is_home_network_1;\n  delete frame.is_home_network_2;\n  delete frame.is_home_network_3;\n\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj);\n}\nfunction parseFramesGNSS(buf,offset,obj,reason)\n{\n  var frame = {};\n  frame.type = 'gnss'; \n  if( reason == 0x00 ) frame.reason = 'regular';\n  else if( reason == 0x01 ) frame.reason = 'change_mode';\n  else if( reason == 0x03 ) frame.reason = 'result_request';\n  else frame.reason = 'unknown';\n  frame.frame_unixtime = toUInt32LE(buf,offset);\n  frame.frame_isotime = new Date(frame.frame_unixtime*1000).toISOString();\n  offset += 4;\n\n  frame.lat = toIntLE(buf,offset,4) / 100000;\n  offset += 4;\n  frame.lon = toIntLE(buf,offset,4) / 100000;\n  offset += 4;\n  frame.alt = toUInt16LE(buf,offset);\n  offset += 2;\n  frame.speed_kmh = toUInt16LE(buf,offset);\n  offset += 2;\n  frame.hdop = toUInt8(buf,offset) / 10;\n  offset++;\n  setOldGnssByte(buf[offset],frame);\n  offset++;\n  obj.frames.push(frame);\n  parseFrames(buf,offset,obj); \n}\n//-----------------------------------------------------\n// Converters\n//-----------------------------------------------------\nfunction hexToBuffer( hex )\n{\n  var buffer=[];\n  for ( var i = 0; i < hex.length - 1; i = i + 2 )\n  {\n     var item = hex.substring( i, i + 2 );\n     var value = parseInt(item,16);\n     if(isNaN(value)) return false;\n     buffer.push( value );\n  }\n  return buffer;\n}\nfunction toInt8 (buf, offset) {\n  offset = offset >>> 0;\n  if (!(buf[offset] & 0x80)) return (buf[offset]);\n  return ((0xff - buf[offset] + 1) * -1);\n} \nfunction to32Real(bytes)\n{\n    var bits = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | (bytes[3]);\n    var sign = ((bits >>> 31) == 0) ? 1.0 : -1.0;\n    var e = ((bits >>> 23) & 0xff);\n    var m = (e == 0) ? (bits & 0x7fffff) << 1 : (bits & 0x7fffff) | 0x800000;\n    var f = sign * m * Math.pow(2, e - 150);\n    return f;\n}\nfunction toUInt8 (buf, offset) \n{\n  offset = offset >>> 0;\n  return (buf[offset]);\n}\nfunction toMac(arr)\n{\n  var res = '';\n  for ( var i = 0; i<arr.length; i++ )\n  {\n    var byte = arr[i].toString(16);\n    if( byte.length < 2 ) byte = '0'+byte;\n    if(i==0) res += byte;\n    else res += ':'+byte;\n  }\n  return res;\n}\nfunction toUInt16LE (buf, offset) \n{\n  offset = offset >>> 0;\n  return  buf[offset] | \n        ( buf[offset + 1] << 8 );\n}\n\nfunction toInt16LE (buf, offset) \n{\n    offset = offset >>> 0;\n    var val = buf[offset] | (buf[offset + 1] << 8);\n    return (val & 0x8000) ? val | 0xFFFF0000 : val;\n}\nfunction toUInt32LE (buf, offset) \n{\n  offset = offset >>> 0;\n  return ((buf[offset]) |\n          (buf[offset + 1] << 8) |\n          (buf[offset + 2] << 16)) +\n          (buf[offset + 3] * 0x1000000);\n}\nfunction toBcdLE (buf) \n{\n  //v_2\n  var MASK_1 = 0xf0; //0b11110000\n  var MASK_2 = 0x0f; //0b00001111\n  var z = 0;\n  var res = 0;\n  for( var i = 0; i < buf.length; i++ )\n  {\n    var t1 = ( buf[i] & MASK_1 ) >> 4;\n    var t2 = ( buf[i] & MASK_2 ) >> 0;\n    res += t2*Math.pow(10,z);\n    z++;\n    res += t1*Math.pow(10,z);\n    z++;\n  }\n  return res;\n}\nfunction toIntLE (buf, offset, length) \n{\n  offset = offset >>> 0;\n  length = length >>> 0;\n\n  var result = buf[offset];\n  var i = 0;\n  var mul = 1;\n  \n  while ( ++i < length && (mul *= 0x100) ) \n  {\n    var byte = buf[offset + i];\n    result += byte * mul;\n  }\n  \n  mul *= 0x80;\n  \n  if (result >= mul) \n  {\n    result -= Math.pow(2, 8 * length);\n  }\n\n  return result;\n}\nfunction toASCII(buf,offset,countByte)\n{\n  offset = offset >>> 0;\n  countByte = countByte >>> 0;\n  var result = '';\n  for (var i = offset; i < (offset+countByte); i++ )\n  {\n    result+=String.fromCharCode(buf[i]);\n  }\n  return result;\n}\nfunction toHex(buf,offset,countByte)\n{\n  offset = offset >>> 0;\n  countByte = countByte >>> 0;\n  var result = '';\n  for (var i = offset; i < (offset+countByte); i++ )\n  {\n    var byte = buf[i].toString(16);\n    if( byte.length == 1 ) byte = '0'+byte;\n    result = byte + result ;\n  }\n  return result;\n}\n//-----------------------------------------------------\n// Auxiliaries Functions\n//-----------------------------------------------------\nfunction setpowerInformation(buf,offset,obj)\n{\n    var MASK_TYPE_POWER     = 0x01; //0b00000001\n    var MASK_BATTERY_CHARGE = 0xfe; //0b11111110\n    var type_power = ( buf[offset] & MASK_TYPE_POWER ) >> 0;\n    if( type_power === 0 ) \n    {\n        obj.type_power = 'battery';\n    }\n    else \n    {\n        obj.type_power = 'external';\n    }\n    var charge = ( buf[offset] & MASK_BATTERY_CHARGE ) >> 1;\n    if( charge >= 0 )\n    {\n        obj.battery_pct = charge;\n    }\n}\nfunction setProtocolInformation(buf,offset,obj) \n{\n    var MASK_SI_SN              = 0x01; //0b00000001\n    var MASK_VERSION_W_PROTOCOL = 0x0e; //0b00001110\n    var MASK_IS_PAYLOAD_SIZE    = 0x10; //0b00010000\n    var MASK_RFU                = 0xe0; //0b11100000\n    var isSN             = ( buf[offset] & MASK_SI_SN )              >> 0;\n    var versionWProtocol = ( buf[offset] & MASK_VERSION_W_PROTOCOL ) >> 1;\n    var isPayloadSize    = ( buf[offset] & MASK_IS_PAYLOAD_SIZE )    >> 4;\n    var rfu              = ( buf[offset] & MASK_RFU )                >> 5;\n    obj.is_sn = !!isSN;\n    obj.version_protocol = versionWProtocol;\n    obj.is_payload_size = !!isPayloadSize;\n    // obj.rfu = rfu;\n}\nfunction setOldWiFiGeoByte(byte,obj)\n{\n  var MASK_RFU              = 0x0f; //0b00001111 \n  var MASK_MOVEMENT         = 0x10; //0b00010000\n  var MASK_IS_HOME_NETWORK1 = 0x20; //0b00100000\n  var MASK_IS_HOME_NETWORK2 = 0x40; //0b01000000\n  var MASK_IS_HOME_NETWORK3 = 0x80; //0b10000000\n  \n  var rfu            = ( byte & MASK_RFU )              >> 0;\n  var movement       = ( byte & MASK_MOVEMENT )         >> 4;\n  var isHomeNetwork1 = ( byte & MASK_IS_HOME_NETWORK1 ) >> 5;\n  var isHomeNetwork2 = ( byte & MASK_IS_HOME_NETWORK2 ) >> 6;\n  var isHomeNetwork3 = ( byte & MASK_IS_HOME_NETWORK3 ) >> 7;\n\n  // obj.rfu = rfu;\n  obj.in_movement = !!movement;\n  obj.is_home_network_1 = !!isHomeNetwork1;\n  obj.is_home_network_2 = !!isHomeNetwork2;\n  obj.is_home_network_3 = !!isHomeNetwork3;\n  \n}\nfunction setOldGnssByte(byte,obj)\n{\n  var MASK_USED_SATELLITES   = 0x1f; //0b00011111\n  var MASK_INSIDE_GEOFENCE_1 = 0x20; //0b00100000\n  var MASK_INSIDE_GEOFENCE_2 = 0x40; //0b01000000\n  var MASK_MOVEMENT          = 0x80; //0b10000000\n  var usedSattellites = ( byte & MASK_USED_SATELLITES )   >> 0;\n  var insideGeofence1 = ( byte & MASK_INSIDE_GEOFENCE_1 ) >> 5;\n  var insideGeofence2 = ( byte & MASK_INSIDE_GEOFENCE_2 ) >> 6;\n  var movement        = ( byte & MASK_MOVEMENT )          >> 7;\n  obj.used_sat = usedSattellites;\n  obj.geofence1 = !!insideGeofence1?'inside':'outside';\n  obj.geofence2 = !!insideGeofence2?'inside':'outside';\n  obj.in_movement = !!movement;\n}\nfunction setDeviceFirmwareVersion(byte,obj)\n{\n  var MASK_MAJOR = 0x0f; //0b00001111\n  var MASK_MINOR = 0xf0; //0b11110000\n  var major = ( byte & MASK_MAJOR ) >> 0;\n  var minor = ( byte & MASK_MINOR ) >> 4;\n  obj.version = major+'.'+minor;\n}\nfunction setOldIBeaconByte(byte,obj)\n{\n  var MASK_RFU      = 0x7f; //0b01111111\n  var MASK_MOVEMENT = 0x80; //0b10000000\n  var rfu      = ( byte & MASK_RFU )      >> 0;\n  var movement = ( byte & MASK_MOVEMENT ) >> 7;\n  obj.in_movement = !!movement;\n  // obj.rfu = rfu;\n}\nfunction getNameModbusFunction(id)\n{\n  if( id == 0x00 ) return 'read_coil_status';\n  else if( id == 0x01 ) return 'read_discrete_inputs';\n  else if( id == 0x02 ) return 'read_hlding_registers';\n  else if( id == 0x03 ) return 'input_registers';\n  else return 'unknown';\n} \nfunction getModelNameById(id)\n{\n  id = parseInt(id);\n  if( id === 1 ) return 'Airbit light controller';\n  else if( id === 200 ) return 'IXOCAT-LW-FULL';\t\n  else if( id === 201 ) return 'IXOCAT-LW-LIGHT';\t\n  else if( id === 3 ) return 'Betar LoRaWAN water meter LC';\t\n  else if( id === 4 ) return 'Betar Nb-IoT water meter LC';\t\n  else if( id === 500 ) return 'IXOCAT-NB-FULL';\t\n  else if( id === 501 ) return 'IXOCAT-NB-LIGHT';\t\n  else if( id === 7 ) return 'ERTX-L01';\t\n  else if( id === 8 ) return 'Construtag';\t\n  else if( id === 9 ) return 'MTBO-01-Nb';\t\n  else if( id === 10 ) return 'TaigaBikeTracker';\t\n  else if( id === 11 ) return 'MTBO-01-2G';\t\n  else if( id === 12 ) return 'SST_GAS_radio_module';\t\n  else if( id === 13 ) return 'NbIoT Button';\t\n  else if( id === 14 ) return 'МКРС-02';\t\n  else if( id === 15 ) return 'BS controller';\t\n  else if( id === 16 ) return 'Airbit light controller NbIoT';\t\n  else if( id === 17 ) return 'IoT node';\t\n  else if( id === 18 ) return 'NIS_METER';\t\n  else if( id === 19 ) return 'RoadsignTracker-LW-FULL';\t\n  else if( id === 21 ) return 'Stels Smoke Sensor';\t\n  else if( id === 22 ) return 'Betar LoRaWAN water meter HALL';\t\n  else if( id === 23 ) return 'Betar Nb-IoT water meter HALL';\t\n  else if( id === 24 ) return 'NodeG';\t\n  else if( id === 25 ) return 'TaigaTracker LoRaWAN';\t\n  else if( id === 26 ) return 'TaigaTracker Nb-IoT';\t\n  else if( id === 27 ) return 'TaigaBeacon';\t\n  else if( id === 28 ) return 'ERTX-ODK-2CH';\t\n  else if( id === 29 ) return 'ERTX crypto kit';\t\n  else if( id === 30 ) return 'TaigaPersonalTracker LW';\t\n  else if( id === 31 ) return 'TaigaPersonalTracker NB';\t\n  else if( id === 32 ) return 'TaigaPersonalTracker 2G';\t\n  else if( id === 33 ) return 'TaigaNode Lw';\t\n  else if( id === 34 ) return 'TaigaNode Nb';\t\n  else if( id === 35 ) return 'TaigaTracker2G';\t\n  else if( id === 36 ) return 'AirbitSensorHub-LW';\t\n  else if( id === 37 ) return 'AuroraNodeODK';\t\n  else if( id === 38 ) return 'TaigaBigTracker';\t\n  else if( id === 39 ) return 'NhrsPersonalTracker';\t\n  else if( id === 40 ) return 'WasteSensor-UKS';\t\n  else if( id === 41 ) return 'TaigaBikeTrackerE';\t\n  else if( id === 42 ) return 'ClickButton';\t\n  else if( id === 43 ) return 'FannaConcentrator';\t\n  else if( id === 44 ) return 'MyLogger';\t\n  else if( id === 45 ) return 'TaigaCartTracker';\t\n  else if( id === 46 ) return 'NtmPulseNB';\t\n  else if( id === 47 ) return 'SoftControl-Pass';\t\n  else if( id === 48 ) return 'TempButton';\t\n  else if( id === 49 ) return 'Uveos';\t\n  else if( id === 50 ) return 'McsmPulseNB';\t\n  else if( id === 51 ) return 'FannaConcentrator IN PWR';\t\n  else if( id === 52 ) return 'AuroraNodeOdkBoard';\t\n  else if( id === 53 ) return 'Siltrack V1 EXT ANT';\t\n  else if( id === 54 ) return 'RaceAnalyse';\t\n  else if( id === 55 ) return 'MaximaContainerTracker';\t\n  else if( id === 56 ) return 'FannaEframe';\t\n  else if( id === 57 ) return 'MaximaWasteSensorV2';\t\n  else if( id === 58 ) return 'Module SGMB-USPD-NB-1';\t\n  else if( id === 59 ) return 'AuroraNodeLTE';\t\n  else if( id === 60 ) return 'AuroraNodeNB';\t\n  else if( id === 61 ) return 'AuroraNodeETH';\t\n  else if( id === 62 ) return 'TaigaPulseCounterNb';\t\n  else if( id === 63 ) return 'FannaAnchor';\t\n  else if( id === 64 ) return 'AuroraNodeExtBoards';\t\n  else if( id === 65 ) return 'TaigaPersonalTracker LW_without GNSS';\t\n  else if( id === 66 ) return 'TaigaPersonalTracker NB_without GNSS';\t\n  else if( id === 67 ) return 'AuroraNodeGTS';\t\n  else if( id === 68 ) return 'TetronTrackerLight';\t\n  else if( id === 69 ) return 'SGMB-NB-2G';\t\n  else if( id === 70 ) return 'TaigaPulseCounterLW';\n  else if( id === 71 ) return 'AnalogPCBBoard';\t\n  else if( id === 75 ) return 'ErtxTermologgerNb';\t\n  else return 'unknown';\n}\n\nfunction validIBeacon( major, minor, rssi )\n{\n  if( major < 0 || major > 65535 ) return false;\n  if( minor < 0 || minor > 65535 ) return false;\n  if( rssi < -128 || rssi > 0 ) return false;\n  return true;\n}\nfunction validLbsData(mcc,mnc,lac,cellid,power)\n{\n  if( mcc < 0 || mcc > 65535 ) return false;\n  if( mnc < 0 || mnc > 65535 ) return false;\n  if( lac < 0 || lac > 65535 ) return false;\n  if( cellid < 0 || cellid > 0xFFFFFFFF ) return false;\n  if( power < -32768 || power > 32768 ) return false;\n  return true;\n}\nfunction validBssid(buf)\n{\n  var count00 = 0;\n  var countFF = 0;\n  for(var i = 0 ; i < buf.length; i++ )\n  {\n    if( buf[i] !== 0x00 && buf[i] !== 0xff ) break;\n    else if( buf[i] === 0x00 ) count00++;\n    else if( buf[i] === 0xff ) countFF++;\n  }\n  if( count00 === buf.length ) return false;\n  else if( countFF === buf.length ) return false;\n  else return true;\n}\n\n/*************************************************** */\n\nfunction decodeUplink(input) {\n    let data = {};\n    let error = {};\n    let errors = [];\n    let buffer = input.bytes;\n  \n    if(buffer !== false && buffer.length>0)\n    {\n    data = Decode(10,buffer); \n    delete data.raw;\n  \n    if (data && data.error !== undefined){\n        error.error_type = data.error;\n        delete data.error;\n        error.debug_info = data.error_debug_info;\n        delete data.error_debug_info;\n        errors.push(error);\n    }\n    \n  \n  }\n  \n  return {\n  data,\n  warnings: [],\n  errors : errors\n  };\n};",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "color": "#f0e924",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "battery_pct",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Power Type"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold;\">\n  <span ng-if=\"value.type_power === 'battery'\" style=\"color:#f39c12;\">🔋 Battery</span>\n  <span ng-if=\"value.type_power === 'external'\" style=\"color:#27ae60;\">⚡ External</span>\n  <span ng-if=\"!value.type_power\" style=\"color:#95a5a6;\">Unknown</span>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "type_power",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Power Type",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Status"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; padding:10px; font-size:14px;\">\n  <div><strong>Protocol Version:</strong> {{ value.version_protocol || 'N/A' }}</div>\n  <div><strong>Decode Status:</strong> <span ng-style=\"{color: value.status_decode ? '#27ae60' : '#e74c3c'}\">{{ value.status_decode ? 'Success' : 'Failed' }}</span></div>\n  <div ng-if=\"value.sn\"><strong>Serial Number:</strong> {{ value.sn }}</div>\n  <div ng-if=\"value.payload_size\"><strong>Payload Size:</strong> {{ value.payload_size }} bytes</div>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "version_protocol",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Protocol Version",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "status_decode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "sn",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Serial",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "payload_size",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Payload Size",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Metering Frames"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Frame Type</th>\n        <th>Reason</th>\n        <th>Data</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames && entry.frames.length > 0\">\n        <td colspan=\"4\" style=\"padding:0;\">\n          <table class=\"table table-condensed\" style=\"margin:0;\">\n            <tr ng-repeat=\"frame in entry.frames\">\n              <td style=\"width:25%;\">{{ frame.frame_isotime || entry.ts | date:'medium' }}</td>\n              <td style=\"width:20%;\"><span class=\"label\" ng-style=\"{'background-color': getFrameColor(frame.type)}\">{{ frame.type }}</span></td>\n              <td style=\"width:20%;\">{{ frame.reason }}</td>\n              <td style=\"width:35%;\">\n                <span ng-if=\"frame.temperature_cel !== undefined\">Temp: {{ frame.temperature_cel }}°C</span>\n                <span ng-if=\"frame.humidity_pct !== undefined\">Humidity: {{ frame.humidity_pct }}%</span>\n                <span ng-if=\"frame.counter !== undefined\">Counter: {{ frame.counter }}</span>\n                <span ng-if=\"frame.mA !== undefined\">Current: {{ frame.mA }}mA</span>\n                <span ng-if=\"frame.mV !== undefined\">Voltage: {{ frame.mV }}mV</span>\n                <span ng-if=\"frame.register_value !== undefined\">Modbus: {{ frame.register_value }}</span>\n                <span ng-if=\"frame.answer !== undefined\">RS485: {{ frame.answer }}</span>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n<script>\n$scope.getFrameColor = function(type) {\n  var colors = {\n    'temperature': '#e74c3c',\n    'humidity': '#3498db',\n    'modbus': '#9b59b6',\n    'rs485': '#34495e',\n    'pulse_counter': '#16a085',\n    'analog_input': '#f39c12',\n    'digital_input': '#27ae60'\n  };\n  return colors[type] || '#95a5a6';\n};\n</script>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Temperature",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latest Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 100,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames[?(@.type=='temperature')].temperature_cel",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames[?(@.type=='temperature')].temperature_cel",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature Sensors"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Sensor #</th>\n        <th>Temperature</th>\n        <th>Time</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === 'temperature'\">\n          <td>{{ frame.number_sensor || 'N/A' }}</td>\n          <td>{{ frame.temperature_cel }}°C</td>\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Modbus/RS485",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Modbus Registers"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Name</th>\n        <th>Slave Addr</th>\n        <th>Register</th>\n        <th>Function</th>\n        <th>Value</th>\n        <th>Signed</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === 'modbus'\">\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n          <td>{{ frame.name }}</td>\n          <td>{{ frame.slave_address }}</td>\n          <td>{{ frame.register_address }}</td>\n          <td>{{ frame.modbus_function }}</td>\n          <td><code>{{ frame.register_value }}</code></td>\n          <td>{{ frame.signed_flag }}</td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "RS485 Messages"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Measurement Row</th>\n        <th>Command #</th>\n        <th>Size</th>\n        <th>Answer (Hex)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === 'rs485'\">\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n          <td>{{ frame.measurement_row_number }}</td>\n          <td>{{ frame.command_number_row }}</td>\n          <td>{{ frame.size_answer }} bytes</td>\n          <td><code>{{ frame.answer }}</code></td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Counters & Analog",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Pulse Counters"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Pin #</th>\n        <th>Counter Value</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === 'pulse_counter'\">\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n          <td>{{ frame.pin_number }}</td>\n          <td><strong>{{ frame.counter }}</strong></td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Analog Inputs"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Pin #</th>\n        <th>Voltage (mV)</th>\n        <th>Status</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === 'analog_input'\">\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n          <td>{{ frame.pin_number }}</td>\n          <td>{{ frame.mV }} mV</td>\n          <td><span class=\"label\" ng-class=\"{'label-success': frame.input_status === 'ok', 'label-danger': frame.input_status !== 'ok'}\">{{ frame.input_status }}</span></td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "4-20mA Sensors"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Time</th>\n        <th>Sensor #</th>\n        <th>Current (mA)</th>\n        <th>Reason</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\" ng-if=\"entry.frames\">\n        <tr ng-repeat=\"frame in entry.frames\" ng-if=\"frame.type === '4_20mA'\">\n          <td>{{ frame.frame_isotime | date:'short' }}</td>\n          <td>{{ frame.number_sensor }}</td>\n          <td><strong>{{ frame.mA }}</strong> mA</td>\n          <td><span class=\"label\" ng-class=\"{'label-warning': frame.reason === 'alarm', 'label-default': frame.reason === 'regular'}\">{{ frame.reason }}</span></td>\n        </tr>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "iot_factory_metering_node_data",
+                              "mapping": "frames",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "Frames",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
