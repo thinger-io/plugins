@@ -1,0 +1,7 @@
+site_name: plugins/devices/imbuildings-imbuildings-moodbox
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
