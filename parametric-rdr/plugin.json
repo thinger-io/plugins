@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Parametric RDR",
     "description": "The device reads NFC tags, stores the content together with a timestamp in an internal data buffer. The data is transmitted via a standard LoRaWAN network. The small and stylish device can be mounted on a wall or used as a table top device. The unit is po",
-    "image": "assets/rdr.png",
+    "image": "assets/RDR_nfc.png",
     "category": "devices",
     "vendor": "parametric"
   },
