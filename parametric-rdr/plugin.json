@@ -68,7 +68,7 @@
               "backend": "mongodb",
               "data": {
                 "payload": "{{payload}}",
-                "payload_function": "parseOrDecodeIncomingData",
+                "payload_function": "decodeThingerUplink",
                 "payload_type": "source_payload",
                 "resource": "uplink",
                 "source": "resource",
