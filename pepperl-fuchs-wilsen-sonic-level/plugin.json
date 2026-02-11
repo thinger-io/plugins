@@ -1,0 +1,680 @@
+{
+  "name": "pepperl_fuchs_wilsen_sonic_level",
+  "version": "1.0.0",
+  "description": "Wireless ultrasonic sensor with LoRaWAN interface",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "pepperl-fuchs-wilsen-sonic-level"
+  },
+  "metadata": {
+    "name": "Pepperl-Fuchs WILSEN-SONIC-LEVEL",
+    "description": "Wireless ultrasonic sensor with LoRaWAN interface",
+    "image": "assets/wilsen-sonic-level.jpg",
+    "category": "devices",
+    "vendor": "pepperl-fuchs"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Wireless ultrasonic sensor with LoRaWAN interface",
+        "enabled": true,
+        "name": "Pepperl-Fuchs WILSEN-SONIC-LEVEL",
+        "product": "pepperl_fuchs_wilsen_sonic_level",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "wilsen-sonic-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n'use strict';\r\n\r\nfunction decodeUplink(input) {\r\n    var hexStr = byte2HexString(input.bytes);\r\n    var obj = payloadParser(hexStr);\r\n\r\n    return {\r\n        data: obj,\r\n        warnings: [],\r\n        errors: []\r\n    };\r\n}\r\n\r\n/**\r\n * This is the function to create a payload object by decoding hex string\r\n * @param {String} hexStr\r\n * @return {Object}\r\n */\r\nfunction payloadParser(hexStr) {\r\n    const LoRaMessgeType = {\r\n        0: 'Unconfirmed',\r\n        1: 'Confirmed'\r\n    };\r\n    const SonicBeamWidth = {\r\n        254: 'Small',\r\n        253: 'Medium',\r\n        252: 'Wide',\r\n        55: 'User-defined',\r\n    };\r\n    const SonicBurstLength = {\r\n        5: 'Normal',\r\n        3: 'Short',\r\n        16: 'Very short',\r\n    };\r\n    const SonicTransmittingPower = {\r\n        63: 'High',\r\n        40: 'Medium',\r\n        12: 'Low'\r\n    };\r\n    const SonicSensitivity = {\r\n        63: 'Maximum',\r\n        51: 'Very high',\r\n        48: 'High',\r\n        38: 'Medium',\r\n        27: 'Low',\r\n        15: 'Minimum',\r\n    };\r\n    const SonicEvaluationMethod = {\r\n        1: 'Average value'\r\n    };\r\n    const SonicApplicationFilter = {\r\n        1: 'Container filling'\r\n    };\r\n    const ValveStatus = {\r\n        0: 'Closed',\r\n        1: 'Open',\r\n        2: 'Undefined',\r\n        3: 'Not connected',\r\n        7: 'Not inquired'\r\n    }\r\n    const SensorDetails = {\r\n        0: 'Low',\r\n        1: 'High',\r\n        7: 'Not inquired',\r\n        8: 'Short circuit',\r\n        9: 'Not connected',\r\n        10: 'Invalid current level',\r\n    }\r\n    const ValveOpenSignal = {\r\n        1: 'Sensor 1',\r\n        2: 'Sensor 2'\r\n    };\r\n    const ValveTriggerEventType = {\r\n        1: 'State change',\r\n        2: 'Valve open',\r\n        3: 'Valve closed',\r\n    };\r\n    const NodeOutputLogic = {\r\n        1: 'Normally open',\r\n        2: 'Normally closed'\r\n    };\r\n    const SensorStatus = {\r\n        0: 'No target detected',\r\n        1: 'Target detected',\r\n        7: 'Not inquired',\r\n        8: 'Short circuit',\r\n        9: 'Not connected',\r\n        10: 'Invalid current level',\r\n    }\r\n    const NodeTriggerEventType = {\r\n        1: 'State change',\r\n        2: 'Target detected',\r\n        3: 'No target detected',\r\n    };\r\n    const GPSAccuracyMode = {\r\n        1: 'Eco mode',\r\n        2: 'Precision mode',\r\n    };\r\n    var len;\r\n    var sID;\r\n    var obj = {};\r\n\r\n    obj.payload = hexStr;\r\n    for (var i = 0; i < hexStr.length; i = i + 2) {\r\n        len = parseInt(hexStr.substr(i, 2), 16);\r\n        sID = hexStr.substr(i + 2, 4);\r\n\r\n        if (sID == '0201') { // 'Temperature'\r\n            obj.temp = parseFloat(hex2float(hexStr.substr(i + 6, 8)).toFixed(1)); // float\r\n        }\r\n        else if (sID == '0B01') { // 'Proximity'\r\n            obj.proxx = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n        }\r\n        else if (sID == '0B02') { // 'Proximity in mm'\r\n            obj.proxx_mm = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n        }\r\n        else if (sID == '0B06') { // 'Fillinglevel'\r\n            obj.fillinglvl = parseInt(hexStr.substr(i + 6, 2), 16); // uint8\r\n        }\r\n        else if (sID == '0B07') { // 'Amplitude'\r\n            obj.amplitude = parseInt(hexStr.substr(i + 6, 2), 16); // uint8\r\n        }\r\n        else if (sID == '0B08') { // 'Water Body Level'\r\n            obj.water_body_level_mm = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n        }\r\n        else if (sID == '0C01') { // 'Valve'\r\n            obj.valve = parseInt(hexStr.substr(i + 6, 2), 16); // uint8\r\n            obj.valveChecksum = parseInt(hexStr.substr(i + 8, 2), 16); // uint8\r\n        }\r\n        else if (sID == '0C02') { // 'Valve Status'\r\n            obj.valve_status = parseInt(hexStr.substr(i + 6, 2), 16); // uint8\r\n            const valve1Status = obj.valve_status & 0x0F;\r\n            const valve2Status = (obj.valve_status >> 4) & 0x0F;\r\n            obj.valve_1_status = (ValveStatus[valve1Status] ? ValveStatus[valve1Status] : 'Invalid');\r\n            obj.valve_2_status = (ValveStatus[valve2Status] ? ValveStatus[valve2Status] : 'Invalid');\r\n        }\r\n        else if (sID == '0C03') { // 'Sensor Details'\r\n            obj.sensor_details = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n            const sensor1details = obj.sensor_details & 0x000F;\r\n            const sensor2details = (obj.sensor_details >> 4) & 0x000F;\r\n            const sensor3details = (obj.sensor_details >> 8) & 0x000F;\r\n            const sensor4details = (obj.sensor_details >> 12) & 0x000F;\r\n            obj.sensor_1_details = (SensorDetails[sensor1details] ? SensorDetails[sensor1details] : 'Invalid');\r\n            obj.sensor_2_details = (SensorDetails[sensor2details] ? SensorDetails[sensor2details] : 'Invalid');\r\n            obj.sensor_3_details = (SensorDetails[sensor3details] ? SensorDetails[sensor3details] : 'Invalid');\r\n            obj.sensor_4_details = (SensorDetails[sensor4details] ? SensorDetails[sensor4details] : 'Invalid');\r\n        }\r\n        else if (sID == '0C04') { // 'Sensor Status'\r\n            obj.sensor_status = parseInt(hexStr.substr(i + 6, 2), 16); // uint8\r\n            const sensor1Status = obj.sensor_status & 0x0F;\r\n            const sensor2Status = (obj.sensor_status >> 4) & 0x0F;\r\n            obj.sensor_1_status = (SensorStatus[sensor1Status] ? SensorStatus[sensor1Status] : 'Invalid');\r\n            obj.sensor_2_status = (SensorStatus[sensor2Status] ? SensorStatus[sensor2Status] : 'Invalid');\r\n        }\r\n        else if (sID == '2A25') { // 'Serial Number'\r\n            obj.serial_nr = hex2string(hexStr.substr(i + 6, 28));\r\n        }\r\n        else if (sID == '2A26') { // 'Serial Number - 6 bytes uint'\r\n            obj.serial_nr_uint = parseInt(hexStr.substr(i + 6, 12), 16); // uint24\r\n        }\r\n        else if (sID == '3101') { // 'LoRa Transmission Counter'\r\n            obj.lora_count = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n        }\r\n        else if (sID == '3102') { // 'GPS Acquisition Counter'\r\n            obj.gps_count = parseInt(hexStr.substr(i + 6, 4), 16); // uint16\r\n        }\r\n        else if (sID == '3103') { // 'US Measurement Counter'\r\n            obj.us_sensor_count = parseInt(hexStr.substr(i + 6, 8), 16); // uint32\r\n        }\r\n        else if (sID == '3104') { // 'Sensor Measurement Counter'\r\n            obj.sensing_count = parseInt(hexStr.substr(i + 6, 8), 16); // uint32\r\n        }\r\n        else if (sID == '5001') { // 'GPS Latitude'\r\n            obj.latitude = parseFloat((number2Int32(parseInt(hexStr.substr(i + 6, 8), 16)) / 1000000).toFixed(6));\r\n        }\r\n        else if (sID == '5002') { // 'GPS Longitude'\r\n            obj.longitude = parseFloat((number2Int32(parseInt(hexStr.substr(i + 6, 8), 16)) / 1000000).toFixed(6));\r\n        }\r\n        else if (sID == '5101') { // 'Battery'\r\n            if (parseInt(hexStr.substr(i + 4, 2), 16) == 1) {\r\n                obj.battery_vol = parseInt(hexStr.substr(i + 6, 2), 16) / 10; // uint8\r\n            }\r\n        }\r\n\r\n        // Downlink ACK: Device Config\r\n        else if (sID == 'F101') {\r\n            obj.ble_enable = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F102') {\r\n            obj.device_name = hex2string(hexStr.substr(i + 6, 32));\r\n        }\r\n        else if (sID == 'F103') {\r\n            obj.reset_counter = 'done';\r\n        }\r\n        else if (sID == 'F104') {\r\n            obj.factory_reset = 'done';\r\n        }\r\n        else if (sID == 'F105') {\r\n            obj.change_password = 'done';\r\n        }\r\n        else if (sID == 'F108') {\r\n            obj.device_name_1 = hex2string(hexStr.substr(i + 6, 16));\r\n        }\r\n        else if (sID == 'F109') {\r\n            obj.device_name_2 = hex2string(hexStr.substr(i + 6, 16));\r\n        }     \r\n \r\n        // Downlink ACK: GPS Config\r\n        else if (sID == 'F201') {\r\n            obj.gps_acquisition_active = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F202') {\r\n            obj.gps_acquisition_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F203') {\r\n            obj.gps_next_acquisition = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F204') {\r\n            const gpsAccuracyModeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.gps_accuracy_mode = (GPSAccuracyMode[gpsAccuracyModeIndex] ? GPSAccuracyMode[gpsAccuracyModeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F205') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.gps_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F206') {\r\n            obj.gps_number_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F207') {\r\n            obj.gps_localization = 'triggered';\r\n        }\r\n\r\n        // Downlink ACK: LoRa Config\r\n        else if (sID == 'F301') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.lora_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F302') {\r\n            obj.lora_number_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F303') {\r\n            const spreadingFactor = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.lora_spreading_factor = (spreadingFactor == 255 ? 'ADR' : spreadingFactor);\r\n        }\r\n        else if (sID == 'F304') {\r\n            obj.lora_data_transmission_active = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F305') {\r\n            obj.lora_transmission_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F306') {\r\n            obj.lora_next_transmission = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F307') {\r\n            obj.lora_downlink_config = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F308') {\r\n            obj.lora_downlink_config_ack = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F309') {\r\n            obj.lora_sub_band = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n\r\n        // Downlink ACK: UltraSonic Config\r\n        else if (sID == 'F401') {\r\n            const SonicBeamWidthVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_beam_width = (SonicBeamWidth[SonicBeamWidthVal] ? SonicBeamWidth[SonicBeamWidthVal] : 'Invalid');\r\n        }\r\n        else if (sID == 'F402') {\r\n            const SonicBurstLengthVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_user_defined_burst_length = (SonicBurstLength[SonicBurstLengthVal] ? SonicBurstLength[SonicBurstLengthVal] : SonicBurstLengthVal);\r\n        }\r\n        else if (sID == 'F403') {\r\n            const SonicTransmittingPowerVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_user_defined_transmitting_power = (SonicTransmittingPower[SonicTransmittingPowerVal] ? SonicTransmittingPower[SonicTransmittingPowerVal] : SonicTransmittingPowerVal);\r\n        }\r\n        else if (sID == 'F404') {\r\n            const SonicSensitivityVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_user_defined_sensitivity = (SonicSensitivity[SonicSensitivityVal] ? SonicSensitivity[SonicSensitivityVal] : SonicSensitivityVal);\r\n        }\r\n        else if (sID == 'F405') {\r\n            obj.us_full_distance = parseInt(hexStr.substr(i + 6, 4), 16);\r\n        }\r\n        else if (sID == 'F406') {\r\n            obj.us_empty_distance = parseInt(hexStr.substr(i + 6, 4), 16);\r\n        }\r\n        else if (sID == 'F407') {\r\n            obj.us_measurement_sequence_active = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F408') {\r\n            const evaluationMethodVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_evaluation_method = (SonicEvaluationMethod[evaluationMethodVal] ? SonicEvaluationMethod[evaluationMethodVal] : 'Invalid');\r\n        }\r\n        else if (sID == 'F409') {\r\n            obj.us_measurements_per_sequence = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F40A') {\r\n            obj.us_at_intervals_of = parseInt(hexStr.substr(i + 6, 4), 16);\r\n        }\r\n        else if (sID == 'F40B') {\r\n            obj.us_application_filter_active = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F40C') {\r\n            const filterVal = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.us_post_processing_filter = (SonicApplicationFilter[filterVal] ? SonicApplicationFilter[filterVal] : 'Invalid');\r\n        }\r\n        else if (sID == 'F40D') {\r\n            obj.us_additional_measurement = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F40E') {\r\n            obj.water_body_level_active = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F40F') {\r\n            obj.distance_to_water_body_ground = parseInt(hexStr.substr(i + 6, 4), 16);\r\n        }\r\n\r\n        // Downlink ACK: Device Information\r\n        else if (sID == 'F501') {\r\n            obj.part_number = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F502') {\r\n            const major = parseInt(hexStr.substr(i + 6, 4), 16);\r\n            const minor = parseInt(hexStr.substr(i + 10, 4), 16);\r\n            const patch = parseInt(hexStr.substr(i + 14, 4), 16);\r\n            obj.hardware_revision = major + '.' + minor + '.' + patch;\r\n        }\r\n        else if (sID == 'F503') {\r\n            const major = parseInt(hexStr.substr(i + 6, 4), 16);\r\n            const minor = parseInt(hexStr.substr(i + 10, 4), 16);\r\n            const patch = parseInt(hexStr.substr(i + 14, 4), 16);\r\n            obj.firmware_revision = major + '.' + minor + '.' + patch;\r\n        }\r\n      \r\n        // Downlink ACK: Valve(UCC) Config\r\n      \telse if (sID == 'F601') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_monitoring_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F602') {\r\n            obj.valve_monitoring_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n\r\n        // Downlink ACK: Valve Config\r\n      \telse if (sID == 'F701') {\r\n            const openSignalIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_1_open_signal = (ValveOpenSignal[openSignalIndex] ? ValveOpenSignal[openSignalIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F702') {\r\n            obj.valve_1_event_driven_transmission = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F703') {\r\n            const triggerEventIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_1_trigger_event = (ValveTriggerEventType[triggerEventIndex] ? ValveTriggerEventType[triggerEventIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F704') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_1_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F705') {\r\n            obj.valve_1_num_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F706') {\r\n            obj.valve_1_monitoring_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F707') {\r\n            const openSignalIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_2_open_signal = (ValveOpenSignal[openSignalIndex] ? ValveOpenSignal[openSignalIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F708') {\r\n            obj.valve_2_event_driven_transmission = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F709') {\r\n            const triggerEventIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_2_trigger_event = (ValveTriggerEventType[triggerEventIndex] ? ValveTriggerEventType[triggerEventIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F70A') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.valve_2_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F70B') {\r\n            obj.valve_2_num_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F70C') {\r\n            obj.valve_2_monitoring_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n\r\n        // Downlink ACK: Node Config\r\n      \telse if (sID == 'F801') {\r\n            const outputLogicIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_1_output_logic = (NodeOutputLogic[outputLogicIndex] ? NodeOutputLogic[outputLogicIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F802') {\r\n            obj.sensor_1_event_driven_transmission = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F803') {\r\n            const triggerEventIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_1_trigger_event = (NodeTriggerEventType[triggerEventIndex] ? NodeTriggerEventType[triggerEventIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F804') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_1_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F805') {\r\n            obj.sensor_1_num_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F806') {\r\n            obj.sensor_1_monitoring_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n        else if (sID == 'F807') {\r\n            const outputLogicIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_2_output_logic = (NodeOutputLogic[outputLogicIndex] ? NodeOutputLogic[outputLogicIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F808') {\r\n            obj.sensor_2_event_driven_transmission = (parseInt(hexStr.substr(i + 6, 2), 16) > 0);\r\n        }\r\n        else if (sID == 'F809') {\r\n            const triggerEventIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_2_trigger_event = (NodeTriggerEventType[triggerEventIndex] ? NodeTriggerEventType[triggerEventIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F80A') {\r\n            const messageTypeIndex = parseInt(hexStr.substr(i + 6, 2), 16);\r\n            obj.sensor_2_message_type = (LoRaMessgeType[messageTypeIndex] ? LoRaMessgeType[messageTypeIndex] : 'Invalid');\r\n        }\r\n        else if (sID == 'F80B') {\r\n            obj.sensor_2_num_of_transmission = parseInt(hexStr.substr(i + 6, 2), 16);\r\n        }\r\n        else if (sID == 'F80C') {\r\n            obj.sensor_2_monitoring_interval = parseInt(hexStr.substr(i + 6, 8), 16);\r\n        }\r\n\r\n        i = i + (len * 2);\r\n    }\r\n    return obj;\r\n}\r\n\r\nfunction byte2HexString(bytes) {\r\n    var retHexString = '';\r\n    for (var i_b = 0; i_b < bytes.length; i_b++) {\r\n        retHexString = retHexString.concat(('0' + (Number(bytes[i_b]).toString(16))).slice(-2).toUpperCase());\r\n    }\r\n    return retHexString;\r\n}\r\n\r\nfunction number2Int32(value) {\r\n    if (value > 0x7FFFFFFF) {\r\n        return (value - 0x100000000);\r\n    }\r\n    return value;\r\n}\r\n\r\nfunction hex2string(hexx) {\r\n    var hex = hexx.toString();\r\n    var str = '';\r\n    for (var j = 0;\r\n        (j < hex.length && hex.substr(j, 2) !== '00'); j += 2)\r\n        str += String.fromCharCode(parseInt(hex.substr(j, 2), 16));\r\n    return str;\r\n}\r\n\r\nfunction hex2float(hexstring) {\r\n    var bytes = [];\r\n    bytes[0] = parseInt(hexstring.substr(0, 2), 16);\r\n    bytes[1] = parseInt(hexstring.substr(2, 2), 16);\r\n    bytes[2] = parseInt(hexstring.substr(4, 2), 16);\r\n    bytes[3] = parseInt(hexstring.substr(6, 2), 16);\r\n    return decodeFloat(bytes, 1, 8, 23, -126, 127, false);\r\n}\r\n\r\nfunction decodeFloat(bytes, signBits, exponentBits, fractionBits, eMin, eMax, littleEndian) {\r\n    var binary = '';\r\n    for (var z = 0, l = bytes.length; z < l; z += 1) {\r\n        var bits = bytes[z].toString(2);\r\n        while (bits.length < 8) {\r\n            bits = '0' + bits;\r\n        }\r\n        if (littleEndian) {\r\n            binary = bits + binary;\r\n        } else {\r\n            binary += bits;\r\n        }\r\n    }\r\n    var sign = (binary.charAt(0) === '1') ? -1 : 1;\r\n    var exponent = parseInt(binary.substr(signBits, exponentBits), 2) - eMax;\r\n    var significandBase = binary.substr(signBits + exponentBits, fractionBits);\r\n    var significandBin = '1' + significandBase;\r\n    var cnt = 0;\r\n    var val = 1;\r\n    var significand = 0;\r\n    if (exponent == -eMax) {\r\n        if (significandBase.indexOf('1') === -1)\r\n            return 0;\r\n        else {\r\n            exponent = eMin;\r\n            significandBin = '0' + significandBase;\r\n        }\r\n    }\r\n    while (cnt < significandBin.length) {\r\n        significand += val * parseInt(significandBin.charAt(cnt));\r\n        val = val / 2;\r\n        cnt += 1;\r\n    }\r\n    return sign * significand * Math.pow(2, exponent);\r\n}\r\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "amplitude": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.amplitude !== undefined ? decoded.amplitude : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "battery": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.battery_vol !== undefined ? decoded.battery_vol : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "filling_level": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.fillinglvl !== undefined ? decoded.fillinglvl : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "latitude": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.latitude !== undefined ? decoded.latitude : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "longitude": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.longitude !== undefined ? decoded.longitude : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "proximity": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.proxx_mm !== undefined ? decoded.proxx_mm : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "serial_number": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.serial_nr !== undefined ? decoded.serial_nr : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "temperature": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.temp !== undefined ? decoded.temp : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            },
+            "water_body_level": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "function(data) { var decoded = decodeThingerUplink(data); return decoded.water_body_level_mm !== undefined ? decoded.water_body_level_mm : null; }",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Filling Level"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "fillinglvl",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Proximity"
+                        },
+                        "properties": {
+                          "color": "#1abc9c",
+                          "max": 5000,
+                          "min": 0,
+                          "unit": "mm"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "proxx_mm",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 60,
+                          "min": -20,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "temp",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Proximity & Filling Level"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "proxx_mm",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Proximity (mm)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "fillinglvl",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Filling Level (%)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Recorded Data"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Proximity (mm)</th>\r\n        <th>Filling Level (%)</th>\r\n        <th>Temperature (°C)</th>\r\n        <th>Battery (V)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\">\r\n        <td>{{ entry.ts | date:'medium' }}</td>\r\n        <td>{{ entry.proxx_mm || '—' }}</td>\r\n        <td>{{ entry.fillinglvl || '—' }}</td>\r\n        <td>{{ entry.temp || '—' }}</td>\r\n        <td>{{ entry.battery_vol || '—' }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#000000",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "proxx_mm",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "proximity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "fillinglvl",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "filling_level",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "temp",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "battery_vol",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4,
+                          "min": 2,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "battery_vol",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Amplitude"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 100,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "amplitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Body Level"
+                        },
+                        "properties": {
+                          "color": "#16a085",
+                          "max": 10000,
+                          "min": 0,
+                          "unit": "mm"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "water_body_level_mm",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
