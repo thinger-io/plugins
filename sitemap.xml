@@ -2,1006 +2,1018 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://marketplace.thinger.io/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/vs-code-plugin-version-2460-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/prometheus-plugin-version-2460-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/alertmanager-plugin-version-0260-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/sftpgo-plugin-version-254-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-150-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-160-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-170-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/prometheus-exporter-plugin-version-120-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/vs-code-plugin-version-4891-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/rstudio-integration-into-thingerio/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-180-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/grafana-plugin-version-1130-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/node-red-plugin-version-190-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/loriot-plugin-version-100/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/siemens-logo-plugin-version-100-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/dragino-lt22222l-plugin-version-100-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/the-things-network-ttn-plugin-version-100-1/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/chirpstack-plugin-version-100/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/wika-integrations-version-100-released/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/plugin-system-infrastructure/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/documentation/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/changelog-file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/configuration-files/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/dockerfile/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/plugin-file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/structure/readme-file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/deploying-local/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/developing-custom-plugins/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/integrating-services/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/contributing/writing/off-the-shelf-hardware/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/community/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/end_customers/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/hardware_manufacturers/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/how_it_works/iot_consultants/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/managing/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/chirpstack/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/chirpstack/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/chirpstack/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/http-device/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/http-device/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/http-device/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/loriot/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/loriot/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/loriot/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/sigfox/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/sigfox/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/sigfox/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn-stack/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn-stack/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/connectivity/ttn-stack/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-minimal/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-minimal/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-minimal/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-r/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-r/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-r/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-tensorflow/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-tensorflow/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/jupyter-tensorflow/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/node-red/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/node-red/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/node-red/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/rstudio/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/rstudio/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/rstudio/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/vscode/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/vscode/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/development/vscode/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/acrios-acr-cv-101l-m-d/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/acrios-acr-cv-101l-m-d/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/acrios-acr-cv-101l-m-d/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/bosch-tps110/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/bosch-tps110/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/bosch-tps110/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/comet-tx5xx-tx6xx/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/comet-tx5xx-tx6xx/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/comet-tx5xx-tx6xx/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lht65n/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lht65n/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lht65n/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lt22222l/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lt22222l/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/dragino-lt22222l/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/emu-emu-prof-ii/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/emu-emu-prof-ii/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/emu-emu-prof-ii/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/fencyboy-fencyboy/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/fencyboy-fencyboy/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/fencyboy-fencyboy/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/greenme-cube/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/greenme-cube/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/greenme-cube/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-comfort-sensor/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-comfort-sensor/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-comfort-sensor/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-moodbox/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-moodbox/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/imbuildings-imbuildings-moodbox/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/iot-factory-metering-node/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/iot-factory-metering-node/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/iot-factory-metering-node/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/koidra-sdi-12-dra/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/koidra-sdi-12-dra/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/koidra-sdi-12-dra/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/lualtek-lualtek-swsi/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/lualtek-lualtek-swsi/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/lualtek-lualtek-swsi/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-am103/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-am103/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-am103/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-ct10x/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-ct10x/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-ct10x/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-am102/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-am102/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-am102/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/minol-zenner-edc-communication-module/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/minol-zenner-edc-communication-module/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/minol-zenner-edc-communication-module/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/moirelabs-p1ap/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/moirelabs-p1ap/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/moirelabs-p1ap/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/n-fuse-stx/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/noah-trashbin-sensor/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/noah-trashbin-sensor/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/noah-trashbin-sensor/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/open-boat-projects-loraboatmonitor/</loc>
+         <lastmod>2026-02-11</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/open-boat-projects-loraboatmonitor/changelog/</loc>
+         <lastmod>2026-02-11</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/open-boat-projects-loraboatmonitor/plugin_file/</loc>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/opensource-esp32-paxcounter/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/opensource-esp32-paxcounter/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/opensource-esp32-paxcounter/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/restotracker-scd18/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/restotracker-scd18/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/restotracker-scd18/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-1l/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-1l/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-1l/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-em/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-em/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-em/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plug-s/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plug-s/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plug-s/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plus-1pm/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plus-1pm/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/shelly-plus-1pm/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/siemens-logo/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/siemens-logo/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/siemens-logo/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/slscorp-volc2180/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/slscorp-volc2180/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/slscorp-volc2180/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/sting-pengy/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/sting-pengy/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/sting-pengy/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-eye/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-eye/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-eye/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-telematics/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-telematics/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/teltonika-telematics/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pew1000/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pew1000/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pew1000/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pgw23-100/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pgw23-100/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/wika-pgw23-100/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/yobiiq-em2101/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/yobiiq-em2101/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/yobiiq-em2101/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/docker-registry/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/docker-registry/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/docker-registry/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/sftpgo/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/sftpgo/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/infrastructure/sftpgo/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/alertmanager/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/alertmanager/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/alertmanager/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/grafana/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/grafana/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/grafana/get_started/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/grafana/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/grafana/working_with_grafana/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/influxdb2/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/influxdb2/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/influxdb2/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus-exporter/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus-exporter/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/monitoring/prometheus-exporter/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/templates/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/templates/lorawan-product-template/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/templates/lorawan-product-template/changelog/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/templates/lorawan-product-template/plugin_file/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/sensors/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/lorawan/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/wika/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/integrations/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/data/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/chirpstack/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/lns/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/plugins/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/dragino/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/ttn/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/siemens/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/plc/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/industry/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/loriot/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/lora/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/grafana/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/dashboards/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/analytics/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/node-red/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/rules/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/rstudio/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/r/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/etl/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/data-science/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/data-analysis/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/vs-code/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/iotmp/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/arduino/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/ota/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/prometheus/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/monitoring/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/alerting/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/sftpgo/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/sftp/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/ftp/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/category/ftps/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/page/2/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/page/3/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
     <url>
          <loc>https://marketplace.thinger.io/announcements/page/4/</loc>
-         <lastmod>2026-02-09</lastmod>
+         <lastmod>2026-02-11</lastmod>
     </url>
 </urlset>
