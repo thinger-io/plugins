@@ -1,0 +1,649 @@
+{
+  "name": "plenom_busylight",
+  "version": "1.0.0",
+  "description": "A visual indicator for status, cues & notification",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "plenom-busylight"
+  },
+  "metadata": {
+    "name": "Plenom BUSYLIGHT",
+    "description": "A visual indicator for status, cues & notification",
+    "image": "assets/busylight.png",
+    "category": "devices",
+    "vendor": "plenom"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "A visual indicator for status, cues & notification",
+        "enabled": true,
+        "name": "Plenom BUSYLIGHT",
+        "product": "plenom_busylight",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "busylight-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "plenom_busylight_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  if (input.bytes.length == 24)\n  {\n  return {\n    data: {\n      RSSI: byteArrayToLong(input.bytes, 0),\n      SNR: byteArrayToLong(input.bytes, 4),\n      messages_received: byteArrayToLong(input.bytes, 8),\n      messages_send: byteArrayToLong(input.bytes, 12),\n      lastcolor_red: input.bytes[16],\n      lastcolor_blue: input.bytes[17],\n      lastcolor_green: input.bytes[18],\n      lastcolor_ontime: input.bytes[19],\n      lastcolor_offtime: input.bytes[20],\n      sw_rev: input.bytes[21],\n      hw_rev: input.bytes[22],\n      adr_state: input.bytes[23]\n    },\n    warnings: [],\n    errors: []\n  };\n  }\n  else if (input.bytes.length == 25)\n  {\n  return {\n    data: {\n      RSSI: byteArrayToLong(input.bytes, 0),\n      SNR: byteArrayToLong(input.bytes, 4),\n      messages_received: byteArrayToLong(input.bytes, 8),\n      messages_send: byteArrayToLong(input.bytes, 12),\n      lastcolor_red: input.bytes[16],\n      lastcolor_blue: input.bytes[17],\n      lastcolor_green: input.bytes[18],\n      lastcolor_ontime: input.bytes[19],\n      lastcolor_offtime: input.bytes[20],\n      sw_rev: input.bytes[21],\n      hw_rev: input.bytes[22],\n      adr_state: input.bytes[23],\n      high_brightness_mode: input.bytes[24]\n    },\n    warnings: [],\n    errors: []\n  };\n  }\n else if (input.bytes.length == 19) \n  { \n  return { \n    data: { \n      messages_received: byteArrayToLong(input.bytes, 0), \n      messages_send: byteArrayToLong(input.bytes, 4), \n      lastcolor_red: input.bytes[8], \n      lastcolor_blue: input.bytes[9], \n      lastcolor_green: input.bytes[10], \n      lastcolor_ontime: input.bytes[11], \n      lastcolor_offtime: input.bytes[1], \n      sw_rev: input.bytes[13], \n      hw_rev: input.bytes[14], \n      sound_no: input.bytes[15], \n      sound_volume: input.bytes[16], \n      sound_duration:input.bytes[17], \n      high_brightness_mode: input.bytes[18] \n    }, \n    warnings: [], \n    errors: [] \n  }; \n  } \nelse if (input.bytes.length == 20) \n  { \n  return { \n    data: { \n      messages_received: byteArrayToLong(input.bytes, 0), \n      messages_send: byteArrayToLong(input.bytes, 4), \n      lastcolor_red: input.bytes[8], \n      lastcolor_blue: input.bytes[9], \n      lastcolor_green: input.bytes[10], \n      lastcolor_ontime: input.bytes[11], \n      lastcolor_offtime: input.bytes[1], \n      sw_rev: input.bytes[13], \n      hw_rev: input.bytes[14], \n      sound_no: input.bytes[15], \n      sound_volume: input.bytes[16], \n      sound_duration:input.bytes[17], \n      high_brightness_mode: input.bytes[18],\n      controlbyte: input.bytes[19]\n    }, \n    warnings: [], \n    errors: [] \n  }; \n  } \n  else if (input.bytes.length == 10)\n  {\nreturn {\n    data: {\n      messages_send: byteArrayToLong(input.bytes, 0),\n      lastcolor_red: input.bytes[4],\n      lastcolor_blue: input.bytes[5],\n      lastcolor_green: input.bytes[6],\n      lastcolor_ontime: input.bytes[7],\n      lastcolor_offtime: input.bytes[8],\n      high_brightness_mode: input.bytes[9]\n    },\n    warnings: [],\n    errors: []\n  };    \n  }\n  else\n  {\n    return {data: {\n      bytes: input.bytes,\n      },\n    warnings: [],\n    errors: []\n    }\n  }\n}\n\n\nbyteArrayToLong = function(/*byte[]*/byteArray, /*int*/from) {\n    return byteArray[from] | (byteArray[from+1] << 8) | (byteArray[from+2] << 16) | (byteArray[from+3] << 24);\n};\n\nfunction encodeDownlink(input) {\n  \n  return {\n    bytes:[(input.data.red & 0x00FF), (input.data.blue & 0x00FF), (input.data.green & 0x00FF), (input.data.ontime & 0x00FF), \n    (input.data.offtime & 0x00FF)],\n    fPort: 15,\n    warnings: [],\n    errors: []\n  };\n}\n\nfunction decodeDownlink(input) {\nif (input.bytes.length == 5)\n  {  \n  return {\n    \n    data: {\n      red: input.bytes[0],\n      green: input.bytes[2],\n      blue: input.bytes[1],\n      ontime: input.bytes[3],\n      offtime: input.bytes[4]\n    },\n    warnings: [],\n    errors: []\n  }\n  }\nelse if (input.bytes.length == 6)\n  {  \n  return {\n    \n    data: {\n      red: input.bytes[0],\n      green: input.bytes[2],\n      blue: input.bytes[1],\n      ontime: input.bytes[3],\n      offtime: input.bytes[4],\n      immediate_uplink: input.bytes[5]\n    },\n    warnings: [],\n    errors: []\n      }  \n  }\n}\n\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Status Monitor",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Red LED Intensity"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_red",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Red",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Blue LED Intensity"
+                        },
+                        "properties": {
+                          "color": "#0000ff",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_blue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Blue",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Green LED Intensity"
+                        },
+                        "properties": {
+                          "color": "#00ff00",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_green",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#00ff00",
+                            "name": "Green",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "RSSI"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": -40,
+                          "min": -140,
+                          "unit": "dBm"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "RSSI",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "RSSI",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "SNR"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 15,
+                          "min": -20,
+                          "unit": "dB"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "SNR",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "SNR",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Information"
+                        },
+                        "properties": {
+                          "color": "#000000",
+                          "size": "12px",
+                          "val": "SW Rev: {{sw_rev}}\nHW Rev: {{hw_rev}}\nADR: {{adr_state}}\nBright Mode: {{high_brightness_mode}}"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "sw_rev",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "sw_rev",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "hw_rev",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "hw_rev",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "adr_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "adr_state",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "high_brightness_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "high_brightness_mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Message Statistics"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "messages_received",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Messages Received",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "messages_send",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Messages Sent",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "LED Color History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_red",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Red",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_blue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Blue",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "lastcolor_green",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#00ff00",
+                            "name": "Green",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Signal Quality History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "RSSI",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "RSSI (dBm)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "plenom_busylight_data",
+                              "mapping": "SNR",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "SNR (dB)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
