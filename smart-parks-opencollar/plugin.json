@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Smart-Parks OPENCOLLAR",
     "description": "First generation of OpenCollar devices. A collection of advanced devices designed for wildlife protection.",
-    "image": "assets/opencollar.jpg",
+    "image": "assets/opencollar.png",
     "category": "devices",
     "vendor": "smart-parks"
   },
