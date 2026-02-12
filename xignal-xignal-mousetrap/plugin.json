@@ -19,6 +19,9 @@
     "resources": {
         "products": [
             {
+                "config": {
+                    "icons": []
+                },
                 "description": "Intelligent mouse trap made by DimoSystems",
                 "enabled": true,
                 "name": "Xignal XIGNAL-MOUSETRAP",
@@ -137,6 +140,7 @@
                                         "name": "Mouse Trap Monitor",
                                         "widgets": [
                                             {
+                                                "api": {},
                                                 "layout": {
                                                     "col": 3,
                                                     "row": 9,
@@ -154,7 +158,8 @@
                                                     "title": "Trap State History"
                                                 },
                                                 "properties": {
-                                                    "options": "var options = {\n    series: series,\n    chart: {\n        type: 'scatter',\n        background: '#ffffff',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x', autoScaleYaxis: true }\n    },\n    stroke: { curve: 'stepline', width: 2 },\n    markers: { size: 6 },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { style: { colors: '#333333' } }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#333333' } }\n};"
+                                                    "alignTimeSeries": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'bar'\n    },\n    plotOptions: {\n        bar: {\n            horizontal: false,\n            columnWidth: '55%',\n            endingShape: 'rounded'\n        },\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        show: true,\n        width: 2,\n        colors: ['transparent']\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    fill: {\n        opacity: 1\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
                                                 },
                                                 "sources": [
                                                     {
@@ -177,10 +182,10 @@
                                                         "name": "Trap State",
                                                         "source": "bucket",
                                                         "timespan": {
-                                                            "magnitude": "day",
+                                                            "magnitude": "minute",
                                                             "mode": "relative",
                                                             "period": "latest",
-                                                            "value": 7
+                                                            "value": 30
                                                         }
                                                     }
                                                 ],
@@ -305,7 +310,8 @@
                                                     "title": "Message ID Sequence"
                                                 },
                                                 "properties": {
-                                                    "options": "var options = {\n    series: series,\n    chart: {\n        type: 'bar',\n        background: '#ffffff',\n        toolbar: { show: true, autoSelected: 'zoom' },\n        zoom: { enabled: true, type: 'x' }\n    },\n    plotOptions: { bar: { columnWidth: '50%' } },\n    xaxis: { type: 'datetime', labels: { datetimeUTC: false } },\n    yaxis: {\n        labels: { \n            formatter: function(val) { return Math.round(val); },\n            style: { colors: '#333333' }\n        }\n    },\n    tooltip: {\n        x: { format: 'dd/MM/yyyy HH:mm' },\n        shared: true\n    },\n    legend: { position: 'bottom', labels: { colors: '#333333' } }\n};"
+                                                    "alignTimeSeries": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 4\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        labels: {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
                                                 },
                                                 "sources": [
                                                     {
