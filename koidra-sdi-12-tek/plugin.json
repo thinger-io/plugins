@@ -1,0 +1,619 @@
+{
+    "name": "koidra-sdi-12-tek",
+    "version": "1.0.0",
+    "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "koidra-sdi-12-tek"
+    },
+    "metadata": {
+        "name": "Koidra SDI-12-TEK",
+        "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+        "image": "assets/sdi-12-tek.png",
+        "category": "devices",
+        "vendor": "koidra"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "The Koidra SDI-12 is an SDI-12 to LoRaWAN® converter. It allows the SDI-12 devices to use LoRaWAN wireless protocol which simplifies the IoT installation and reduces the installation/maintaining cost.",
+                "enabled": true,
+                "name": "Koidra SDI-12-TEK",
+                "product": "koidra_sdi_12_tek",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "koidra-sdi-12-.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "koidra_sdi_12_tek_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n// Only for AT+DATAUP=0 & AT+ALLDATAMOD=0\n// Tekbox format only\nfunction Decoder(bytes, port) {\n    const Report_Len = 41; \n    const Bat_Len = 25; \n    const Measure_Len = 38;\n  \n    if(port==5)\n    {\n        var freq_band;\n        var sub_band;\n      var sensor;\n      \n    }\n    else if(port==100)\n    {\n        var datas_sum={};\n        for(var j=0;j<bytes.length;j++)\n        {\n          var datas= String.fromCharCode(bytes[j]);\n          if(j=='0')\n            datas_sum.datas_sum=datas;\n          else\n            datas_sum.datas_sum+=datas;\n        }\n        // achievable\n        return datas_sum;\n    }\n    else  \n    {\n      const payload = String.fromCharCode(...new Uint8Array(bytes));\n      var decode={};\n      typeStr = bytes[0];\n      typeMeasure = bytes[1];\n      decode.msg_length = bytes.length;\n      \n      if ((bytes.length == Report_Len) || (payload[0] == \"C\")) {\n          // 00:01:07:04:19:00544253420100011201R -69\n          decode.msg = String.fromCharCode(typeStr);\n          decode.msg_type = \"FW Report\";\n          decode.data_sum = String.fromCharCode(...bytes.slice(1));\n          data_sum_infos = decode.data_sum.split(' ');\n          decode.NodeRssi = data_sum_infos[1] ? parseFloat(data_sum_infos[1]) : null;\n          decode.TimeReporting = data_sum_infos[0] ? (data_sum_infos[0]) : null;\n          reportStr = data_sum_infos[0] ? (data_sum_infos[0]) : null;\n          //   decoded.timestamp = reportStr.substring(0, 17);\n          //   decoded.deviceID = reportStr.substring(17, 26);\n          //   decoded.firmwareVersion = reportStr.substring(26, 35);\n          //   decoded.numOfSensor = reportStr.substring(35, 36);\n          //   decoded.nodeStatus = payload[36];\n          //   decoded.reportLen = reportStr.length;\n          \n          return decode;\n      } else if (bytes.length == Bat_Len || (typeStr == \"P\" && typeMeasure == \"B\")) {\n          // 00:01:07:04:16:00 4.115\n          decode.msg = String.fromCharCode(typeStr) + String.fromCharCode(typeMeasure);\n          decode.msg_type = \"Bat Report\";\n          decode.data_sum = String.fromCharCode(...bytes.slice(2));\n        data_sum_infos = decode.data_sum.split(' ');\n        decode.BatV = data_sum_infos[1] ? parseFloat(data_sum_infos[1]) : null;\n        decode.TimeMesuring = data_sum_infos[0] ? (data_sum_infos[0]) : null;\n        \n        return decode;\n      } else if (bytes.length == Measure_Len || (typeStr == \"P\" && typeMeasure == \"S\")) {\n          // 00:01:07:04:15:000002 +63.99 +26.973\"\n          decode.msg = String.fromCharCode(typeStr) + String.fromCharCode(typeMeasure);\n          decode.msg_type = \"Sensor\";\n          decode.data_sum=String.fromCharCode(...bytes.slice(2));\n          data_sum_infos = decode.data_sum.split(' ');\n          decode.TimeMesuring = data_sum_infos[0] ? (data_sum_infos[0]) : null;\n          decode.rh_Root = !isNaN(parseFloat(data_sum_infos[1])) ? parseFloat(data_sum_infos[1]) : null;\n          decode.T_Root = data_sum_infos[2] ? parseFloat(data_sum_infos[2]) : null;\n          return decode;\n      } else {\n          decode.msg_type = \"Unknown\";\n          return decode;\n    }\n  }\n  }",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "name": "Koidra SDI-12 Tek",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "properties": {
+                                    "accent_color": "#1976D2",
+                                    "background_image": "#0a0e17",
+                                    "description": "Koidra SDI-12 Tek Monitoring Dashboard",
+                                    "refresh_interval": 10000,
+                                    "template": true,
+                                    "theme": "dark",
+                                    "title": "SDI-12 Sensor Dashboard"
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-leaf",
+                                        "name": "Dashboard",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "posX": 0,
+                                                    "posY": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(76, 175, 80, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "icon": "fas fa-tint",
+                                                    "iconColor": "#4caf50",
+                                                    "iconGap": "12px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "48px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#4caf50",
+                                                    "textSize": "64px",
+                                                    "textWeight": "font-bold",
+                                                    "unit": "%",
+                                                    "unitSize": "16px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "rh_Root",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#4caf50",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "posX": 2,
+                                                    "posY": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(255, 152, 0, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "icon": "fas fa-thermometer-half",
+                                                    "iconColor": "#ff9800",
+                                                    "iconGap": "12px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "48px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#ff9800",
+                                                    "textSize": "64px",
+                                                    "textWeight": "font-bold",
+                                                    "unit": "C",
+                                                    "unitSize": "16px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "T_Root",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff9800",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "posX": 4,
+                                                    "posY": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(25, 118, 210, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 3,
+                                                    "icon": "fas fa-battery-half",
+                                                    "iconColor": "#1976D2",
+                                                    "iconGap": "12px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "48px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1976D2",
+                                                    "textSize": "64px",
+                                                    "textWeight": "font-bold",
+                                                    "unit": "V",
+                                                    "unitSize": "16px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "BatV",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1976D2",
+                                                        "name": "Battery Voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "posX": 6,
+                                                    "posY": 0,
+                                                    "row": 4,
+                                                    "sizeX": 3,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(244, 67, 54, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "RSSI"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "icon": "fas fa-signal",
+                                                    "iconColor": "#f44336",
+                                                    "iconGap": "12px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "48px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#f44336",
+                                                    "textSize": "64px",
+                                                    "textWeight": "font-bold",
+                                                    "unit": "dBm",
+                                                    "unitSize": "16px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "NodeRssi",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f44336",
+                                                        "name": "RSSI",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "posX": 8,
+                                                    "posY": 0,
+                                                    "row": 4,
+                                                    "sizeX": 3,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(156, 39, 176, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Message Type"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "icon": "fas fa-envelope",
+                                                    "iconColor": "#9c27b0",
+                                                    "iconGap": "12px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "40px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#9c27b0",
+                                                    "textSize": "32px",
+                                                    "textWeight": "font-bold",
+                                                    "unit": "",
+                                                    "unitSize": "12px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "msg_type",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9c27b0",
+                                                        "name": "Message Type",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "posX": 0,
+                                                    "posY": 4,
+                                                    "row": 8,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(76, 175, 80, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity - 7 Days"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "axis": true,
+                                                    "chart_type": "area",
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false,
+                                                    "options": "var options = {\n    chart: {type: 'area', stacked: false},\n    dataLabels: {enabled: false},\n    stroke: {curve: 'smooth', width: 2},\n    fill: {type: 'gradient', gradient: {shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05}},\n    xaxis: {type: 'datetime', labels: {datetimeUTC: false}, tooltip: {enabled: false}},\n    yaxis: {labels: {formatter: function(val) {return val !== null && val !== undefined ? val.toFixed(1) + '%' : '';}}},\n    tooltip: {x: {format: 'dd/MM HH:mm'}, y: {formatter: function(val) {return val.toFixed(2) + '%';}}}\n};"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "rh_Root",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#4caf50",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "posX": 5,
+                                                    "posY": 4,
+                                                    "row": 8,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(255, 152, 0, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature - 7 Days"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "axis": true,
+                                                    "chart_type": "area",
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false,
+                                                    "options": "var options = {\n    chart: {type: 'area', stacked: false},\n    dataLabels: {enabled: false},\n    stroke: {curve: 'smooth', width: 2},\n    fill: {type: 'gradient', gradient: {shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05}},\n    xaxis: {type: 'datetime', labels: {datetimeUTC: false}, tooltip: {enabled: false}},\n    yaxis: {labels: {formatter: function(val) {return val !== null && val !== undefined ? val.toFixed(1) + 'C' : '';}}},\n    tooltip: {x: {format: 'dd/MM HH:mm'}, y: {formatter: function(val) {return val.toFixed(2) + 'C';}}}\n};"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "T_Root",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff9800",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "posX": 0,
+                                                    "posY": 10,
+                                                    "row": 14,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(25, 118, 210, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery Voltage - 7 Days"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "axis": true,
+                                                    "chart_type": "area",
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false,
+                                                    "options": "var options = {\n    chart: {type: 'area', stacked: false},\n    dataLabels: {enabled: false},\n    stroke: {curve: 'smooth', width: 2},\n    fill: {type: 'gradient', gradient: {shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05}},\n    xaxis: {type: 'datetime', labels: {datetimeUTC: false}, tooltip: {enabled: false}},\n    yaxis: {labels: {formatter: function(val) {return val !== null && val !== undefined ? val.toFixed(2) + 'V' : '';}}},\n    tooltip: {x: {format: 'dd/MM HH:mm'}, y: {formatter: function(val) {return val.toFixed(3) + 'V';}}}\n};"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "BatV",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1976D2",
+                                                        "name": "Battery Voltage",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "posX": 5,
+                                                    "posY": 10,
+                                                    "row": 14,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "borderRadius": "16px",
+                                                    "boxShadow": "0 20px 60px rgba(244, 67, 54, 0.25)",
+                                                    "color": "#1a2332",
+                                                    "currentColor": "#1a2332",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "RSSI - 7 Days"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "axis": true,
+                                                    "chart_type": "area",
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false,
+                                                    "options": "var options = {\n    chart: {type: 'area', stacked: false},\n    dataLabels: {enabled: false},\n    stroke: {curve: 'smooth', width: 2},\n    fill: {type: 'gradient', gradient: {shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05}},\n    xaxis: {type: 'datetime', labels: {datetimeUTC: false}, tooltip: {enabled: false}},\n    yaxis: {labels: {formatter: function(val) {return val !== null && val !== undefined ? val.toFixed(0) + 'dBm' : '';}}},\n    tooltip: {x: {format: 'dd/MM HH:mm'}, y: {formatter: function(val) {return val.toFixed(0) + 'dBm';}}}\n};"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "koidra_sdi_12_tek_data",
+                                                            "mapping": "NodeRssi",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f44336",
+                                                        "name": "RSSI",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
