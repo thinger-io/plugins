@@ -1,0 +1,803 @@
+{
+  "name": "smart_parks_opencollar",
+  "version": "1.0.0",
+  "description": "First generation of OpenCollar devices. A collection of advanced devices designed for wildlife protection.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "smart-parks-opencollar"
+  },
+  "metadata": {
+    "name": "Smart-Parks OPENCOLLAR",
+    "description": "First generation of OpenCollar devices. A collection of advanced devices designed for wildlife protection.",
+    "image": "assets/opencollar.jpg",
+    "category": "devices",
+    "vendor": "smart-parks"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "First generation of OpenCollar devices. A collection of advanced devices designed for wildlife protection.",
+        "enabled": true,
+        "name": "Smart-Parks OPENCOLLAR",
+        "product": "smart_parks_opencollar",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "opencollar-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "smart_parks_opencollar_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "telemetry",
+                "gps",
+                "wildlife"
+              ]
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction get_num(x, min, max, precision, round) {\n\n  var range = max - min;\n  var new_range = (Math.pow(2, precision) - 1) / range;\n  var back_x = x / new_range;\n\n  if (back_x === 0) {\n    back_x = min;\n  }\n  else if (back_x === (max - min)) {\n    back_x = max;\n  }\n  else {\n    back_x += min;\n  }\n  return Math.round(back_x * Math.pow(10, round)) / Math.pow(10, round);\n}\n\nfunction decodeUplink(input) {\n\n  var data = {};\n  var bytes = input.bytes;\n  var port = input.fPort;\n  var cnt = 0;\n  var resetCause_dict = {\n    0: \"POWERON\",\n    1: \"EXTERNAL\",\n    2: \"SOFTWARE\",\n    3: \"WATCHDOG\",\n    4: \"FIREWALL\",\n    5: \"OTHER\",\n    6: \"STANDBY\"\n  };\n\n\n  // settings\n  if (port === 3) {\n    data.system_status_interval = (bytes[1] << 8) | bytes[0];\n    data.system_functions = {};//bytes[2];\n    data.system_functions.gps_periodic = ((bytes[2] >> 0) & 0x01) ? 1 : 0;\n    data.system_functions.gps_triggered = ((bytes[2] >> 1) & 0x01) ? 1 : 0;\n    data.system_functions.gps_hot_fix = ((bytes[2] >> 2) & 0x01) ? 1 : 0;\n    data.system_functions.accelerometer_enabled = ((bytes[2] >> 3) & 0x01) ? 1 : 0;\n    data.system_functions.light_enabled = ((bytes[2] >> 4) & 0x01) ? 1 : 0;\n    data.system_functions.temperature_enabled = ((bytes[2] >> 5) & 0x01) ? 1 : 0;\n    data.system_functions.humidity_enabled = ((bytes[2] >> 6) & 0x01) ? 1 : 0;\n    data.system_functions.charging_enabled = ((bytes[2] >> 7) & 0x01) ? 1 : 0;\n\n    data.lorawan_datarate_adr = {};//bytes[3];\n    data.lorawan_datarate_adr.datarate = bytes[3] & 0x0f;\n    data.lorawan_datarate_adr.confirmed_uplink = ((bytes[3] >> 6) & 0x01) ? 1 : 0;\n    data.lorawan_datarate_adr.adr = ((bytes[3] >> 7) & 0x01) ? 1 : 0;\n\n    data.gps_periodic_interval = (bytes[5] << 8) | bytes[4];\n    data.gps_triggered_interval = (bytes[7] << 8) | bytes[6];\n    data.gps_triggered_threshold = bytes[8];\n    data.gps_triggered_duration = bytes[9];\n    data.gps_cold_fix_timeout = (bytes[11] << 8) | bytes[10];\n    data.gps_hot_fix_timeout = (bytes[13] << 8) | bytes[12];\n    data.gps_min_fix_time = bytes[14];\n    data.gps_min_ehpe = bytes[15];\n    data.gps_hot_fix_retry = bytes[16];\n    data.gps_cold_fix_retry = bytes[17];\n    data.gps_fail_retry = bytes[18];\n    data.gps_settings = {};//bytes[19];\n    data.gps_settings.d3_fix = ((bytes[19] >> 0) & 0x01) ? 1 : 0;\n    data.gps_settings.fail_backoff = ((bytes[19] >> 1) & 0x01) ? 1 : 0;\n    data.gps_settings.hot_fix = ((bytes[19] >> 2) & 0x01) ? 1 : 0;\n    data.gps_settings.fully_resolved = ((bytes[19] >> 3) & 0x01) ? 1 : 0;\n    data.system_voltage_interval = bytes[20];\n    data.gps_charge_min = bytes[21]*10+2500;\n    data.system_charge_min = bytes[22]*10+2500;\n    data.system_charge_max = bytes[23]*10+2500;\n    data.system_input_charge_min = (bytes[25] << 8) | bytes[24];\n    data.pulse_threshold = bytes[26];\n    data.pulse_on_timeout = bytes[27];\n    data.pulse_min_interval = (bytes[29] << 8) | bytes[28];\n    data.gps_accel_z_threshold = ((bytes[31] << 8) | bytes[30])-2000;\n    data.fw_version = (bytes[33] << 8) | bytes[32];\n  }\n  else if (port === 12) {\n    data.resetCause = resetCause_dict[bytes[0]&0x07];\n    data.system_state_timeout = bytes[0]>>3;\n    data.battery = bytes[1]*10+2500; // result in mV\n    data.temperature = get_num(bytes[2], -20, 80, 8, 1);\n    data.system_functions_errors = {};//bytes[5];\n    data.system_functions_errors.gps_periodic_error = ((bytes[3] >> 0) & 0x01) ? 1 : 0;\n    data.system_functions_errors.gps_triggered_error = ((bytes[3] >> 1) & 0x01) ? 1 : 0;\n    data.system_functions_errors.gps_fix_error = ((bytes[3] >> 2) & 0x01) ? 1 : 0;\n    data.system_functions_errors.accelerometer_error = ((bytes[3] >> 3) & 0x01) ? 1 : 0;\n    data.system_functions_errors.light_error = ((bytes[3] >> 4) & 0x01) ? 1 : 0;\n    data.system_functions_errors.charging_status = (bytes[3] >> 5) & 0x07;\n    data.lat = ((bytes[4] << 16) >>> 0) + ((bytes[5] << 8) >>> 0) + bytes[6];\n    data.lon = ((bytes[7] << 16) >>> 0) + ((bytes[8] << 8) >>> 0) + bytes[9];\n    if(data.lat!==0 && data.lon!==0){\n      data.lat = (data.lat / 16777215.0 * 180) - 90;\n      data.lon = (data.lon / 16777215.0 * 360) - 180;\n      data.lat = Math.round(data.lat*100000)/100000;\n      data.lon = Math.round(data.lon*100000)/100000;\n    }\n    data.gps_resend = bytes[10];\n    data.accelx = get_num(bytes[11], -2000, 2000, 8, 1);\n    data.accely = get_num(bytes[12], -2000, 2000, 8, 1);\n    data.accelz = get_num(bytes[13], -2000, 2000, 8, 1);\n    data.battery_low = (bytes[15] << 8) | bytes[14];; // result in mV\n    data.gps_on_time_total = (bytes[17] << 8) | bytes[16];\n    data.gps_time = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);\n    var d= new Date(data.gps_time*1000);\n    data.gps_time_data = d.toLocaleString();\n    data.pulse_counter = bytes[22];\n    data.pulse_energy = (bytes[23]<<4) | (bytes[24] | (bytes[25] << 8)>>12);\n    data.pulse_voltage = (bytes[24] | (bytes[25] << 8)) & 0x0fff;\n    data.voltage_fence_v = data.pulse_voltage * 8;\n    data.downlink_counter = (bytes[26] | (bytes[27] << 8));\n  }\n  else if (port === 1) {\n    data.lat = ((bytes[cnt++] << 16) >>> 0) + ((bytes[cnt++] << 8) >>> 0) + bytes[cnt++];\n    data.lon = ((bytes[cnt++] << 16) >>> 0) + ((bytes[cnt++] << 8) >>> 0) + bytes[cnt++];\n    if(data.lat!==0 && data.lon!==0){\n      data.lat = (data.lat / 16777215.0 * 180) - 90;\n      data.lon = (data.lon / 16777215.0 * 360) - 180;\n      data.lat = Math.round(data.lat*100000)/100000;\n      data.lon = Math.round(data.lon*100000)/100000;\n    }\n    data.alt = bytes[cnt++] | (bytes[cnt++] << 8);\n    data.satellites = (bytes[cnt] >> 4);\n    data.hdop = (bytes[cnt++] & 0x0f);\n    data.time_to_fix = bytes[cnt++];\n    data.epe = bytes[cnt++];\n    data.snr = bytes[cnt++];\n    data.lux = bytes[cnt++];\n    data.motion = bytes[cnt++];\n    data.gps_time = bytes[cnt++] | (bytes[cnt++] << 8) | (bytes[cnt++] << 16) | (bytes[cnt++] << 24);\n    var d= new Date(data.gps_time*1000);\n    data.gps_time_data = d.toLocaleString();\n  }\n  else if (port === 11) {\n    var locations=[];\n    for(i = 0; i < 20; i++){\n      var location={}\n      location.lat = ((bytes[cnt++] << 16) >>> 0) + ((bytes[cnt++] << 8) >>> 0) + bytes[cnt++];\n      location.lon = ((bytes[cnt++] << 16) >>> 0) + ((bytes[cnt++] << 8) >>> 0) + bytes[cnt++];\n      location.gps_time = ((bytes[cnt++] << 16) >>> 0) + ((bytes[cnt++] << 8) >>> 0) + bytes[cnt++];\n      location.gps_time = location.gps_time * 60 + 1600000000;\n      var d= new Date(location.gps_time*1000);\n      location.gps_time_data = d.toLocaleString();\n      var fix_stats= bytes[cnt++];\n      location.motion = fix_stats>>7;\n      location.epe = ((fix_stats>>4)&0x07)*12;\n      location.ttf = (fix_stats&0x0f)*5;\n      if(location.lat!==0 && location.lon!==0){\n        location.lat = (location.lat / 16777215.0 * 180) - 90;\n        location.lon = (location.lon / 16777215.0 * 360) - 180;\n        location.lat = Math.round(location.lat*100000)/100000;\n        location.lon = Math.round(location.lon*100000)/100000;\n        // push only valid locations\n        locations.push(location);\n      }\n    }\n    data.locations=JSON.stringify(locations);\n  }\n  else if (port === 30) {\n    var vswr=[];\n    for(i = 0; i < bytes.length; i++){\n      var value=(bytes[i]);\n      vswr.push(value);\n    }\n    data.vswr=vswr;\n  }\n\n  return data;\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "GPS Tracking",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Wildlife Location"
+                        },
+                        "properties": {
+                          "center": {
+                            "lat": 0,
+                            "lng": 0,
+                            "zoom": 2
+                          }
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "lat",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "lon",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "System Status",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4200,
+                          "min": 2500,
+                          "unit": "mV"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 80,
+                          "min": -20,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Satellites"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "decimal_places": 0,
+                          "icon": "fa fa-satellite",
+                          "size": "75px",
+                          "unit": "",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "satellites",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Satellites",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery & Temperature History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Battery (mV)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Motion & Activity",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Accelerometer Data"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "accelx",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Accel X",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "accely",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Accel Y",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "accelz",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Accel Z",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Motion Detected"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "decimal_places": 0,
+                          "icon": "fa fa-running",
+                          "size": "50px",
+                          "unit": "",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "motion",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Motion",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Light Level"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "decimal_places": 0,
+                          "icon": "fa fa-sun",
+                          "size": "50px",
+                          "unit": "lux",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "lux",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Light",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Pulse Counter"
+                        },
+                        "properties": {
+                          "color": "#16a085",
+                          "max": 255,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "pulse_counter",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Pulses",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Data Log",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Telemetry Data"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Lat</th>\n        <th>Lon</th>\n        <th>Battery (mV)</th>\n        <th>Temp (°C)</th>\n        <th>Motion</th>\n        <th>Satellites</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.lat || '—' }}</td>\n        <td>{{ entry.lon || '—' }}</td>\n        <td>{{ entry.battery || '—' }}</td>\n        <td>{{ entry.temperature || '—' }}</td>\n        <td>{{ entry.motion || '—' }}</td>\n        <td>{{ entry.satellites || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "lat",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "lat",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "lon",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "lon",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "motion",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "motion",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "smart_parks_opencollar_data",
+                              "mapping": "satellites",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "satellites",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
