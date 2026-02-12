@@ -1,0 +1,7 @@
+site_name: plugins/devices/pepperl-fuchs-wilsen-sonic-level
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
