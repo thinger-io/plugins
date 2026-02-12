@@ -1,0 +1,1043 @@
+{
+    "name": "uradmonitor-model-industrial",
+    "version": "1.0.0",
+    "description": "An automated, fixed monitoring station that tracks a total of 11 important air quality parameters including Particulate Matter, Carbon Monoxide, Ozone, Sulphur Dioxide, Nitrogen Dioxide and more for the INDUSTRIAL sector. It comes in a rugged aluminum enc",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "uradmonitor-model-industrial"
+    },
+    "metadata": {
+        "name": "Uradmonitor MODEL-INDUSTRIAL",
+        "description": "An automated, fixed monitoring station that tracks a total of 11 important air quality parameters including Particulate Matter, Carbon Monoxide, Ozone, Sulphur Dioxide, Nitrogen Dioxide and more for the INDUSTRIAL sector. It comes in a rugged aluminum enc",
+        "image": "assets/industrial.png",
+        "category": "devices",
+        "vendor": "uradmonitor"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "An automated, fixed monitoring station that tracks a total of 11 important air quality parameters including Particulate Matter, Carbon Monoxide, Ozone, Sulphur Dioxide, Nitrogen Dioxide and more for the INDUSTRIAL sector. It comes in a rugged aluminum enc",
+                "enabled": true,
+                "name": "Uradmonitor MODEL-INDUSTRIAL",
+                "product": "uradmonitor_model_industrial",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "uradmonitor-industrial-.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "industrial_model_uradmonitor_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction uint16(value1, value2) {\n  return (value1 << 8) + value2;\n}\n\nfunction uint24(value1, value2, value3) {\n  return (value1 << 16) + (value2 << 8) + value3;\n}\n\nfunction uint24float(value1, value2, value3, multiplier) {\n  var value = uint24(value1, value2, value3);\n\n  if (value & 0x800000)\n    return (value & 0x7FFFFF) / -multiplier;\n\n  return value/multiplier;\n}\n\nfunction uint16float(value1, value2, multiplier) {\n  var value = uint16(value1, value2);\n\n  if (value & 0x8000)\n    return (value & 0x7FFF) / -multiplier;\n\n  return value/multiplier;\n}\n\nfunction decodeOrganicSensor(type, value1, value2, value3) {\n  var lookup = {\n    0x2A: 'o3',\n    0x2B: 'so2',\n    0x2C: 'no2',\n    0x04: 'co',\n    0x03: 'h2s',\n    0x02: 'nh3',\n    0x31: 'cl2',\n  };\n\n  var t = lookup[type];\n  if (!t)\n    return null;\n\n  return [t, uint24float(value1, value2, value3, 1000)];\n}\n\n// ID 4B - \"1400008E\"\n// VERHW 1B - \"06\" (decimal 6, meaning INDUSTRIAL HW106)\n// VERSW 1B - \"4E\" (decimal 78, meaning firmware version 78)\n// TIMESTAMP 4B - \"00001C20\" (decimal 7200 sec)\n// LATITUDE 3B - “000000” (decimal 0, only on devices with NMEA GPS on pin RX6), DI24 encoded with 4 digits *\n// LONGITUDE 3B - “000000” (decimal 0, only on devices with NMEA GPS on pin RX6), DI24 encoded with 4 digits *\n// ALTITUDE 2B - “0000” (decimal 0, only on devices with NMEA GPS on pin RX6), DI16 encoded no digits **\n// SPEED 2B - “0000” (decimal 0, only on devices with NMEA GPS on pin RX6), multiplied by 10. Divide by 10.\n// TEMPERATURE 2B - “0732\" , value 18.42°C, DI16 encoded with 2 digits **\n// PRESSURE 2B - \"8797\" offset encoded ***\n// HUMIDITY 1B - \"82\" multiplied by 2, 0.5RH resolution, decimal 130 / 2 = 65RH\n// VOC 3B - \"031276\" (decimal 201334ohms, or 201KO)\n// NOISE 1B - \"A3\" like humidity, multiplied by 2, 0.5dBA resolution, decimal 163/2 = 81dBA\n// SENSORGASID1 1B - \"2A\" (Ozone: O3=0x2A, NO2=0x2C, SO2=0x2B, CO=0x04, H2S=0x03, NH3=0x02, CL2=0x31)\n// SENSORGASCONC1 3B - \"00028D\" DI24 encoded, 3 digits *, 0.653ppm Ozone\n// SENSORGASID2 1B - \"2C\" (Nitrogen Dioxide: O3=0x2A,NO2=0x2C, SO2=0x2B, CO=0x04, H2S=0x03, NH3=0x02, CL2=0x31)\n// SENSORGASCONC2 3B - \"00000D\" DI24 encoded, 3 digits *, 0.013ppm NO2\n// SENSORGASID3 1B - \"2B\" (Sulphur Dioxide: O3=0x2A, NO2=0x2C, SO2=0x2B, CO=0x04, H2S=0x03, NH3=0x02, CL2=0x31)\n// SENSORGASCONC3 3B - “00000A\" DI24 encoded, 3 digits *, 0.01ppm SO2\n// SENSORGASID4 1B - \"04\" (Carbon Monoxide: O3=0x2A,NO2=0x2C, SO2=0x2B, CO=0x04, H2S=0x03, NH3=0x02, CL2=0x31)\n// SENSORGASCONC4 3B - \"000000\" DI24 encoded, 3 digits *, 0ppm CO\n// PM1 1B - \"02\" (decimal 2 µg/m3, difference from PM2.5, final value PM2.5=7 - 2= 5 µg/m3 )\n// PM2.5 2B - \"0007\" ( decimal 7 µg/m3)\n// PM10 1B - \"00\" (decimal 0 µg/m3, difference from PM2.5, final value PM2.5=7 + 2= 7 µg/m3 ))\n// CRC 1B - “45\" ****\nfunction DecodePayload(bytes) {\n    if (bytes.length != 50)\n        return null;\n\n    var obj = {\n        model: \"Industrial\",\n        hardware_version: \"HW\" + bytes[4],\n        firmware_version: bytes[5],\n        // timestamp: bytes[6, 7, 8, 9]\n        // latitude: bytes[10, 11, 12]\n        // longitude: bytes[13, 14, 15]\n        // altitude: bytes[16, 17]\n        // speed: bytes[18, 19]\n        temperature: uint16float(bytes[20], bytes[21], 100),\n        pressure: (uint16(bytes[22], bytes[23]) + 65535),\n        humidity: (bytes[24]/2),\n        gas_resistance: uint24(bytes[25], bytes[26], bytes[27]),\n        sound: bytes[28]/2,\n    };\n\n    var r;\n    r = decodeOrganicSensor(bytes[29], bytes[30], bytes[31], bytes[32]);\n    if (r)\n      obj[r[0]] = r[1];\n    r = decodeOrganicSensor(bytes[33], bytes[34], bytes[35], bytes[36]);\n    if (r)\n      obj[r[0]] = r[1];\n    r = decodeOrganicSensor(bytes[37], bytes[38], bytes[39], bytes[40]);\n    if (r)\n      obj[r[0]] = r[1];\n    r = decodeOrganicSensor(bytes[41], bytes[42], bytes[43], bytes[44]);\n    if (r)\n      obj[r[0]] = r[1];\n\n    var pm1 = bytes[45];\n    var pm2_5 = uint16(bytes[46], bytes[47]);\n    var pm10 = bytes[48];\n    pm1 = pm2_5 - pm1;\n    pm10 = pm2_5 + pm10;\n\n    obj.pm1 = pm1;\n    obj.pm2_5 = pm2_5;\n    obj.pm10 = pm10;\n\n    obj.iaq = parseInt(Math.log(obj.gas_resistance) + 0.04 * obj.humidity, 10);\n    return obj;\n}\n\nfunction decodeUplink(input) {\n    return {\n        \"data\": DecodePayload(input.bytes)\n    }\n}\n\nfunction hexToBytes(hex) {\n    for (var bytes = [], c = 0; c < hex.length; c += 2)\n        bytes.push(parseInt(hex.substr(c, 2), 16));\n    return bytes;\n}\n\n//const payload = \"1400008E064E00001C20000000000000000000000732879782031276A32A00028D2C00000D2B00000A040000000200070045\";\n//console.log(DecodePayload(hexToBytes(payload)));\n\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "name": "Industrial Model",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "tabs": [
+                                    {
+                                        "name": "Air Quality Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 85,
+                                                    "min": -40,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff0000",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#0000ff",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%RH"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#0000ff",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Pressure"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 110000,
+                                                    "min": 90000,
+                                                    "unit": "Pa"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "PM2.5"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "µg/m³"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pm2_5",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "PM2.5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "PM10"
+                                                },
+                                                "properties": {
+                                                    "color": "#e67e22",
+                                                    "max": 150,
+                                                    "min": 0,
+                                                    "unit": "µg/m³"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pm10",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "PM10",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 12,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Sound Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 120,
+                                                    "min": 30,
+                                                    "unit": "dBA"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "sound",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Sound",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 4,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Particulate Matter Trends"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pm1",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "PM1.0",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pm2_5",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "PM2.5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "pm10",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "PM10",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 18,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "IAQ Index"
+                                                },
+                                                "properties": {
+                                                    "color": "#16a085",
+                                                    "max": 500,
+                                                    "min": 0,
+                                                    "unit": ""
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#16a085",
+                                                        "name": "IAQ",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 18,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Gas Resistance"
+                                                },
+                                                "properties": {
+                                                    "color": "#27ae60",
+                                                    "max": 500000,
+                                                    "min": 0,
+                                                    "unit": "Ω"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "gas_resistance",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#27ae60",
+                                                        "name": "VOC Resistance",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 12,
+                                                    "sizeX": 4,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Environmental Parameters - 24h"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff0000",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#0000ff",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "sound",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Sound Level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "name": "Gas Sensors",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Ozone (O3)"
+                                                },
+                                                "properties": {
+                                                    "color": "#3498db",
+                                                    "max": 1,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "o3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "O3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Nitrogen Dioxide (NO2)"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 0.5,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "no2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "NO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Sulphur Dioxide (SO2)"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 0.5,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "so2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "SO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Carbon Monoxide (CO)"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 50,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "co",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "CO",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Hydrogen Sulfide (H2S)"
+                                                },
+                                                "properties": {
+                                                    "color": "#16a085",
+                                                    "max": 0.1,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "h2s",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#16a085",
+                                                        "name": "H2S",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Ammonia (NH3)"
+                                                },
+                                                "properties": {
+                                                    "color": "#27ae60",
+                                                    "max": 50,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "nh3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#27ae60",
+                                                        "name": "NH3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Gas Concentrations - 24h Trend"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "o3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "O3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "no2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "NO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "so2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "SO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "co",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "CO",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 6,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Latest Air Quality Readings"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Temp (°C)</th>\n        <th>Hum (%)</th>\n        <th>PM2.5</th>\n        <th>PM10</th>\n        <th>O3</th>\n        <th>NO2</th>\n        <th>SO2</th>\n        <th>CO</th>\n        <th>IAQ</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td>{{ entry.temperature | number:1 }}</td>\n        <td>{{ entry.humidity | number:1 }}</td>\n        <td>{{ entry.pm2_5 || '—' }}</td>\n        <td>{{ entry.pm10 || '—' }}</td>\n        <td>{{ entry.o3 | number:3 }}</td>\n        <td>{{ entry.no2 | number:3 }}</td>\n        <td>{{ entry.so2 | number:3 }}</td>\n        <td>{{ entry.co | number:3 }}</td>\n        <td>{{ entry.iaq || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "industrial_model_uradmonitor_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "timestamp",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

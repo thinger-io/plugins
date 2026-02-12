@@ -1,0 +1,869 @@
+{
+    "name": "n-fuse-ste",
+    "version": "1.0.0",
+    "description": "Environment sensor. BME680 (IAQ, CO2-e, bVOC-e, pressure, temperature, humidity).",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "n-fuse-ste"
+    },
+    "metadata": {
+        "name": "N-Fuse STE",
+        "description": "Environment sensor. BME680 (IAQ, CO2-e, bVOC-e, pressure, temperature, humidity).",
+        "image": "assets/ste.png",
+        "category": "devices",
+        "vendor": "n-fuse"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "Environment sensor. BME680 (IAQ, CO2-e, bVOC-e, pressure, temperature, humidity).",
+                "enabled": true,
+                "name": "N-Fuse STE",
+                "product": "n_fuse_ste",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "return payload.deviceId;",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "n-fuse-ste.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "n_fuse_ste_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": [
+                                "environment",
+                                "bme680"
+                            ]
+                        }
+                    },
+                    "code": {
+                        "code": "function getBattery(payload) {\n    return payload.battery;\n}\n\nfunction getCO2(payload) {\n    return payload.co2;\n}\n\nfunction getHumidity(payload) {\n    return payload.humidity;\n}\n\nfunction getIAQ(payload) {\n    return payload.iaq;\n}\n\nfunction getIAQAccuracy(payload) {\n    return payload.iaq_accuracy;\n}\n\nfunction getPressure(payload) {\n    return payload.pressure;\n}\n\nfunction getTemperature(payload) {\n    return payload.temperature;\n}\n\nfunction getVOC(payload) {\n    return payload.voc;\n}\n\n\n\n\n\nfunction decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: The Things Stack v3\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n\n            var result = decodeUplink(input);\n\n            if (result.data) {\n                return {\n                    ...result.data.bme680,\n                    battery: result.data.info?.battery,\n                    txpower: result.data.info?.txpower,\n                    version: result.data.info?.version\n                };\n            }\n\n            return result;\n\n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n\n// ---------------- TTN DECODER ORIGINAL ----------------\n\nconst iaq_accuracy_type = [\n  {val: 0, str: 'none'},\n  {val: 1, str: 'low'},\n  {val: 2, str: 'medium'},\n  {val: 3, str: 'high'},\n]\n\nfunction decodeUplink(input) {\n  if(input.fPort != 1) return {errors: ['unknown FPort']};\n  if(input.bytes[0] & 0xc0 != 0x40) return {errors: ['unknown format version']};\n\n  const iaq_raw =\n    input.bytes[10] <<  1 & 0x100 |\n    input.bytes[6]  <<  0 & 0x000;\n\n  const voc_raw =\n    input.bytes[10] << 12 & 0x1000 |\n    input.bytes[ 9] <<  8 & 0x0f00 |\n    input.bytes[ 7] <<  0 & 0x00ff;\n\n  const co2_raw =\n    input.bytes[10] << 12 & 0x7000 |\n    input.bytes[ 9] <<  8 & 0x0f00 |\n    input.bytes[ 8] <<  0 & 0x00ff;\n\n  let voc_real = 0\n  const voc_mantissa = voc_raw & 0x03ff;\n  const voc_exponent = voc_raw & 0x1c00;\n\n  if(voc_exponent) {\n    voc_real = voc_raw / 1024.0;\n  } else {\n    const floor = 8 << (3 * (voc_exponent - 1));\n    const ceil  = 8 << (3 * voc_exponent);\n    const range = ceil - floor;\n    voc_real = voc_mantissa / 1024.0 * range + floor;\n  }\n\n  return {\n    data: {\n      bme680: {\n        temperature: (input.bytes[3] << 1 & 0x100 | input.bytes[2]) / 511 * 125 - 40,\n        humidity: input.bytes[3] & 0x7f,\n        pressure: input.bytes[5] << 8 | input.bytes[4],\n        co2: co2_raw,\n        voc: voc_real,\n        iaq: iaq_raw,\n        iaq_accuracy: iaq_accuracy_type[input.bytes[10] & 0x03],\n      },\n      info: {\n        version: 0x01,\n        battery: (input.bytes[1] & 0x7f) / 100 + 2,\n        txpower: input.bytes[0] >> 2 & 0x0f,\n      }\n    }\n  }\n}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "ste_flow_decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "n_fuse_ste_battery": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getBattery",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_co2": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getCO2",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_humidity": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getHumidity",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_iaq": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getIAQ",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_iaq_accuracy": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getIAQAccuracy",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_pressure": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getPressure",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_temperature": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getTemperature",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "n_fuse_ste_voc": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getVOC",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Environment",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 50,
+                                                    "min": -10,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#3498db",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%RH"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Pressure"
+                                                },
+                                                "properties": {
+                                                    "color": "#95a5a6",
+                                                    "max": 1100,
+                                                    "min": 900,
+                                                    "unit": "hPa"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#95a5a6",
+                                                        "name": "Pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "CO2 Equivalent"
+                                                },
+                                                "properties": {
+                                                    "color": "#e67e22",
+                                                    "max": 5000,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "CO2-e",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "VOC Equivalent"
+                                                },
+                                                "properties": {
+                                                    "color": "#9b59b6",
+                                                    "max": 10,
+                                                    "min": 0,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.voc",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "bVOC-e",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Indoor Air Quality"
+                                                },
+                                                "properties": {
+                                                    "color": "#1abc9c",
+                                                    "max": 500,
+                                                    "min": 0,
+                                                    "unit": "index"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "IAQ",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature & Humidity History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Air Quality History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "CO2-e (ppm)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.voc",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "bVOC-e (ppm)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "IAQ Index",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 24,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery Status"
+                                                },
+                                                "properties": {
+                                                    "color": "#f1c40f",
+                                                    "max": 4.5,
+                                                    "min": 2,
+                                                    "unit": "V"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "info.battery",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f1c40f",
+                                                        "name": "Battery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 24,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Latest Data"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 15px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Temp (°C)</th>\n        <th>Humidity (%)</th>\n        <th>Pressure (hPa)</th>\n        <th>CO2-e (ppm)</th>\n        <th>bVOC-e (ppm)</th>\n        <th>IAQ</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ (entry['bme680.temperature'] || entry.temperature || 0) | number:1 }}</td>\n        <td>{{ (entry['bme680.humidity'] || entry.humidity || 0) | number:1 }}</td>\n        <td>{{ (entry['bme680.pressure'] || entry.pressure || 0) | number:0 }}</td>\n        <td>{{ (entry['bme680.co2'] || entry.co2 || 0) | number:0 }}</td>\n        <td>{{ (entry['bme680.voc'] || entry.voc || 0) | number:2 }}</td>\n        <td>{{ (entry['bme680.iaq'] || entry.iaq || 0) | number:0 }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#34495e",
+                                                        "name": "timestamp",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#95a5a6",
+                                                        "name": "pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "co2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.voc",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "voc",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "n_fuse_ste_data",
+                                                            "mapping": "bme680.iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "iaq",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
