@@ -1,0 +1,7 @@
+site_name: plugins/devices/koidra-sdi-12-tek
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
