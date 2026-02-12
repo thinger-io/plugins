@@ -1,0 +1,7 @@
+site_name: plugins/devices/n-fuse-ste
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
