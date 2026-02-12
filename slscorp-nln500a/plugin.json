@@ -1,0 +1,355 @@
+{
+  "name": "slscorp_nln500a",
+  "version": "1.0.0",
+  "description": "The NebuLink Node NLN500a is the First and Smallest STM32WL Based LoRa Module. It is built on the STM32WL SoC which has an Embedded LoRaWAN Transceiver for a wide range of Smart Applications. It offers long-range, low-power, and secure data transmission f",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "slscorp-nln500a"
+  },
+  "metadata": {
+    "name": "Slscorp NLN500A",
+    "description": "The NebuLink Node NLN500a is the First and Smallest STM32WL Based LoRa Module. It is built on the STM32WL SoC which has an Embedded LoRaWAN Transceiver for a wide range of Smart Applications. It offers long-range, low-power, and secure data transmission f",
+    "image": "assets/nln500a-main.png",
+    "category": "devices",
+    "vendor": "slscorp"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The NebuLink Node NLN500a is the First and Smallest STM32WL Based LoRa Module. It is built on the STM32WL SoC which has an Embedded LoRaWAN Transceiver for a wide range of Smart Applications. It offers long-range, low-power, and secure data transmission f",
+        "enabled": true,
+        "name": "Slscorp NLN500A",
+        "product": "slscorp_nln500a",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "nln500a-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "slscorp_nln500a_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "parseOrDecodeIncomingData",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Telemetry History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "slscorp_nln500a_data",
+                              "mapping": "value",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Sensor Data",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Data Received"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 10px;\">\r\n  <div ng-if=\"value && value.length > 0\">\r\n    <h4>Latest Entry</h4>\r\n    <p><strong>Timestamp:</strong> {{ value[0].ts | date:'medium' }}</p>\r\n    <hr>\r\n    <h5>Payload Data:</h5>\r\n    <pre style=\"background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 400px; overflow-y: auto;\">{{ value[0] | json }}</pre>\r\n  </div>\r\n  <div ng-if=\"!value || value.length === 0\" style=\"text-align: center; padding: 20px;\">\r\n    <p style=\"color: #999;\">No data available</p>\r\n  </div>\r\n</div>\r\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "slscorp_nln500a_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "data",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Total Messages (24h)"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "decimal_places": 0,
+                          "icon": "fas fa-envelope",
+                          "size": "80px",
+                          "unit": "msgs",
+                          "unit_size": "20px",
+                          "weight": "font-thin"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "type": "count"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "slscorp_nln500a_data",
+                              "mapping": "",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Message Count",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "RSSI"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": -40,
+                          "min": -120,
+                          "unit": "dBm"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "slscorp_nln500a_data",
+                              "mapping": "rssi",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "RSSI",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "SNR"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 15,
+                          "min": -20,
+                          "unit": "dB"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "slscorp_nln500a_data",
+                              "mapping": "snr",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "SNR",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
