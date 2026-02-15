@@ -1,0 +1,294 @@
+{
+    "name": "acrios-acr-cv-101l-m-eac",
+    "version": "1.0.0",
+    "description": "M-Bus to LoRaWAN converter is used to retrofit ANY M-Bus meter with LoRaWAN communication",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "acrios-acr-cv-101l-m-eac"
+    },
+    "metadata": {
+        "name": "Acrios ACR-CV-101L-M-EAC",
+        "description": "M-Bus to LoRaWAN converter is used to retrofit ANY M-Bus meter with LoRaWAN communication",
+        "image": "assets/acr-cv-101l-x-eac.png",
+        "category": "devices",
+        "vendor": "acrios"
+    },
+    "resources": {
+        "products": [
+            {
+                "description": "M-Bus to LoRaWAN converter is used to retrofit ANY M-Bus meter with LoRaWAN communication",
+                "enabled": true,
+                "name": "Acrios ACR-CV-101L-M-EAC",
+                "product": "acrios_acr_cv_101l_m_eac",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "acrios-acr-cv.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "acr_cv_101l_m_eac_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "parseOrDecodeIncomingData",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * tmbus JavaScript Library v1.0.0\n * https://github.com/dev-lab/tmbus\n *\n * Copyright (c) 2023 Taras Greben\n * Released under the Apache License\n * https://dev-lab.github.com/tmbus/LICENSE\n */\n\nfunction ln(t) {\n\treturn t ? t.length || 0 : 0;\n}\n\nfunction sNc(c, i) {\n\treturn i > 0 ? Array(i + 1).join(c) : \"\";\n}\n\nfunction sIn(s, i, n) {\n\treturn i ? s.slice(0, i) + n + s.slice(i) : n + s;\n}\n\nfunction p10(n, e) {\n\tif (!e) return n;\n\tvar s = ln(n);\n\tif (!s) {\n\t\tvar i = parseInt(n);\n\t\tif (n !== i) return isNaN(i) ? n : n * Math.pow(10, e);\n\t}\n\tvar t = \"\" + n, b = (s ? t[0] == \"-\" : n < 0) ? 1 : 0, l = ln(t);\n\tif (e > 0) t += sNc(\"0\", e);\n\telse {\n\t\te += l - b;\n\t\tif (e < 0) t = sIn(t, b, sNc(\"0\", -e));\n\t\tt = sIn(t, e <= 0 ? b : e + b, \".\");\n\t}\n\treturn s ? t : Number(t);\n}\n\nfunction ha2si(a) {\n\tvar l = ln(a = a.slice()), d = [], r = a[l - 1], m = r & 128, i, f;\n\tif (m) for (i = f = 0; i < l; ++i) if (a[i] || f) {\n\t\ta[i] = 256 - a[i] - f;\n\t\tf = 1;\n\t}\n\tfor (i = l, f = 0; i;) if (a[--i]) f = 1;\n\tif (!f) return 0;\n\tdo {\n\t\tr = f = 0, i = l;\n\t\twhile (i) {\n\t\t\tvar n = r * 256 + a[--i];\n\t\t\tr = n % 10;\n\t\t\tif (a[i] = (n - r) / 10) f = 1;\n\t\t}\n\t\td.push(r);\n\t} while (f);\n\tfor (i = ln(d); !d[--i];);\n\treturn (m ? \"-\" : \"\") + d.slice(0, ++i).reverse().join(\"\");\n}\n\nfunction i2s(v, n) {\n\tvar r = v ? v.toString() : \"0\", l = ln(r);\n\treturn n ? (l < n ? sNc(\"0\", n - l) : \"\") + r : r;\n}\n\nfunction sum(a, b, e) {\n\tvar r = 0, i = b || 0;\n\twhile (i < (e || ln(a))) r += a[i++];\n\treturn r & 0xFF;\n}\n\nfunction parseHs(s) {\n\tvar p = s ? s.split(/[\\s,]/) : [], r = [], t, i = 0;\n\twhile (i < ln(p)) if (ln(t = p[i++])) r = r.concat(t.match(/.{1,2}/g));\n\treturn r;\n}\n\nfunction hs2i(s) {\n\treturn Number(\"0x\" + s.replace(/^#/, ''));\n}\n\nfunction hs2a(s) {\n\tvar a = parseHs(s), r = [], v, i = 0;\n\twhile (i < ln(a)) {\n\t\tv = hs2i(a[i++]);\n\t\tif (isNaN(v) || v < 0 || v > 255) throw '\"' + a[i] + '\" is not a hex byte, pos ' + i;\n\t\tr.push(v);\n\t}\n\treturn r;\n}\n\nfunction b2hs(i) {\n\ti = Number(i);\n\treturn (i < 16 ? \"0\" : \"\") + i.toString(16);\n}\n\nfunction ba2hs(a, s) {\n\tvar r = [], i = 0;\n\twhile (i < ln(a)) r.push(b2hs(a[i++]));\n\treturn r.join(s || \"\");\n}\n\nfunction ba2i(a) {\n\tvar i = ln(a);\n\tif (!i || i > 4) return i ? a : 0;\n\tvar r = a[--i], m = i == 3 ? 0 : r & 128 ? (r &= 127, -(1 << i * 8 + 7)) : 0;\n\twhile (i) r = (r << 8) + a[--i];\n\treturn r + m;\n}\n\nfunction ba2b(a) {\n\tvar i = ln(a), r = 0;\n\twhile (i) r = (r << 8) + a[--i];\n\treturn r;\n}\n\nfunction ba2bcd(a, x) {\n\tvar r = 0, i = ln(a), v, h, l, s = \"\", e = 0, m = 0;\n\tfunction p(c) {\n\t\tif (m) c = -c;\n\t\tif (c < 10) s += c;\n\t\telse e = 1, s += \"A-C EF\".charAt(c - 10);\n\t}\n\twhile (i) {\n\t\tv = a[--i], h = (v & 0xF0) >> 4, l = v & 0xF;\n\t\tif (m) h = -h, l = -l;\n\t\tr = r * 100 + h * 10 + l;\n\t\tp(h);\n\t\tif (1 == ln(s)) {\n\t\t\te = 0;\n\t\t\tif (h == 13) e = 1;\n\t\t\telse if (h > 13) {\n\t\t\t\tm = 1, l = -l, r = l;\n\t\t\t\tif (h == 14) r -= 10;\n\t\t\t}\n\t\t}\n\t\tp(l);\n\t}\n\tif (!x && e) throw s;\n\treturn e ? s : r;\n}\n\nfunction i2c(i) {\n\treturn String.fromCharCode(i);\n}\n\nfunction ba2s(a) {\n\tvar r = [], i = ln(a);\n\twhile (i) r.push(i2c(a[--i]));\n\treturn r.join(\"\");\n}\n\nfunction date(y, m, d) {\n\treturn {\n\t\trawY: y, y: 1900 + y + (y < 100 ? 100 : 0), m: m, d: d,\n\t\ttoString: function () {\n\t\t\tvar t = this, r = i2s(d, 2) + \".\" + i2s(m, 2) + \".\" + t.y;\n\t\t\tif (t.hr !== undefined) r += \" \" + i2s(t.hr, 2) + \":\" + i2s(t.mi, 2)\n\t\t\t\t+ (t.se !== undefined ? (\":\" + i2s(t.se, 2)) : \"\");\n\t\t\tif (t.s) r += \" (summer)\";\n\t\t\tif (t.i) r += \" (invalid)\";\n\t\t\treturn r;\n\t\t}\n\t};\n}\n\nfunction i2d(i) {\n\treturn i ? date(i >> 5 & 7 | i >> 9 & 0x78, i >> 8 & 0xF, i & 0x1F) : null;\n}\n\nfunction i2t(i) {\n\tvar l = ln(i) || 0, b = l > 5 ? 1 : 0, s = b ? i[--l] : 0, i = l ? ba2b(i.slice(b, l)) : i;\n\tif (!i) return null;\n\tvar r = i2d(i >> 16);\n\tr.hr = i >> 8 & 0x1F;\n\tr.mi = i & 0x3F;\n\tif (b) r.se = s & 0x3F;\n\tif (i & 0x8000) r.s = true;\n\tif (i & 0x80) r.i = true;\n\treturn r;\n}\n\nfunction ba2f(a) {\n\tvar l = ln(a) - 1, s = 7;\n\tif (l == 7) s = 4;\n\telse if (l != 3) return NaN;\n\tvar b = l - 1, m = (1 << s) - 1, f = (a[b] & m) << b * 8, h = 1 << b * 8 + s, y = 1 << 14 - s,\n\t\te = (a[b] >> s) + ((a[l] & 0x7F) << 8 - s) + 1 - y, g = a[l] >> 7 ? -1 : 1, i;\n\tfor (i = 0; i < b; ++i) f += a[i] << i * 8;\n\tif (e == y) return g * (f ? NaN : Number.POSITIVE_INFINITY);\n\tif (f) f = e == 1 - y ? f / (h >> 1) : (f | h) / h;\n\treturn g * f * Math.pow(2, e);\n}\n\nfunction hexSum(h, c, s) {\n\tvar a = hs2a(h), l = ln(a);\n\tif (l > 1 && l < 256 && c) {\n\t\ta.push(sum(a));\n\t\ta.push(0x16);\n\t\tif (l < 3) a.splice(0, 0, 0x10);\n\t\telse a.splice(0, 0, 0x68, l, l, 0x68);\n\t}\n\treturn ba2hs(a, s);\n}\n\nfunction tmbus(h) {\n\n\tvar a = hs2a(h), isA = Array.isArray, O = [0], MS = \"Manufacturer specific\", R = \"Reserved\", UH = \"Units for H.C.A.\";\n\twhile (ln(a)) if (a[0] != 255) break; else a.splice(0, 1);\n\tvar l = ln(a), e = l - 2, r = { len: l }, id = 0, n = 0, c, w;\n\tif (!l) return r;\n\n\tfunction er(s) {\n\t\tthrow (s || \"Wrong frame length\") + \", pos \" + n;\n\t}\n\n\tfunction i() {\n\t\tif (n == l) er();\n\t\treturn c = a[n++];\n\t}\n\n\tfunction sl(t, s) {\n\t\tvar p = n, r = s + n;\n\t\tif (r > e) er(\"Premature end of data when reading \" + t + \" (need \" + s + \", available \" + (e - n) + \")\");\n\t\tn = r;\n\t\treturn a.slice(p, n);\n\t}\n\n\tfunction ii(t, b, s) {\n\t\tvar r = sl(t, s || 4);\n\t\treturn b ? ba2i(b == 2 ? r.reverse() : r) : ba2bcd(r, 1);\n\t}\n\n\tfunction aSum(b) {\n\t\tif (sum(a, b, e) != a[e]) er(\"Check sum failed\");\n\t}\n\n\ti();\n\tif (l == 1) {\n\t\tc == 0xe5 ? r.type = \"OK\" : er(\"Invalid char\");\n\t\treturn r;\n\t}\n\tif (l < 5) er();\n\tif (a[l - 1] != 0x16) er(\"No Stop\");\n\tif (c == 0x10) {\n\t\tr.type = \"Short\";\n\t\taSum(1);\n\t\tr.c = i();\n\t\tr.a = i();\n\t\treturn r;\n\t}\n\tif (c != 0x68) er(\"No Start\");\n\tr.type = \"Data\";\n\tr.l = i();\n\tif (a[2] != c) er(\"Invalid length\");\n\tif (a[0] != a[3]) er(\"Invalid format\");\n\tif (c != l - 6) er(\"Wrong length\");\n\taSum(n = 4);\n\tr.c = i();\n\tr.a = i();\n\tr.ci = i();\n\tw = r.errors = [];\n\tif ((c & 0xFA) == 0x72) r.fixed = (c & 1) == 1;\n\telse {\n\t\tr.type = \"Error\";\n\t\tvar s = [\"Unspecified error\", \"Unimplemented CI-Field\", \"Buffer too long, truncated\", \"Too many records\",\n\t\t\t\"Premature end of record\", \"More than 10 DIFE's\", \"More than 10 VIFE's\",\n\t\t\tR, \"Application too busy for handling readout request\", \"Too many readouts\"];\n\t\tif (c == 0x70) {\n\t\t\tw.push(s[n == e ? 0 : i() < 10 ? c : 7]);\n\t\t\treturn r;\n\t\t}\n\t\ter(s[1]);\n\t}\n\tr.id = ii(\"ID\");\n\n\tvar M = \" meter\", S = [\"Heat\" + M, \"Cooling\" + M, \" (Volume measured at \", \"return temperature: outlet)\", \"flow temperature: inlet)\", \"Customer unit\", \"Radio converter \", \"Access Code \"],\n\t\tD = [\"Other\", \"Oil\" + M, \"Electricity\" + M, \"Gas\" + M, S[0], \"Steam\" + M, \"Hot water\" + M, \"Water\" + M, \"Heat Cost Allocator\", R,\n\t\t\tS[0] + S[2] + S[3], \"Compressed air\", S[1] + S[2] + S[3], S[1] + S[2] + S[4], S[0] + S[2] + S[4], \"Combined Heat / \" + S[1], \"Bus / System component\", \"Unknown device type\", \"Cold water\" + M, \"Dual water\" + M,\n\t\t\t\"Pressure\" + M + \" / pressure device\", \"A/D Converter\", \"Warm water\" + M, \"Calorific value\", \"Smoke detector / smoke alarm device\", \"Room sensor\", \"Gas detector\", \"Consumption\" + M, \"Sensor\", \"Breaker (electricity)\",\n\t\t\t\"Valve (gas or water)\", \"Switching device\", S[5] + \" (display device)\", S[5], \"Waste water\" + M, \"Garbage\", \"Carbon dioxide\", \"Environmental\" + M, \"System device\", \"Communication controller\",\n\t\t\t\"Unidirectional repeater\", \"Bidirectional repeater\", S[6] + \"(system side)\", S[6] + \"(meter side)\", \"Wired Adapter\"],\n\t\tfD = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9],\n\t\tvD = [0, 1, 2, 3, 10, 5, 22, 7, 8, 11, 12, 13, 14, 15, 16, 17,\n\t\t\t27, 27, 27, 27, 23, 6, 18, 19, 20, 21, 24, 25, 26, 28, 28, 28,\n\t\t\t29, 30, 31, 31, 31, 32, 33, 33, 34, 35, 36, 37, 37, 37, 37, 37,\n\t\t\t38, 39, 40, 41, 38, 38, 42, 43, 44],\n\t\tvFunc = [\"Instantaneous\", \"Maximum\", \"Minimum\", \"During error state\"];\n\n\tfunction i2fu(i) {\n\t\tvar U = [\"Wh\", \"kWh\", \"MWh\", \"kJ\", \"MJ\", \"GJ\", \"W\", \"kW\", \"MW\", \"kJ/h\", \"MJ/h\", \"GJ/h\", \"ml\", \"l\", \"m\\xB3\", \"ml/h\", \"l/h\", \"m\\xB3/h\"];\n\t\treturn i < 2 ? [[\"h,m,s\", \"D,M,Y\"][i], 0]\n\t\t\t: i < 0x38 ? [U[Math.floor((i - 2) / 3)], (i - 2) % 3]\n\t\t\t\t: i < 0x39 ? [\"\\xB0C\", -3]\n\t\t\t\t\t: i < 0x3A ? [UH, 0]\n\t\t\t\t\t\t: [R, 0];\n\t}\n\n\tfunction m2c(i) {\n\t\treturn i2c((i & 0x1F) + 64);\n\t}\n\n\tfunction deManIdi(n) {\n\t\treturn m2c(n >> 10) + m2c(n >> 5) + m2c(n);\n\t}\n\n\tfunction deManId(a, n) {\n\t\treturn deManIdi(ii(\"ManID\", 1, 2));\n\t}\n\n\tfunction deD(i) {\n\t\treturn D[i > 0x3F ? 9 : i > 0x38 ? 38 : vD[i]];\n\t}\n\n\tfunction deS(r) {\n\t\tvar s = r.status;\n\t\tif (r.fixed) r.cStored = s & 2 ? \"At fixed date\" : \"Actual\";\n\t\telse {\n\t\t\tif ((s & 3) != 3) {\n\t\t\t\tif (s & 1) w.push(\"Application Busy\");\n\t\t\t\tif (s & 2) w.push(\"Application Error\");\n\t\t\t}\n\t\t}\n\t\tif (s & 4) w.push(\"Power Low\");\n\t\tif (s & 8) w.push(\"Permanent Error\");\n\t\tif (s & 16) w.push(\"Temporary Error\");\n\t\treturn s & 1;\n\t}\n\n\tfunction nv() {\n\t\tif (!r.data) r.data = [];\n\t\tvar v = { id: id++ };\n\t\tr.data.push(v);\n\t\treturn v;\n\t}\n\n\tfunction sD(d, m) {\n\t\tr.deviceCode = d;\n\t\tr.deviceType = m;\n\t}\n\n\tfunction pF() {\n\t\tr.accessN = i();\n\t\tr.status = i();\n\t\tvar s = deS(r), u1 = i(), u2 = i(), m = (u1 >> 6) | (u2 >> 4 & 0xC);\n\t\tsD(m, D[fD[m]]);\n\t\tif (m > 9 && m < 15 && s) s = 2;\n\t\tvar x = nv(), y = nv(), ux = i2fu(u1 & 0x3f), vy = u2 & 0x3f, uy, v = 1;\n\t\tx.storage = 0;\n\t\tx.func = vFunc[0];\n\t\tx.value = p10(ii(\"Counter 1\", s), ux[1]);\n\t\tx.unit = ux[0];\n\t\tif (vy == 0x3e) uy = ux;\n\t\telse {\n\t\t\tv = 0;\n\t\t\tif (vy != 0x3f) uy = i2fu(vy);\n\t\t}\n\t\ty.storage = v;\n\t\ty.func = vFunc[0];\n\t\tv = ii(\"Counter 2\", s);\n\t\ty.value = uy ? p10(v, uy[1]) : v;\n\t\ty.unit = uy ? uy[0] : \"\";\n\t}\n\n\tfunction rif(i) {\n\t\tvar v = ln(i);\n\t\tv = v ? i[v - 1] : 128;\n\t\twhile (n < e && v >> 7) {\n\t\t\tv = a[n++];\n\t\t\ti.push(v);\n\t\t}\n\t\treturn i;\n\t}\n\n\tvar T = [\"Reserved\", \"Energy\", \"Volume\", \"Mass\", \"On Time\", \"Operating Time\", \"Power\", \"Volume Flow\", \"Volume Flow ext.\", \"Mass flow\",\n\t\t\"Flow Temperature\", \"Return Temperature\", \"Temperature Difference\", \"External Temperature\", \"Pressure\", \"Time Point\", UH, \"Averaging Duration\", \"Actuality Duration\", \"Credit\",\n\t\t\"Debit\", \"Access Number\", \"Medium\", \"Manufacturer\", \"Parameter set id\", \"Model/Version\", \"Hardware version #\", \"Firmware version #\", \"Software version #\", \"Customer location\",\n\t\t\"Customer\", S[7] + \"User\", S[7] + \"Operator\", S[7] + \"System Operator\", S[7] + \"Developer\", \"Password\", \"Error flags\", \"Error mask\", \"Digital Output\", \"Digital Input\",\n\t\t\"Baudrate\", \"Response delay time\", \"Retry\", \"First cyclic storage #\", \"Last cyclic storate #\", \"Storage block size\", \"Storage interval\", \"Duration since last readout\", \"Start of tariff\", \"Duration of tariff\",\n\t\t\"Period of tariff\", \"Voltage\", \"Current\", \"Dimensionless\", \"Reset counter\", \"Cumulation counter\", \"Control signal\", \"Day of week\", \"Week number\", \"Time point of day change\",\n\t\t\"State of parameter activation\", \"Special supplier information\", \"Duration since last cumulation\", \"Operating time battery\", \"Battery change\", \"Cold/Warm Temperature Limit\", \"Cumul. count max power\"\n\t], U = [\"seconds\", \"minutes\", \"hours\", \"days\", \"months\", \"years\", \"Wh\", \"J\", \"m\\xB3\", \"kg\",\n\t\t\"W\", \"J/h\", \"m\\xB3/h\", \"m\\xB3/min\", \"m\\xB3/s\", \"kg/h\", \"\\xB0C\", \"K\", \"bar\", \"currency unit\",\n\t\t\"binary\", \"baud\", \"bittimes\", \"V\", \"A\", \"MWh\", \"GJ\", \"t\", \"feet\\xB3\", \"american gallon\",\n\t\t\"american gallon/min\", \"american gallon/h\", \"MW\", \"GJ/h\", \"\\xB0F\", \"revolution / measurement\", \"liter\", \"kWh\", \"kW\", \"K*l\"\n\t];\n\n\tfunction deV(v, b, n) {\n\t\tv.type = T[b[0]];\n\t\tvar e = b[1];\n\t\tif (ln(b) > 1) {\n\t\t\tif (e == 5) {\n\t\t\t\te = 9;\n\t\t\t\tn += 2;\n\t\t\t}\n\t\t\tif (e == 9) v.unit = U[n];\n\t\t\telse if (e == 8) {\n\t\t\t\tv.type += \" (\" + (n ? \"time & \" : \"\") + \"date)\";\n\t\t\t\tv.f = n == 1 ? i2t : i2d;\n\t\t\t} else if (e > 5) v.f = e == 7 ? deD : deManIdi;\n\t\t\telse {\n\t\t\t\tv.unit = U[b[2]];\n\t\t\t\tv.e = n + b[1];\n\t\t\t}\n\t\t}\n\t}\n\n\tfunction deVif(v, d) {\n\t\tvar t = d >> 3 & 0xF, n = d & 7, m = [\n\t\t\t[1, -3, 6],\n\t\t\t[1, 1, 7],\n\t\t\t[2, -6, 8],\n\t\t\t[3, -3, 9],\n\t\t\t[[4, 9], [5, 9]],\n\t\t\t[6, -3, 10],\n\t\t\t[6, 1, 11],\n\t\t\t[7, -6, 12],\n\t\t\t[8, -7, 13],\n\t\t\t[8, -9, 14],\n\t\t\t[9, -3, 15],\n\t\t\t[[10, -3, 16], [11, -3, 16]],\n\t\t\t[[12, -3, 17], [13, -3, 16]],\n\t\t\t[[14, -3, 18], [[15, 8], [[16], O]]],\n\t\t\t[[17, 9], [18, 9]]];\n\t\tif (t == 0xF) {\n\t\t\tif (n < 3) v.type = [\"Fabrication No\", \"(Enhanced)\", \"Bus Address\"][n];\n\t\t} else {\n\t\t\tvar b = m[t], i = 2;\n\t\t\tfor (; isA(b[0]); n &= 0xF ^ 1 << i, b = b[d >> i-- & 1]);\n\t\t\tdeV(v, b, n);\n\t\t}\n\t}\n\n\tfunction deVifD(v, d) {\n\t\tvar t = d >> 2 & 0xF, n = d & 3, m = [\n\t\t\t[19, -3, 19],\n\t\t\t[20, -3, 19],\n\t\t\t[[21], [22, 7], [23, 6], [24]],\n\t\t\t[[25], [26], [27], [28]],\n\t\t\t[[29], [30], [31], [32]],\n\t\t\t[[33], [34], [35], [36, 0, 20]],\n\t\t\t[[37], O, [38, 0, 20], [39, 0, 20]],\n\t\t\t[[40, 0, 21], [41, 0, 22], [42], O],\n\t\t\t[[43], [44], [45], O],\n\t\t\t[46, 9],\n\t\t\t[[46, 0, 4], [46, 0, 5], O, O],\n\t\t\t[47, 9],\n\t\t\t[[48, 8], [49, 0, 1], [49, 0, 2], [49, 0, 3]],\n\t\t\t[50, 9],\n\t\t\t[[50, 0, 4], [50, 0, 5], [53], O],\n\t\t\tO,\n\t\t\t[[54], [55], [56], [57]],\n\t\t\t[[58], [59], [60], [61]],\n\t\t\t[62, 5],\n\t\t\t[63, 5],\n\t\t\t[[64, 8]]\n\t\t];\n\t\tif (d & 0x40) t = (t & 7) + 16;\n\t\tvar b = d > 0x70 ? O : m[t];\n\t\tif ((d & 0x60) == 0x40) {\n\t\t\tt = d & 16;\n\t\t\tn = d & 0xF;\n\t\t\tb = t ? [52, -12, 24] : [51, -9, 23];\n\t\t} else {\n\t\t\tif (isA(b[0])) {\n\t\t\t\tb = b[n];\n\t\t\t\tn = 0;\n\t\t\t}\n\t\t}\n\t\tdeV(v, b, n);\n\t}\n\n\tfunction deVifB(v, d) {\n\t\tvar t = d >> 3 & 0xF, n = d & 7, m = [\n\t\t\t[[[1, -1, 25]]],\n\t\t\t[[[1, -1, 26]]],\n\t\t\t[[[2, 2, 8]]],\n\t\t\t[[[3, 2, 27]]],\n\t\t\t[[[O, [2, -1, 28]], [[2, -1, 29], [2, 0, 29]]], [[[7, -3, 30], [7, 0, 30]], [[7, 0, 31], O]]],\n\t\t\t[[[6, -1, 32]]],\n\t\t\t[[[6, -1, 33]]],\n\t\t\tO,\n\t\t\tO,\n\t\t\tO,\n\t\t\tO,\n\t\t\t[[10, -3, 34], [11, -3, 34]],\n\t\t\t[[12, -3, 34], [13, -3, 34]],\n\t\t\tO,\n\t\t\t[[65, -3, 34], [65, -3, 16]],\n\t\t\t[66, -3, 10]];\n\t\tvar b = m[t], i = 2;\n\t\tfor (; isA(b[0]); n &= 0xF ^ 1 << i, b = d >> i-- & 1 ? (ln(b) < 2 ? O : b[1]) : b[0]);\n\t\tdeV(v, b, n);\n\t}\n\n\tfunction deVife(v, d) {\n\t\tvar e, t = d & 7, p = \"per \", m = \"multiplied by sek\", o = t & 2 ? \"out\" : \"in\",\n\t\t\tw = d & 8 ? \"upper\" : \"lower\", f = d & 4 ? \"last\" : \"first\", b = d & 1 ? \"end\" : \"begin\",\n\t\t\tD = \"Duration of \", L = \" limit exceed\";\n\t\te = d < 2 ? (d ? \"Too many DIFE's\" : e)\n\t\t\t: d < 8 ? [\"Storage number\", \"Unit number\", \"Tariff number\", \"Function\", \"Data class\", \"Data size\"][t - 2] + \" not implemented\"\n\t\t\t\t: d < 0xb ? e\n\t\t\t\t\t: d < 0x10 ? [\"Too many VIFE's\", \"Illegal VIF-Group\", \"Illegal VIF-Exponent\", \"VIF/DIF mismatch\", \"Unimplemented action\"][t - 3]\n\t\t\t\t\t\t: d < 0x15 ? e\n\t\t\t\t\t\t\t: d < 0x19 ? [\"No data available (undefined value)\", \"Data overflow\", \"Data underflow\", \"Data error\"][t - 5]\n\t\t\t\t\t\t\t\t: d < 0x1C ? \"Premature end of record\"\n\t\t\t\t\t\t\t\t\t: d < 0x20 ? e\n\t\t\t\t\t\t\t\t\t\t: d < 0x27 ? p + U[t].slice(0, -1)\n\t\t\t\t\t\t\t\t\t\t\t: d < 0x28 ? p + U[35]\n\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x2C ? \"increment per \" + o + \"put pulse on \" + o + \"put channel #\" + (d & 1)\n\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x36 ? p + U[[36, 8, 9, 17, 37, 26, 38, 39, 23, 24][d - 0x2C]]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x37 ? m\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x39 ? m + \" / \" + U[24 - (d & 1)]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x3D ? [\"start date(/time) of\", \"VIF contains uncorrected unit instead of corrected unit\", \"Accumulation only if positive contributions\",\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Accumulation of abs value only if negative contributions\"][t - 1]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x40 ? T[0]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x4A ? (t ? \"# of exceeds of \" + w + \" limit\" : w + \" limit value\")\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x50 ? \"Date (/time) of: \" + b + \" of \" + f + \" \" + w + L\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x60 ? D + f + \" \" + w + L + \", \" + U[t & 3]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x68 ? D + f + \", \" + U[t & 3]\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x70 ? (t & 2 ? \"Date (/time) of \" + f + \" \" + b : e)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x78 ? (v.e = (v.e || 0) + t - 6, e)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x7C ? \"Additive correction constant: 10E\" + (t - 3) + \"*\" + v.type + \" (offset)\"\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x7D ? e\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: d < 0x7E ? (v.e = (v.e || 0) + 3, e)\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t: [\"future value\", MS + \" data next\"][t & 1];\n\t\tif (e) v.typeE.push(e);\n\t}\n\n\tfunction deVifs(v) {\n\t\tvar y = v.vif, l = ln(y), i = 0, t = y[i], m = 0x7F, d = t & m, b;\n\t\tif (t == 0xFD || t == 0xFB) {\n\t\t\td = y[++i] & m;\n\t\t\t(t == 0xFD ? deVifD : deVifB)(v, d);\n\t\t} else if (d < 0x7C) deVif(v, d);\n\t\telse if (d == 0x7C) {\n\t\t\tb = a[(n -= l - 2) - 1];\n\t\t\tv.type = ba2s(sl(\"VIF type\", b));\n\t\t\ty = v.vif = rif([t]);\n\t\t\tl = ln(y);\n\t\t}\n\t\tif (d == m) v.type = MS;\n\t\tif (!(y[i] >> 7)) return;\n\t\tif (d != m) ++i;\n\t\tv.typeE = [];\n\t\tb = 0;\n\t\twhile (i < l && i < 11) {\n\t\t\tt = y[i++], d = t & m;\n\t\t\tb ? v.typeE.push(d) : (b = d == m, deVife(v, d));\n\t\t\tif (!(t & 0x80)) break;\n\t\t}\n\t\tif (!ln(v.typeE)) delete v.typeE;\n\t}\n\n\tfunction rv(v) {\n\t\tdeVifs(v);\n\t\tvar y = v.dif, l = ln(y) - 1, p, i, d = y[0], f = d >> 4 & 3, t = d & 0xF, m, b = d & 7, u, s;\n\t\tif (t == 0xD) {\n\t\t\tp = b = a[n++];\n\t\t\tif (b < 0xC0) m = ba2s;\n\t\t\telse {\n\t\t\t\tb &= 0xF;\n\t\t\t\tif (p > 0xEF) {\n\t\t\t\t\tif (p < 0xFB) m = ba2f;\n\t\t\t\t} else {\n\t\t\t\t\tm = p > 0xDF ? ba2i : ba2bcd;\n\t\t\t\t\ts = (p & 0xF0) == 0xD0;\n\t\t\t\t}\n\t\t\t}\n\t\t} else {\n\t\t\tif (b == 5) {\n\t\t\t\t--b;\n\t\t\t\tm = ba2f;\n\t\t\t} else {\n\t\t\t\tif (b == 7) ++b;\n\t\t\t\tm = t & 8 ? ba2bcd : ba2i;\n\t\t\t}\n\t\t}\n\t\ti = t = sl(\"Record #\" + v.id, b);\n\t\tif (m) {\n\t\t\ttry {\n\t\t\t\tt = m(t);\n\t\t\t} catch (e) {\n\t\t\t\tv.error = true;\n\t\t\t\tt = e;\n\t\t\t}\n\t\t}\n\t\tif (!v.error) {\n\t\t\tif (v.f) t = v.f(t);\n\t\t\tm = Array.isArray(t);\n\t\t\tif (m) t = ha2si(t);\n\t\t\tif (s) t = m ? (t[0] == \"-\" ? t.slice(1) : (\"-\" + t)) : -t;\n\t\t\tif (v.e) t = p10(t, v.e);\n\t\t}\n\t\tv.value = t;\n\t\tv.rawValue = i;\n\t\tv.func = vFunc[f];\n\t\td >>= 6; f = d & 1; i = t = u = 0;\n\t\tif (d & 2) {\n\t\t\tfor (; i < l; ++i) {\n\t\t\t\td = y[i + 1];\n\t\t\t\tu += (d >> 6 & 1) << i;\n\t\t\t\tt += (d >> 4 & 3) << i * 2;\n\t\t\t\tf += (d & 0xF) << i * 4 + 1;\n\t\t\t}\n\t\t\tv.device = u;\n\t\t\tv.tariff = t;\n\t\t}\n\t\tv.storage = f;\n\t\tdelete v.f;\n\t\tdelete v.e;\n\t}\n\n\tfunction pV() {\n\t\tr.manId = deManId(a, n);\n\t\tr.version = i(), i();\n\t\tsD(c, deD(c));\n\t\tr.accessN = i();\n\t\tr.status = i();\n\t\tdeS(r);\n\t\tn += 2;\n\t\twhile (n < e - 1) {\n\t\t\tvar t = a[n], v = t == 0x2F ? v : nv();\n\t\t\tif ((t & 0xF) == 0xF) {\n\t\t\t\tt = t >> 4 & 7; ++n;\n\t\t\t\tif (t < 2) {\n\t\t\t\t\tif (t) v.request = \"Readout again\";\n\t\t\t\t\tv.type = MS;\n\t\t\t\t\tv.value = sl(v.type, e - n);\n\t\t\t\t} else if (t > 6) v.request = \"Global readout\";\n\t\t\t} else {\n\t\t\t\tv.dif = rif([]);\n\t\t\t\tv.vif = rif([]);\n\t\t\t\trv(v);\n\t\t\t}\n\t\t}\n\t}\n\n\tr.fixed ? pF() : pV();\n\treturn r;\n}\n\nfunction unitConv(cfg, f) {\n\n\tvar U = [\"J\", \"Wh\", \"W\", \"J/h\"], P = [\"\", \"k\", \"M\", \"G\"], k, g;\n\n\tfunction x(d) {\n\t\tvar u = d.unit, v = d.value, m;\n\t\tif (u && v) {\n\t\t\tif (m = k[u]) try {\n\t\t\t\td.value = p10(v, m[0]);\n\t\t\t\td.unit = m[1];\n\t\t\t} catch (e) { }\n\t\t}\n\t\tif (g) try {\n\t\t\tg(d);\n\t\t} catch (e) { }\n\t}\n\n\tfunction p(d) {\n\t\tvar a, i;\n\t\tif (d && (a = d.data)) for (i in a) x(a[i]);\n\t\treturn d;\n\t}\n\n\tfunction c(d, f) {\n\t\tk = {}, g = f;\n\t\tvar u, c, o, n, v;\n\t\tif (d) for (o in d) {\n\t\t\tc = d[o], u = U.indexOf(o), v = P.indexOf(c);\n\t\t\tif (u >= 0 && v >= 0) for (n in P) k[P[n] + o] = [(n - v) * 3, c + o];\n\t\t}\n\t}\n\n\tc(cfg, f);\n\n\treturn {\n\t\tgetUnits: function () { return U.slice(); },\n\t\tgetPrefixes: function () { return P.slice(); },\n\t\tconfig: c,\n\t\tprocess: p\n\t};\n\n}\n\n\nfunction decodeUplink(input) {\n\tvar ashex = input.bytes.reduce(function (acc, num) {\n\t\treturn acc + ('0' + num.toString(16)).slice(-2).toUpperCase();\n\t}, '');\n\n\tvar FrameIndex = parseInt(ashex.substr(0, 2), 16);\n\tvar BatchFrames = parseInt(ashex.substr(2, 2), 16);\n\tvar parsed = {};\n\tvar errors = [];\n\n\tif (FrameIndex === 1 && BatchFrames === 1) {\n\t\tparsed = tmbus(ashex.substr(4));\n\t} else {\n\t\terrors.push(\"Fragmentation not supported -> use Akenza.io to decode fragmented frames\");\n\t}\n\treturn {\n\t\tdata: parsed,\n\t\twarnings: [],\n\t\terrors: errors\n\t};\n}\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "name": "acr_cv_101l_m_eac_data",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "tabs": [
+                                    {
+                                        "name": "M-Bus Data",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 6,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "M-Bus Frame Data"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 15px;\">\r\n  <div ng-if=\"value && value.length > 0\" ng-repeat=\"entry in value | limitTo:1\">\r\n    <h4>Device Information</h4>\r\n    <table class=\"table table-striped table-condensed\">\r\n      <tr>\r\n        <td><strong>Device Type:</strong></td>\r\n        <td>{{ entry.deviceType || '—' }}</td>\r\n      </tr>\r\n      <tr>\r\n        <td><strong>Manufacturer ID:</strong></td>\r\n        <td>{{ entry.manId || '—' }}</td>\r\n      </tr>\r\n      <tr>\r\n        <td><strong>Device ID:</strong></td>\r\n        <td>{{ entry.id || '—' }}</td>\r\n      </tr>\r\n      <tr>\r\n        <td><strong>Version:</strong></td>\r\n        <td>{{ entry.version || '—' }}</td>\r\n      </tr>\r\n      <tr>\r\n        <td><strong>Access Number:</strong></td>\r\n        <td>{{ entry.accessN || '—' }}</td>\r\n      </tr>\r\n      <tr>\r\n        <td><strong>Status:</strong></td>\r\n        <td>{{ entry.status || '—' }}</td>\r\n      </tr>\r\n      <tr ng-if=\"entry.errors && entry.errors.length > 0\">\r\n        <td><strong>Errors:</strong></td>\r\n        <td><span ng-repeat=\"err in entry.errors\" class=\"label label-danger\">{{ err }}</span></td>\r\n      </tr>\r\n    </table>\r\n    \r\n    <h4 ng-if=\"entry.data && entry.data.length > 0\" style=\"margin-top: 20px;\">Meter Readings</h4>\r\n    <table ng-if=\"entry.data && entry.data.length > 0\" class=\"table table-striped table-condensed\">\r\n      <thead>\r\n        <tr>\r\n          <th>ID</th>\r\n          <th>Type</th>\r\n          <th>Value</th>\r\n          <th>Unit</th>\r\n          <th>Storage</th>\r\n          <th>Function</th>\r\n        </tr>\r\n      </thead>\r\n      <tbody>\r\n        <tr ng-repeat=\"record in entry.data\">\r\n          <td>{{ record.id }}</td>\r\n          <td>{{ record.type || '—' }}</td>\r\n          <td>{{ record.value || '—' }}</td>\r\n          <td>{{ record.unit || '—' }}</td>\r\n          <td>{{ record.storage || '0' }}</td>\r\n          <td>{{ record.func || '—' }}</td>\r\n        </tr>\r\n      </tbody>\r\n    </table>\r\n\r\n    <p ng-if=\"!entry.data || entry.data.length === 0\" style=\"color: #999; margin-top: 20px;\">\r\n      No meter data available\r\n    </p>\r\n  </div>\r\n  \r\n  <div ng-if=\"!value || value.length === 0\" style=\"text-align: center; padding: 40px; color: #999;\">\r\n    <h4>No M-Bus data received yet</h4>\r\n    <p>Waiting for uplink messages...</p>\r\n  </div>\r\n</div>\r\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "M-Bus Data",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 6,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Recent Uplinks"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto;\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Timestamp</th>\r\n        <th>Device Type</th>\r\n        <th>Manufacturer</th>\r\n        <th>Status</th>\r\n        <th>Records</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value | orderBy:'-ts' | limitTo:20\">\r\n        <td>{{ entry.ts | date:'yyyy-MM-dd HH:mm:ss' }}</td>\r\n        <td>{{ entry.deviceType || '—' }}</td>\r\n        <td>{{ entry.manId || '—' }}</td>\r\n        <td>\r\n          <span ng-if=\"!entry.errors || entry.errors.length === 0\" class=\"label label-success\">OK</span>\r\n          <span ng-if=\"entry.errors && entry.errors.length > 0\" class=\"label label-danger\">{{ entry.errors.length }} error(s)</span>\r\n        </td>\r\n        <td>{{ entry.data ? entry.data.length : 0 }}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n  <div ng-if=\"!value || value.length === 0\" style=\"text-align: center; padding: 40px; color: #999;\">\r\n    <p>No historical data available</p>\r\n  </div>\r\n</div>\r\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "timestamp",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "deviceType",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "device_type",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "manId",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "manufacturer",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "errors",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "errors",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "acr_cv_101l_m_eac_data",
+                                                            "mapping": "data",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "data_records",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
