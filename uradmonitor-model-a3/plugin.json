@@ -1,708 +1,711 @@
 {
-  "name": "uradmonitor_model_a3",
-  "version": "1.0.0",
-  "description": "Plug and play advanced air quality monitoring station, enclosed in an aluminium body for rugged design, it has sensors for Particulate Matter (PM2.5, PM1, PM10), Ozone, Formaldehyde, Carbon Dioxide, Volatile Organic Compounds (VOC), temperature, barometri",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "uradmonitor-model-a3"
-  },
-  "metadata": {
-    "name": "Uradmonitor MODEL-A3",
-    "description": "Plug and play advanced air quality monitoring station, enclosed in an aluminium body for rugged design, it has sensors for Particulate Matter (PM2.5, PM1, PM10), Ozone, Formaldehyde, Carbon Dioxide, Volatile Organic Compounds (VOC), temperature, barometri",
-    "image": "assets/uradmonitor-a3.png",
-    "category": "devices",
-    "vendor": "uradmonitor"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "Plug and play advanced air quality monitoring station, enclosed in an aluminium body for rugged design, it has sensors for Particulate Matter (PM2.5, PM1, PM10), Ozone, Formaldehyde, Carbon Dioxide, Volatile Organic Compounds (VOC), temperature, barometri",
-        "enabled": true,
+    "name": "uradmonitor-model-a3",
+    "version": "1.0.0",
+    "description": "Device that measures air quality and environmental parameters in real time.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "uradmonitor-model-a3"
+    },
+    "metadata": {
         "name": "Uradmonitor MODEL-A3",
-        "product": "uradmonitor_model_a3",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
-                }
-              }
-            },
-            "uplink": {
-              "device_id_resolver": "getId",
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_function": "",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
-            }
-          },
-          "autoprovisions": {
-            "device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "uradmonitor-a3-.*"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "uradmonitor_model_a3_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": [
-                "air_quality",
-                "environmental"
-              ]
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction uint16(value1, value2) {\n  return (value1 << 8) + value2;\n}\n\nfunction uint24(value1, value2, value3) {\n  return (value1 << 16) + (value2 << 8) + value3;\n}\n\nfunction uint16float(value1, value2, multiplier) {\n  var value = uint16(value1, value2);\n\n  if (value & 0x8000)\n    return (value & 0x7FFF) / -multiplier;\n\n  return value/multiplier;\n}\n\n// ID 4B - \"82000284\"\n// VERHW 1B - \"6C\" (decimal 108, meaning A3 HW108)\n// VERSW 1B - \"4E\" (decimal 78, meaning firmware version 78)\n// TIMESTAMP 4B - \"00012E1C\" (decimal 77340 sec)\n// TEMPERATURE 2B - “0A1B\" , value 25.87°C, DI16 encoded with 2 digits **\n// PRESSURE 2B - \"88BC\" offset encoded (decimal value 35004 + 65535 = 100539 Pa) ***\n// HUMIDITY 1B - \"66\" multiplied by 2, 0.5RH resolution, decimal 102 / 2 = 51RH\n// VOC 3B - \"013129\" (decimal 78121ohm, or 78KO)\n// NOISE 1B - \"8D\" like humidity, multiplied by 2, 0.5dBA resolution, decimal 141/2 = 70.5dBA\n// CO2 2B - \"026A\" (decimal 618ppm CO2)\n// FORMALDEHYDE 2B - \"0053\" (decimal 83ppb CH2O)\n// OZONE 2B - \"0014\" (decimal 20ppb O3)\n// PM1 2B - \"0055\" (decimal 85 µg/m3)\n// PM2.5 2B - \"006F\" ( decimal 111 µg/m3)\n// PM10 2B - \"009C\" (decimal 156 µg/m3 ))\n// CRC 1B - “E2\" ****\nfunction DecodePayload(bytes) {\n    if (bytes.length != 32)\n        return null;\n\n    var obj = {\n        model: \"A3\",\n        hardware_version: \"HW\" + bytes[4],\n        firmware_version: bytes[5],\n        // timestamp: bytes[6, 7, 8, 9]\n        temperature: uint16float(bytes[10], bytes[11], 100),\n        pressure: (uint16(bytes[12], bytes[13]) + 65535),\n        humidity: (bytes[14]/2),\n        gas_resistance: uint24(bytes[15], bytes[16], bytes[17]),\n        sound: bytes[18]/2,\n        co2: uint16(bytes[19], bytes[20]),\n        ch20: uint16(bytes[21], bytes[22]),\n        o3: uint16(bytes[23], bytes[24]),\n        pm1: uint16(bytes[25], bytes[26]),\n        pm2_5: uint16(bytes[27], bytes[28]),\n        pm10: uint16(bytes[29], bytes[30]),\n        // crc: bytes[31]\n    };\n\n    obj.iaq = parseInt(Math.log(obj.gas_resistance) + 0.04 * obj.humidity, 10);\n    return obj;\n}\n\nfunction decodeUplink(input) {\n    return {\n        \"data\": DecodePayload(input.bytes)\n    }\n}\n\n",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "properties": {
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": [
+        "description": "Device that measures air quality and environmental parameters in real time.",
+        "image": "assets/uradmonitor-a3.png",
+        "category": "devices",
+        "vendor": "uradmonitor"
+    },
+    "resources": {
+        "products": [
             {
-              "property": "dashboard",
-              "value": {
-                "tabs": [
-                  {
-                    "name": "Air Quality",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature"
-                        },
-                        "properties": {
-                          "color": "#ff0000",
-                          "max": 50,
-                          "min": -10,
-                          "unit": "°C"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "temperature",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#ff0000",
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                "config": {
+                    "icons": []
+                },
+                "description": "Device that measures air quality and environmental parameters in real time.",
+                "enabled": true,
+                "name": "Uradmonitor MODEL-A3",
+                "product": "uradmonitor_model_a3",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
                             }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 6
                         },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Humidity"
-                        },
-                        "properties": {
-                          "color": "#0000ff",
-                          "max": 100,
-                          "min": 0,
-                          "unit": "%RH"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "humidity",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#0000ff",
-                            "name": "Humidity",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
                             }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Pressure"
-                        },
-                        "properties": {
-                          "color": "#34495e",
-                          "max": 110000,
-                          "min": 95000,
-                          "unit": "Pa"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pressure",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "uradmonitor-a3-.*"
                             },
-                            "color": "#34495e",
-                            "name": "Pressure",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 6,
-                          "sizeX": 2,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "CO2"
-                        },
-                        "properties": {
-                          "color": "#e74c3c",
-                          "max": 2000,
-                          "min": 400,
-                          "unit": "ppm"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "co2",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "uradmonitor_model_a3_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
                             },
-                            "color": "#e74c3c",
-                            "name": "CO2",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 6,
-                          "sizeX": 2,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "IAQ"
-                        },
-                        "properties": {
-                          "color": "#16a085",
-                          "max": 15,
-                          "min": 0,
-                          "unit": "index"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "iaq",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
                             },
-                            "color": "#16a085",
-                            "name": "IAQ",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 6,
-                          "sizeX": 2,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Sound Level"
-                        },
-                        "properties": {
-                          "color": "#f39c12",
-                          "max": 120,
-                          "min": 30,
-                          "unit": "dBA"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "sound",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "tags": [
+                                "air_quality",
+                                "environmental"
+                            ]
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction uint16(value1, value2) {\n  return (value1 << 8) + value2;\n}\n\nfunction uint24(value1, value2, value3) {\n  return (value1 << 16) + (value2 << 8) + value3;\n}\n\nfunction uint16float(value1, value2, multiplier) {\n  var value = uint16(value1, value2);\n\n  if (value & 0x8000)\n    return (value & 0x7FFF) / -multiplier;\n\n  return value/multiplier;\n}\n\n// ID 4B - \"82000284\"\n// VERHW 1B - \"6C\" (decimal 108, meaning A3 HW108)\n// VERSW 1B - \"4E\" (decimal 78, meaning firmware version 78)\n// TIMESTAMP 4B - \"00012E1C\" (decimal 77340 sec)\n// TEMPERATURE 2B - “0A1B\" , value 25.87°C, DI16 encoded with 2 digits **\n// PRESSURE 2B - \"88BC\" offset encoded (decimal value 35004 + 65535 = 100539 Pa) ***\n// HUMIDITY 1B - \"66\" multiplied by 2, 0.5RH resolution, decimal 102 / 2 = 51RH\n// VOC 3B - \"013129\" (decimal 78121ohm, or 78KO)\n// NOISE 1B - \"8D\" like humidity, multiplied by 2, 0.5dBA resolution, decimal 141/2 = 70.5dBA\n// CO2 2B - \"026A\" (decimal 618ppm CO2)\n// FORMALDEHYDE 2B - \"0053\" (decimal 83ppb CH2O)\n// OZONE 2B - \"0014\" (decimal 20ppb O3)\n// PM1 2B - \"0055\" (decimal 85 µg/m3)\n// PM2.5 2B - \"006F\" ( decimal 111 µg/m3)\n// PM10 2B - \"009C\" (decimal 156 µg/m3 ))\n// CRC 1B - “E2\" ****\nfunction DecodePayload(bytes) {\n    if (bytes.length != 32)\n        return null;\n\n    var obj = {\n        model: \"A3\",\n        hardware_version: \"HW\" + bytes[4],\n        firmware_version: bytes[5],\n        // timestamp: bytes[6, 7, 8, 9]\n        temperature: uint16float(bytes[10], bytes[11], 100),\n        pressure: (uint16(bytes[12], bytes[13]) + 65535),\n        humidity: (bytes[14]/2),\n        gas_resistance: uint24(bytes[15], bytes[16], bytes[17]),\n        sound: bytes[18]/2,\n        co2: uint16(bytes[19], bytes[20]),\n        ch20: uint16(bytes[21], bytes[22]),\n        o3: uint16(bytes[23], bytes[24]),\n        pm1: uint16(bytes[25], bytes[26]),\n        pm2_5: uint16(bytes[27], bytes[28]),\n        pm10: uint16(bytes[29], bytes[30]),\n        // crc: bytes[31]\n    };\n\n    obj.iaq = parseInt(Math.log(obj.gas_resistance) + 0.04 * obj.humidity, 10);\n    return obj;\n}\n\nfunction decodeUplink(input) {\n    return {\n        \"data\": DecodePayload(input.bytes)\n    }\n}\n\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
                             },
-                            "color": "#f39c12",
-                            "name": "Sound",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 12,
-                          "sizeX": 3,
-                          "sizeY": 12
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Particulate Matter Levels"
-                        },
-                        "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": false
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pm1",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
+                            "default": {
+                                "source": "value"
                             },
-                            "color": "#3498db",
-                            "name": "PM1",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Air Quality",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 50,
+                                                    "min": -10,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff0000",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#0000ff",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%RH"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#0000ff",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Pressure"
+                                                },
+                                                "properties": {
+                                                    "color": "#34495e",
+                                                    "max": 110000,
+                                                    "min": 95000,
+                                                    "unit": "Pa"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#34495e",
+                                                        "name": "Pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "CO2"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 2000,
+                                                    "min": 400,
+                                                    "unit": "ppm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "CO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "IAQ"
+                                                },
+                                                "properties": {
+                                                    "color": "#16a085",
+                                                    "max": 15,
+                                                    "min": 0,
+                                                    "unit": "index"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#16a085",
+                                                        "name": "IAQ",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Sound Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#f39c12",
+                                                    "max": 120,
+                                                    "min": 30,
+                                                    "unit": "dBA"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "sound",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Sound",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Particulate Matter Levels"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pm1",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "PM1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pm2_5",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "PM2.5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pm10",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#c0392b",
+                                                        "name": "PM10",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 12,
+                                                    "sizeX": 3,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Gas Sensors"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "CO2 (ppm)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "ch20",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Formaldehyde (ppb)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "o3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Ozone (ppb)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 24,
+                                                    "sizeX": 6,
+                                                    "sizeY": 12
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Environmental Data"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Temp (°C)</th>\n        <th>Humidity (%)</th>\n        <th>Pressure (Pa)</th>\n        <th>CO2 (ppm)</th>\n        <th>PM2.5 (µg/m³)</th>\n        <th>IAQ</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td>{{ entry.temperature | number:1 }}</td>\n        <td>{{ entry.humidity | number:1 }}</td>\n        <td>{{ entry.pressure | number:0 }}</td>\n        <td>{{ entry.co2 || '—' }}</td>\n        <td>{{ entry.pm2_5 || '—' }}</td>\n        <td>{{ entry.iaq || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pressure",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "co2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "pm2_5",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "pm2_5",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "uradmonitor_model_a3_data",
+                                                            "mapping": "iaq",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "iaq",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
                             }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pm2_5",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e67e22",
-                            "name": "PM2.5",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pm10",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#c0392b",
-                            "name": "PM10",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "chart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 12,
-                          "sizeX": 3,
-                          "sizeY": 12
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Gas Sensors"
-                        },
-                        "properties": {
-                          "axis": true,
-                          "fill": false,
-                          "legend": true,
-                          "multiple_axes": true
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "co2",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "CO2 (ppm)",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "ch20",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#9b59b6",
-                            "name": "Formaldehyde (ppb)",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "o3",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#1abc9c",
-                            "name": "Ozone (ppb)",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "chart"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 24,
-                          "sizeX": 6,
-                          "sizeY": 12
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Environmental Data"
-                        },
-                        "properties": {
-                          "source": "code",
-                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Temp (°C)</th>\n        <th>Humidity (%)</th>\n        <th>Pressure (Pa)</th>\n        <th>CO2 (ppm)</th>\n        <th>PM2.5 (µg/m³)</th>\n        <th>IAQ</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td>{{ entry.temperature | number:1 }}</td>\n        <td>{{ entry.humidity | number:1 }}</td>\n        <td>{{ entry.pressure | number:0 }}</td>\n        <td>{{ entry.co2 || '—' }}</td>\n        <td>{{ entry.pm2_5 || '—' }}</td>\n        <td>{{ entry.iaq || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "ts",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "ts",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "temperature",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "humidity",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "humidity",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pressure",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "pressure",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "co2",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "co2",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "pm2_5",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "pm2_5",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "uradmonitor_model_a3_data",
-                              "mapping": "iaq",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "iaq",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "html_time"
-                      }
+                        }
                     ]
-                  }
-                ]
-              }
+                }
             }
-          ]
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
