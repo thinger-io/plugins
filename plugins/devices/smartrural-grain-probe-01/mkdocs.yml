@@ -1,0 +1,7 @@
+site_name: plugins/devices/smartrural-grain-probe-01
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
