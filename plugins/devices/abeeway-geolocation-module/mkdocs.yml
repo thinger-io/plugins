@@ -1,4 +1,4 @@
-site_name: plugins/devices/abeeway-abeeway-geolocation-module
+site_name: plugins/devices/abeeway-geolocation-module
 docs_dir: .
 
 nav:
