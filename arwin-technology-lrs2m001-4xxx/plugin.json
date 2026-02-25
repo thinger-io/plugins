@@ -1,0 +1,958 @@
+{
+  "name": "arwin_technology_lrs2m001_4xxx",
+  "version": "1.0.0",
+  "description": "Power Monitoring Sensor",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "arwin-technology-lrs2m001-4xxx"
+  },
+  "metadata": {
+    "name": "Arwin-Technology LRS2M001-4XXX",
+    "description": "Power Monitoring Sensor",
+    "image": "assets/lrs2m001-4xxx.png",
+    "category": "devices",
+    "vendor": "arwin-technology"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Power Monitoring Sensor",
+        "enabled": true,
+        "name": "Arwin-Technology LRS2M001-4XXX",
+        "product": "arwin_technology_lrs2m001_4xxx",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lrs2m001-.*"
+              },
+              "enabled": false
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar lrs2m001_meter_events = ['heartbeat/button', 'bakcup power', 'ph_C_under_V', 'ph_C_over_V', 'ph_B_under_V', 'ph_B_over_V', 'ph_A_under_V', 'ph_A_over_V', 'backup_batt_low'];\nvar lrs2m001_phase_events = ['over_current','heartbeat/button'];\nvar decoded;\n\nfunction hex2dec(hex) {\n  var dec = hex&0x3fffff;\n  if (dec & 0x200000)\n    dec = -(0x400000-dec);\n  return dec;\n}\n\nfunction decodePhaseData(input, channel, phase) {\n  var evt_amp = input.bytes[1]<<8|input.bytes[2];\n  var pow_pf = input.bytes[3]<<24|input.bytes[4]<<16|input.bytes[5]<<8|input.bytes[6];\n  var evt=\"\";\n  for (let i=0; i<2; i++) {\n    if ((0x01<<i)&(evt_amp>>14)) \n      if (evt===\"\")\n        evt=lrs2m001_phase_events[i];\n      else\n        evt=evt+\",\"+lrs2m001_phase_events[i];\n  }\n  if (input.bytes[0] === 0x0a) { \n    return {\n      data: {\n        channel: channel,\n        phase: phase,\n        event: evt,\n        current: (evt_amp&0x3fff)/10,\n        active_pow: hex2dec(pow_pf>>10)/10,\n        power_factor: (pow_pf&0x03ff)/1000,\n        active_energy: (input.bytes[7]<<24|input.bytes[8]<<16|input.bytes[9]<<8|input.bytes[10])/10\n      }\n    }\n  }\n  else {\n    return {\n      error: ['unknown packet type']\n    };\n  }\n}\n\nfunction decodeUplink(input) {\n  switch (input.fPort) {\n    case 10: // meter data\n      var freq_evt = input.bytes[7]<<16|input.bytes[8]<<8|input.bytes[9];      \n      var evt=\"\";\n      for (let i=0; i<10; i++) {\n        if ((0x01<<i)&freq_evt) \n          if (evt===\"\")\n            evt=lrs2m001_meter_events[i];\n          else\n            evt=evt+\",\"+lrs2m001_meter_events[i];\n      }\n      return {\n        data: {\n              event: evt,\n              phase_A_V: (input.bytes[1]<<8|input.bytes[2])/10,\n              phase_B_V: (input.bytes[3]<<8|input.bytes[4])/10,\n              phase_C_V: (input.bytes[5]<<8|input.bytes[6])/10,\n              freq: freq_evt>>10,\n              backup_batt: input.bytes[10],\n            },\n        };\n    case 50:\n      decoded = decodePhaseData(input, 1, 'A');\n      return decoded;\n    case 51:\n      decoded = decodePhaseData(input, 1, 'B');\n      return decoded;\n    case 52:\n      decoded = decodePhaseData(input, 1, 'C');\n      return decoded;\n    case 53:\n      decoded = decodePhaseData(input, 2, 'A');\n      return decoded;\n    case 54:\n      decoded = decodePhaseData(input, 2, 'B');\n      return decoded;\n    case 55:\n      decoded = decodePhaseData(input, 2, 'C');\n      return decoded;\n    case 56:\n      decoded = decodePhaseData(input, 3, 'A');\n      return decoded;\n    case 57:\n      decoded = decodePhaseData(input, 3, 'B');\n      return decoded;\n    case 58:\n      decoded = decodePhaseData(input, 3, 'C');\n      return decoded;\n    case 59:\n      decoded = decodePhaseData(input, 4, 'A');\n      return decoded;\n    case 60:\n      decoded = decodePhaseData(input, 4, 'B');\n      return decoded;\n    case 61:\n      decoded = decodePhaseData(input, 4, 'C');\n      return decoded;\n    case 8: // version\n      var ver = input.bytes[0]+\".\"+(\"00\"+input.bytes[1]).slice(-2)+\".\"+(\"000\"+(input.bytes[2]<<8|input.bytes[3])).slice(-3);    \n      return {\n        data: {\n          firmwareVersion: ver,\n        }\n      };\n    case 16: // device settings\n      if (input.bytes[0] === 0x0a) {    \n        return {\n          data: {\n            dataUploadInterval: input.bytes[1]<<8|input.bytes[2],\n            underVoltageLimit: input.bytes[3]<<8|input.bytes[4],\n            overVoltageLimit: input.bytes[5]<<8|input.bytes[6],\n            overCurrentLimit: input.bytes[7]<<8|input.bytes[8],\n          }\n        };  \n      }\n      else {\n        return {\n          error: ['unknown packet type']\n        };\n      }      \n      break;\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n\nfunction encodeDownlink(input) {\n  var payload = [];\n\n  if (input.data.cmd === 'getFirmwareVersion') {\n    return {\n      fPort: 20,\n      bytes: [0]\n    };\n  }\n  else if (input.data.cmd === 'getDeviceSettings') {\n    return {\n      fPort: 21,\n      bytes: [0]\n    };\n  }\n  else if (input.data.cmd === 'setDeviceSettings') {\n    var ult = input.data.dataUploadInterval;\n    var uvl = input.data.underVoltageLimit;\n    var ovl = input.data.overVoltageLimit;\n    var ocl = input.data.overCurrentLimit;\n    var dack = 1;\n    return {\n      fPort: 22,\n      bytes: payload.concat(ult>>8,ult&0xff,uvl>>8,uvl&0xff,ovl>>8,ovl&0xff,ocl>>8,ocl&0xff,dack)\n    };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Phase A Voltage"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_A_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Phase A",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Phase B Voltage"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_B_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Phase B",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Phase C Voltage"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_C_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Phase C",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Voltage"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_A_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Phase A",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_B_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Phase B",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_C_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Phase C",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Current"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "current",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Current",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Current"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "A"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "current",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Current",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Active Power"
+                        },
+                        "properties": {
+                          "color": "#16a085",
+                          "max": 10000,
+                          "min": -10000,
+                          "unit": "W"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "active_pow",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Active Power",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 18,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Power Factor"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "max": 1,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "power_factor",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Power Factor",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 24,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Active Power"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "active_pow",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Active Power",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 24,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Energy Consumption"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "active_energy",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Active Energy",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 168
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 36,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Frequency"
+                        },
+                        "properties": {
+                          "color": "#e67e22",
+                          "max": 65,
+                          "min": 45,
+                          "unit": "Hz"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "freq",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Frequency",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 36,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Backup Battery"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "backup_batt",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 36,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Active Energy"
+                        },
+                        "properties": {
+                          "color": "#2ecc71",
+                          "max": 100000,
+                          "min": 0,
+                          "unit": "Wh"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "active_energy",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Energy",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 42,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Power Events"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Channel</th>\n        <th>Phase</th>\n        <th>Event</th>\n        <th>Voltage (V)</th>\n        <th>Current (A)</th>\n        <th>Power (W)</th>\n        <th>Power Factor</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.channel || '—' }}</td>\n        <td>{{ entry.phase || '—' }}</td>\n        <td>{{ entry.event || '—' }}</td>\n        <td>{{ entry.phase_A_V || entry.phase_B_V || entry.phase_C_V || '—' }}</td>\n        <td>{{ entry.current || '—' }}</td>\n        <td>{{ entry.active_pow || '—' }}</td>\n        <td>{{ entry.power_factor || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "channel",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "channel",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#7f8c8d",
+                            "name": "phase",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "event",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#c0392b",
+                            "name": "event",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_A_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "phase_A_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_B_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "phase_B_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "phase_C_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "phase_C_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "current",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "current",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "active_pow",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "active_pow",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "device_data",
+                              "mapping": "power_factor",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "power_factor",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
