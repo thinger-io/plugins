@@ -1,0 +1,955 @@
+{
+  "name": "sezo_sezoel",
+  "version": "1.0.0",
+  "description": "Environment Sensor",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sezo-sezoel"
+  },
+  "metadata": {
+    "name": "Sezo SEZOEL",
+    "description": "Environment Sensor",
+    "image": "assets/sezoel.png",
+    "category": "devices",
+    "vendor": "sezo"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Environment Sensor",
+        "enabled": true,
+        "name": "Sezo SEZOEL",
+        "product": "sezo_sezoel",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "sezo-sezoel-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "sezo_sezoel_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n\n  /**\n     * @reference https://github.com/myDevicesIoT/cayenne-docs/blob/master/docs/LORA.md\n     *\n     *\n     * Type                 IPSO    LPP     Hex     Data Size   Data Resolution per bit\n     *  Digital Input       3200    0       0       1           1\n     *  Digital Output      3201    1       1       1           1\n     *  Analog Input        3202    2       2       2           0.01 Signed\n     *  Analog Output       3203    3       3       2           0.01 Signed\n\t *  Counter Input       5501    4       4       2           1 event Unsigned MSB\n     *  Illuminance Sensor  3301    101     65      2           1 Lux Unsigned MSB\n     *  Presence Sensor     3302    102     66      1           1\n     *  Temperature Sensor  3303    103     67      2           0.1 °C Signed MSB\n     *  Humidity Sensor     3304    104     68      1           0.5 % Unsigned\n     *  Accelerometer       3313    113     71      6           0.001 G Signed MSB per axis\n     *  Barometer           3315    115     73      2           0.1 hPa Unsigned MSB\n     *  Gyrometer           3334    134     86      6           0.01 °/s Signed MSB per axis\n     *  GPS Location        3336    136     88      9           Latitude  : 0.0001 ° Signed MSB\n     *                                                          Longitude : 0.0001 ° Signed MSB\n     *                                                          Altitude  : 0.01 meter Signed MSB\n\tSEZO specific types\n\t *\tLoudness\t\t\t  -\t\t200\t\tC8\t\t2\t\t\t0.01 Signed\n\t *\tParticle Matter PM1   -\t\t201\t\tC9\t\t1\t\t\t1\n\t *\tParticle Matter PM2.5 -\t\t202\t\tCA\t\t1\t\t\t1\n\t *\tParticle Matter PM4   -\t\t203\t\tCB\t\t1\t\t\t1\n\t *\tParticle Matter PM10  -\t\t204\t\tCC\t\t1\t\t\t1\t \n\t *  Index air quality\t  -\t\t205\t\tCD\t\t2\t\t\t1\n     */\n    var sensor_types = {\n            0  : {'size': 1, 'name': 'digital_input', 'readable_name': 'Digital Input', 'signed': false, 'divisor': 1,},\n            1  : {'size': 1, 'name': 'digital_output', 'readable_name': 'Digital Output', 'signed': false, 'divisor': 1,},\n            2  : {'size': 2, 'name': 'analog_input', 'readable_name': 'Analog Input', 'signed': true , 'divisor': 100,},\n            3  : {'size': 2, 'name': 'analog_output', 'readable_name': 'Analog Output', 'signed': true , 'divisor': 100,},\n            4  : {'size': 2, 'name': 'counter_input', 'readable_name': 'Counter Input', 'signed': false, 'divisor': 1,},\n            101: {'size': 2, 'name': 'luminosity', 'readable_name': 'Illuminance Sensor', 'signed': false, 'divisor': 1,},\n            102: {'size': 1, 'name': 'presence', 'readable_name': 'Presence Sensor', 'signed': false, 'divisor': 1,},\n            103: {'size': 2, 'name': 'temperature', 'readable_name': 'Temperature Sensor', 'signed': true , 'divisor': 10,},\n            104: {'size': 1, 'name': 'humidity', 'readable_name': 'Humidity Sensor', 'signed': false, 'divisor': 2,},\n            113: {'size': 6, 'name': 'accelerometer', 'readable_name': 'Accelerometer', 'signed': true ,  'divisor': [1000,1000,1000],},\n            114: {'size': 6, 'name': 'magnetometer', 'readable_name': 'Magnetometer', 'signed': true , 'divisor': [1000,1000,1000],},\n            115: {'size': 2, 'name': 'barometer', 'readable_name': 'Barometer', 'signed': false, 'divisor': 10,},\n            134: {'size': 6, 'name': 'gyrometer', 'readable_name': 'Gyrometer', 'signed': true , 'divisor': 100,},\n            136: {'size': 9, 'name': 'gps_location', 'readable_name': 'GPS Location', 'signed': false, 'divisor': [10000,10000,100],},\n\t\t\t//SEZO specific types\n            200: {'size': 2, 'name': 'battery', 'readable_name': 'Battery', 'signed': false , 'divisor': 100,},\n            201: {'size': 2, 'name': 'loudness', 'readable_name': 'Loudness', 'signed': true , 'divisor': 100,},\n\t\t\t202: {'size': 1, 'name': 'PM1', 'readable_name': 'PM1', 'signed': false, 'divisor': 1,},\n\t\t\t203: {'size': 1, 'name': 'PM2_5', 'readable_name': 'PM2_5', 'signed': false, 'divisor': 1,},\n\t\t\t204: {'size': 1, 'name': 'PM4', 'readable_name': 'PM4', 'signed': false, 'divisor': 1,},\n\t\t\t205: {'size': 1, 'name': 'PM10', 'readable_name': 'PM10', 'signed': false, 'divisor': 1,},\n\t\t\t206: {'size': 2, 'name': 'IAQ', 'readable_name': 'IAQ', 'signed': false, 'divisor': 1,},\n\t\t\t207: {'size': 2, 'name': 'UV', 'readable_name': 'UV Sensor', 'signed': false, 'divisor': 1,},\n \t\t\t208: {'size': 2, 'name': 'EXT_temperature', 'readable_name': 'External Temperature Sensor', 'signed': true , 'divisor': 10,},\n            209: {'size': 1, 'name': 'EXT_humidity', 'readable_name': 'External Humidity Sensor', 'signed': false, 'divisor': 2,},\n\t\t\t210: {'size': 2, 'name': 'EXT_barometer', 'readable_name': 'Barometer', 'signed': false, 'divisor': 10,},\n\t\t\t211: {'size': 1, 'name': 'IAQ_accuracy', 'readable_name': 'IAQ accuracy', 'signed': false, 'divisor': 1,}\n\t\t};\n\n    function arrayToDecimal(stream, is_signed, divisor) {\n        var value = 0;\n        for (var i = 0; i < stream.length; i++) {\n            if (stream[i] > 0xFF)\n                throw 'Byte value overflow!';\n            value = (value << 8) | stream[i];\n        }\n\n        if (is_signed) {\n            var edge = 1 << (stream.length) * 8;  // 0x1000..\n            var max = (edge - 1) >> 1;             // 0x0FFF.. >> 1\n            value = (value > max) ? value - edge : value;\n        }\n        \n        value /= divisor;\n\n        return value;\n    }\n    var bytes = input.bytes;\n    var sensors = {};\n    var i = 0;\n\twhile (i < bytes.length) {\n\t    // console.log(i);\n\t    // console.log(typeof bytes[i])\n\t    // console.log(bytes[i].toString())\n\t    var s_no   = bytes[i++];\n\t\tvar s_type = bytes[i++];\n\t\tif (typeof sensor_types[s_type] == 'undefined')\n\t\t    throw 'Sensor type error!: ' + s_type;\n\t    var s_size = sensor_types[s_type].size;\n\t    var s_name = sensor_types[s_type].name;\n\n\t    switch (s_type) {\n    \t    case 0  :  // Digital Input\n            case 1  :  // Digital Output\n            case 2  :  // Analog Input\n            case 3  :  // Analog Output\n            case 4  :  // Counter input\n            case 101:  // Illuminance Sensor\n            case 102:  // Presence Sensor\n            case 103:  // Temperature Sensor\n            case 104:  // Humidity Sensor\n            case 115:  // Barometer\n            case 134:  // Gyrometer\n\t\t\tcase 200:  // Battery\n            case 201:  // Loudness\n            case 202:  // PM1\n            case 203:  // PM2.5\n            case 204:  // PM4\n            case 205:  // PM10\n\t\t\tcase 206:  // IAQ\n\t\t\tcase 207:  // UV radiation\n\t\t\tcase 208:  // External temperature\n\t\t\tcase 209:  // External Relative Humidity\n\t\t\tcase 210:  // External Pressure\n\t\t\tcase 211:  // External Pressure\n\t\t\tvar s_value = arrayToDecimal(bytes.slice(i, i+s_size),\n            is_signed     = sensor_types[s_type].signed,\n            divisor = sensor_types[s_type].divisor);\n             break;\n\t\t\tcase 113:  // Accelerometer\n\t\t\tcase 114:  // Magnetometer \n\t\t\tvar s_value = {\n                        'x':  arrayToDecimal(bytes.slice(i+0, i+2), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[0]),\n                        'y': arrayToDecimal(bytes.slice(i+2, i+4), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[1]),\n                        'z':  arrayToDecimal(bytes.slice(i+4, i+6), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[2])};\n             break;\n            case 136:  // GPS Location\n                var s_value = {\n                        'latitude':  arrayToDecimal(bytes.slice(i+0, i+3), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[0]),\n                        'longitude': arrayToDecimal(bytes.slice(i+3, i+6), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[1]),\n                        'altitude':  arrayToDecimal(bytes.slice(i+6, i+9), is_signed=sensor_types[s_type].signed, divisor=sensor_types[s_type].divisor[2])};\n                 break;\n        }\n        if (typeof(sensors[s_name]) === \"undefined\") {\n            sensors[s_name] = {};\n        }\n        sensors[s_name] = s_value;\n\t    // sensors[s_no] = {'type': s_type, 'type_name': s_name, 'value': s_value };\n\t    i += s_size;\n\t}\n\n\treturn {data: sensors};\n}\n\nfunction encodeDownlink(input) {\n    var i = colors.indexOf(input.data.led);\n    if (i === -1) {\n        return {\n            errors: ['invalid LED color'],\n        };\n    }\n    return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 2,\n        // Encoded bytes\n        bytes: [i],\n    };\n}\n\nfunction decodeDownlink(input) {\n    switch (input.fPort) {\n        case 2:\n            return {\n                // Decoded downlink (must be symmetric with encodeDownlink)\n                data: {\n                    led: colors[input.bytes[0]],\n                },\n            };\n        default:\n            return {\n                errors: ['invalid FPort'],\n            };\n    }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Air Quality",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "IAQ Index"
+                        },
+                        "properties": {
+                          "color": "#00ff00",
+                          "max": 500,
+                          "min": 0,
+                          "unit": "IAQ"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "IAQ",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "IAQ",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PM2.5"
+                        },
+                        "properties": {
+                          "color": "#ff6b6b",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "µg/m³"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM2_5",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "PM2.5",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PM10"
+                        },
+                        "properties": {
+                          "color": "#ff9f43",
+                          "max": 150,
+                          "min": 0,
+                          "unit": "µg/m³"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM10",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "PM10",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Particulate Matter Trends"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM1",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "PM1",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM2_5",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "PM2.5",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM4",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "PM4",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM10",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "PM10",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 50,
+                          "min": -10,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#0000ff",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%RH"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Barometric Pressure"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 1050,
+                          "min": 950,
+                          "unit": "hPa"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "barometer",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Environmental Conditions"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "barometer",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Pressure",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Additional Sensors",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "UV Radiation"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 15,
+                          "min": 0,
+                          "unit": "UV Index"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "UV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "UV",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Luminosity"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "max": 10000,
+                          "min": 0,
+                          "unit": "Lux"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "luminosity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Light",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Loudness"
+                        },
+                        "properties": {
+                          "color": "#e67e22",
+                          "max": 120,
+                          "min": 0,
+                          "unit": "dB"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "loudness",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Noise",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "max": 4,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 4,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "IAQ and Environmental Trends"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "IAQ",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "IAQ Index",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "UV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "UV Index",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "luminosity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Luminosity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Sensor Readings"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>IAQ</th>\n        <th>PM2.5</th>\n        <th>Temp (°C)</th>\n        <th>Humidity (%)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td>{{ entry.IAQ || '—' }}</td>\n        <td>{{ entry.PM2_5 || '—' }}</td>\n        <td>{{ entry.temperature || '—' }}</td>\n        <td>{{ entry.humidity || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "IAQ",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "IAQ",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "PM2_5",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "PM2_5",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sezo_sezoel_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
