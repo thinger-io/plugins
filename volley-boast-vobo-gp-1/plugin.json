@@ -1,0 +1,112 @@
+{
+  "name": "volley_boast_vobo_gp_1",
+  "version": "1.0.0",
+  "description": "General purpose LoRaWAN bridge",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "volley-boast-vobo-gp-1"
+  },
+  "metadata": {
+    "name": "Volley-Boast VOBO-GP-1",
+    "description": "General purpose LoRaWAN bridge",
+    "image": "assets/vobo-gp-1.png",
+    "category": "devices",
+    "vendor": "volley-boast"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "General purpose LoRaWAN bridge",
+        "enabled": true,
+        "name": "Volley-Boast VOBO-GP-1",
+        "product": "volley_boast_vobo_gp_1",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "vobo-gp-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "volley_boast_vobo_gp_1_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": [
+                "lorawan",
+                "uplink",
+                "telemetry"
+              ]
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
