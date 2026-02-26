@@ -1,0 +1,7 @@
+site_name: plugins/devices/moko-lw003-b
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
