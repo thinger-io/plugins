@@ -1,0 +1,108 @@
+{
+  "name": "volley_boast_vobo_hl_1",
+  "version": "1.0.0",
+  "description": "General purpose LoRaWAN bridge certified for use in Class 1 Div 2 hazardous locations",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "volley-boast-vobo-hl-1"
+  },
+  "metadata": {
+    "name": "Volley-Boast VOBO-HL-1",
+    "description": "General purpose LoRaWAN bridge certified for use in Class 1 Div 2 hazardous locations",
+    "image": "assets/vobo-hl-1.png",
+    "category": "devices",
+    "vendor": "volley-boast"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "General purpose LoRaWAN bridge certified for use in Class 1 Div 2 hazardous locations",
+        "enabled": true,
+        "name": "Volley-Boast VOBO-HL-1",
+        "product": "volley_boast_vobo_hl_1",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "vobo-hl-1.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "device_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
