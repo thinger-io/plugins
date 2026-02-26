@@ -1,7 +1,7 @@
 {
   "name": "moko_lw005_mp",
   "version": "1.0.0",
-  "description": "LW005 is a compact, multi-purposes, easy-to -use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+  "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Moko LW005-MP",
-    "description": "LW005 is a compact, multi-purposes, easy-to -use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
-    "image": "assets/lw005-mp.jpg",
+    "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+    "image": "assets/lw005-mp.png",
     "category": "devices",
     "vendor": "moko"
   },
   "resources": {
     "products": [
       {
-        "description": "LW005 is a compact, multi-purposes, easy-to -use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+        "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
         "enabled": true,
         "name": "Moko LW005-MP",
         "product": "moko_lw005_mp",
