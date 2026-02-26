@@ -1,0 +1,474 @@
+{
+  "name": "moko_lw003_b",
+  "version": "1.0.0",
+  "description": "The Moko Smart LW003-B integrates LoRaWAN® and Bluetooth wireless communication. It can scan BLE Beacon data and send data to the LoRaWAN gateway, and then upload it to the server to realize environmental monitoring and indoor positioning.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "moko-lw003-b"
+  },
+  "metadata": {
+    "name": "Moko LW003-B",
+    "description": "The Moko Smart LW003-B integrates LoRaWAN® and Bluetooth wireless communication. It can scan BLE Beacon data and send data to the LoRaWAN gateway, and then upload it to the server to realize environmental monitoring and indoor positioning.",
+    "image": "assets/lw003-b-1.png",
+    "category": "devices",
+    "vendor": "moko"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Moko Smart LW003-B integrates LoRaWAN® and Bluetooth wireless communication. It can scan BLE Beacon data and send data to the LoRaWAN gateway, and then upload it to the server to realize environmental monitoring and indoor positioning.",
+        "enabled": true,
+        "name": "Moko LW003-B",
+        "product": "moko_lw003_b",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "moko-lw003b-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "moko_lw003_b_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input)\n{\n  var port = input.fPort;\n  var bytes = input.bytes;\n  var decoded = {};\n  var fourStr = bytes.join(\"\");\n  if (port === 1)\n  {\n    decoded.type = \"Device Information Packet\";\n    decoded.batterylevel = bytes[0]/100 ; //  IF equal to 0.55, means the battery level is 55%.\n    decoded.voltagemv = bytes[1]*256 +bytes[2];\n    decoded.firmwareversion = bytes[3]; //Convert to binary, if it is 01 00 00 11 ,the firmware is V1.0.3\n    decoded.accelerometersensitivity = bytes[4];\n    decoded.tamperstatus = bytes[5];\n    decoded.temperature = ( ( bytes[6] * 256 + bytes[7] ) -4500 ) / 100; // the unit is ℃\n    decoded.humidity =  ( bytes[8] * 256 + bytes[9] ) / 100;\n    if ( bytes[10] == 0 )\n    {\n      decoded.region = \"as923\";\n    }\n    else if ( bytes[10] == 1 )\n    {\n      decoded.region = \"au915\";\n    }\n    else if ( bytes[10] == 5 )\n    {\n      decoded.region = \"eu868\";  \n    }\n    else if ( bytes[10] == 6 )\n    {\n      decoded.region = \"kr920\";  \n    }\n    else if ( bytes[10] == 7 )\n    {\n      decoded.region = \"in865\";     \n    }\n    else if ( bytes[10] == 8 )\n    {\n      decoded.region = \"us915\";  \n    }\n    else \n    {\n      decoded.region = \"ru864\";     \n    }\n  }\n  else if (port === 2)\n  {\n    decoded.tyep = \"Beacons data packet\";\n    decoded.framecounter = bytes[0];\n    decoded.Beaconsnumber = bytes[1];\n    decoded.timeyear1st = bytes[2] * 256 + bytes[3];\n    decoded.timemonth1st = bytes[4];\n    decoded.timeday1st = bytes[5]; \n    decoded.timehour1st = bytes[6];\n    decoded.timeminute1st = bytes[7];\n    decoded.timesecond1st = bytes[8]; \n    decoded.beaconlength1st = bytes[9];\n    decoded.beaconmac1st  = fourStr.substring(20,32);\n    decoded.beaconrssi1st = bytes[16] - 256;\n    decoded.adverrawdata1st = fourStr.substring(34,96);\n    decoded.responserawdata1st =  fourStr.substring(96,158);\n    decoded.timeyear2nd = bytes[79] * 256 + bytes[80];\n    decoded.timemonth2nd = bytes[81];\n    decoded.timeday2nd = bytes[82]; \n    decoded.timehour2nd = bytes[83];\n    decoded.timeminute2nd = bytes[84];\n    decoded.timesecond2nd = bytes[85]; \n    decoded.beaconlength2nd = bytes[86];\n    decoded.beaconmac2nd  = fourStr.substring(174,186);\n    decoded.beaconrssi2nd = bytes[93] - 256;\n    decoded.adverrawdata2nd = fourStr.substring(188,250);\n    decoded.responserawdata2nd =  fourStr.substring(250,312);\n    decoded.timeyear3rd = bytes[156] * 256 + bytes[157];\n    decoded.timemonth3rd = bytes[158];\n    decoded.timeday3rd = bytes[159]; \n    decoded.timehour3rd = bytes[160];\n    decoded.timeminute3rd = bytes[161];\n    decoded.timesecond3rd = bytes[162]; \n    decoded.beaconlength3rd = bytes[163];\n    decoded.beaconmac3rd  = fourStr.substring(328,340);\n    decoded.beaconrssi3rd = bytes[170] - 256;\n    decoded.adverrawdata3rd = fourStr.substring(342,404);\n    decoded.responserawdata3rd =  fourStr.substring(404,466);\n  }\n  else\n  {\n    return {\n      errors: ['unknown FPort'],\n    };\n  }\n\n  return {\n    data: decoded,\n  };\n}\n\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Device Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Temperature"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff0000",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Historic Humidity"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#0000ff",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#ff0000",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#0000ff",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%RH"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "humidity",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "color": "#2ecc71",
+                          "max": 1,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "batterylevel",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Information"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 15px;\">\n  <div ng-if=\"value && value.length > 0\" style=\"font-family: Arial, sans-serif;\">\n    <h4 style=\"margin-top: 0;\">Latest Reading</h4>\n    <table class=\"table table-striped table-condensed\">\n      <tbody>\n        <tr>\n          <td><strong>Timestamp:</strong></td>\n          <td>{{ value[0].ts | date:'medium' }}</td>\n        </tr>\n        <tr ng-if=\"value[0].temperature !== undefined\">\n          <td><strong>Temperature:</strong></td>\n          <td>{{ value[0].temperature | number:2 }} °C</td>\n        </tr>\n        <tr ng-if=\"value[0].humidity !== undefined\">\n          <td><strong>Humidity:</strong></td>\n          <td>{{ value[0].humidity | number:2 }} %RH</td>\n        </tr>\n        <tr ng-if=\"value[0].batterylevel !== undefined\">\n          <td><strong>Battery Level:</strong></td>\n          <td>{{ (value[0].batterylevel * 100) | number:0 }} %</td>\n        </tr>\n        <tr ng-if=\"value[0].voltagemv !== undefined\">\n          <td><strong>Voltage:</strong></td>\n          <td>{{ value[0].voltagemv }} mV</td>\n        </tr>\n        <tr ng-if=\"value[0].firmwareversion !== undefined\">\n          <td><strong>Firmware:</strong></td>\n          <td>{{ value[0].firmwareversion }}</td>\n        </tr>\n        <tr ng-if=\"value[0].region !== undefined\">\n          <td><strong>Region:</strong></td>\n          <td>{{ value[0].region }}</td>\n        </tr>\n        <tr ng-if=\"value[0].tamperstatus !== undefined\">\n          <td><strong>Tamper Status:</strong></td>\n          <td>{{ value[0].tamperstatus }}</td>\n        </tr>\n        <tr ng-if=\"value[0].type !== undefined\">\n          <td><strong>Packet Type:</strong></td>\n          <td>{{ value[0].type }}</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n  <div ng-if=\"!value || value.length === 0\" style=\"text-align: center; padding: 20px; color: #999;\">\n    <p>No data available</p>\n  </div>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Device Data",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#f39c12",
+                          "max": 4000,
+                          "min": 2000,
+                          "unit": "mV"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "mapping": "voltagemv",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Beacon Data",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 18
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Beacon Scanner Data"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 15px;\">\n  <div ng-if=\"value && value.length > 0\" style=\"font-family: Arial, sans-serif;\">\n    <h4 style=\"margin-top: 0;\">Latest Beacon Scan</h4>\n    <div ng-repeat=\"entry in value | limitTo:5\" style=\"margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px;\">\n      <p><strong>Timestamp:</strong> {{ entry.ts | date:'medium' }}</p>\n      <p ng-if=\"entry.framecounter !== undefined\"><strong>Frame Counter:</strong> {{ entry.framecounter }}</p>\n      <p ng-if=\"entry.Beaconsnumber !== undefined\"><strong>Number of Beacons:</strong> {{ entry.Beaconsnumber }}</p>\n      \n      <div ng-if=\"entry.beaconmac1st\" style=\"margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px;\">\n        <h5 style=\"margin-top: 0; color: #2c3e50;\">Beacon 1</h5>\n        <p><strong>MAC Address:</strong> {{ entry.beaconmac1st }}</p>\n        <p ng-if=\"entry.beaconrssi1st !== undefined\"><strong>RSSI:</strong> {{ entry.beaconrssi1st }} dBm</p>\n        <p ng-if=\"entry.beaconlength1st !== undefined\"><strong>Length:</strong> {{ entry.beaconlength1st }}</p>\n        <p ng-if=\"entry.timeyear1st !== undefined\"><strong>Time:</strong> {{ entry.timeyear1st }}-{{ entry.timemonth1st }}-{{ entry.timeday1st }} {{ entry.timehour1st }}:{{ entry.timeminute1st }}:{{ entry.timesecond1st }}</p>\n      </div>\n      \n      <div ng-if=\"entry.beaconmac2nd\" style=\"margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px;\">\n        <h5 style=\"margin-top: 0; color: #2c3e50;\">Beacon 2</h5>\n        <p><strong>MAC Address:</strong> {{ entry.beaconmac2nd }}</p>\n        <p ng-if=\"entry.beaconrssi2nd !== undefined\"><strong>RSSI:</strong> {{ entry.beaconrssi2nd }} dBm</p>\n        <p ng-if=\"entry.beaconlength2nd !== undefined\"><strong>Length:</strong> {{ entry.beaconlength2nd }}</p>\n        <p ng-if=\"entry.timeyear2nd !== undefined\"><strong>Time:</strong> {{ entry.timeyear2nd }}-{{ entry.timemonth2nd }}-{{ entry.timeday2nd }} {{ entry.timehour2nd }}:{{ entry.timeminute2nd }}:{{ entry.timesecond2nd }}</p>\n      </div>\n      \n      <div ng-if=\"entry.beaconmac3rd\" style=\"margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px;\">\n        <h5 style=\"margin-top: 0; color: #2c3e50;\">Beacon 3</h5>\n        <p><strong>MAC Address:</strong> {{ entry.beaconmac3rd }}</p>\n        <p ng-if=\"entry.beaconrssi3rd !== undefined\"><strong>RSSI:</strong> {{ entry.beaconrssi3rd }} dBm</p>\n        <p ng-if=\"entry.beaconlength3rd !== undefined\"><strong>Length:</strong> {{ entry.beaconlength3rd }}</p>\n        <p ng-if=\"entry.timeyear3rd !== undefined\"><strong>Time:</strong> {{ entry.timeyear3rd }}-{{ entry.timemonth3rd }}-{{ entry.timeday3rd }} {{ entry.timehour3rd }}:{{ entry.timeminute3rd }}:{{ entry.timesecond3rd }}</p>\n      </div>\n    </div>\n  </div>\n  <div ng-if=\"!value || value.length === 0\" style=\"text-align: center; padding: 20px; color: #999;\">\n    <p>No beacon data available</p>\n  </div>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw003_b_data",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Beacon Data",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
