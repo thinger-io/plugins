@@ -28,6 +28,8 @@ The LW004 is a LoRaWAN-based panic button with positioning functionality, featur
 
 The LW004 integrates seamlessly with Thinger.io through LoRaWAN connectivity, enabling real-time emergency alerts, location tracking, and device monitoring through the Thinger.io platform.
 
+To use SOS alerts, you can configure them via the dashboard or as a property.
+
 ## Requirements
 
 A LoRaWAN server is required to communicate the LW004 into Thinger.io, some options are:
