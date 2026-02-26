@@ -1,7 +1,7 @@
 {
   "name": "the_things_node",
   "version": "1.0.0",
-  "description": "The Things Node is based on the SparkFun Pro Micro - 3.3V/8MHz with added Microchip LoRaWAN® module and temperature sensor, NXP’s digital accelerometer, a light sensor, button, and RGB LED. All this is packaged in a matchbox-sized waterproof (IP54) casing",
+  "description": "The Things Node is a compact, IP54-rated device based on the SparkFun Pro Micro (3.3V/8MHz), featuring a Microchip LoRaWAN® module, temperature sensor, accelerometer, light sensor, button, and RGB LED",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "THE-THINGS-NODE",
-    "description": "The Things Node is based on the SparkFun Pro Micro - 3.3V/8MHz with added Microchip LoRaWAN® module and temperature sensor, NXP’s digital accelerometer, a light sensor, button, and RGB LED. All this is packaged in a matchbox-sized waterproof (IP54) casing",
-    "image": "assets/the-things-node.jpg",
+    "description": "The Things Node is a compact, IP54-rated device based on the SparkFun Pro Micro (3.3V/8MHz), featuring a Microchip LoRaWAN® module, temperature sensor, accelerometer, light sensor, button, and RGB LED",
+    "image": "assets/the-things-node.png",
     "category": "devices",
     "vendor": "the-things-products"
   },
   "resources": {
     "products": [
       {
-        "description": "The Things Node is based on the SparkFun Pro Micro - 3.3V/8MHz with added Microchip LoRaWAN® module and temperature sensor, NXP’s digital accelerometer, a light sensor, button, and RGB LED. All this is packaged in a matchbox-sized waterproof (IP54) casing",
+        "description": "The Things Node is a compact, IP54-rated device based on the SparkFun Pro Micro (3.3V/8MHz), featuring a Microchip LoRaWAN® module, temperature sensor, accelerometer, light sensor, button, and RGB LED",
         "enabled": true,
         "name": "THE-THINGS-NODE",
         "product": "the_things_node",
