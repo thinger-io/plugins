@@ -1,0 +1,567 @@
+{
+  "name": "moko_lw005_mp",
+  "version": "1.0.0",
+  "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "moko-lw005-mp"
+  },
+  "metadata": {
+    "name": "Moko LW005-MP",
+    "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+    "image": "assets/lw005-mp.png",
+    "category": "devices",
+    "vendor": "moko"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LW005 is a compact, multi-purposes, easy-to-use, wireless LoRaWAN power meter for indoor use. It can remotely control the output switch and detect the output power.",
+        "enabled": true,
+        "name": "Moko LW005-MP",
+        "product": "moko_lw005_mp",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "moko-lw005.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "moko_lw005_mp_data_bucket": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction command_format_check(bytes, port)\n{\n    switch(port) \n    {\n        case 5:\n            if (bytes.length === 7) \n                return true;\n            break;\n\n        case 6:\n            if (bytes.length === 11) \n                return true;\n            break;\n        \n        case 7:\n            if (bytes.length === 10) \n                return true;\n            break;\n\n        case 8:\n            if (bytes.length === 11) \n                return true;\n            break;\n\n        case 9:\n            if (bytes.length === 10) \n                return true;\n            break;\n\n        case 10:\n            if (bytes.length === 10) \n                return true;\n            break;\n\n        case 11:\n            if (bytes.length === 10) \n                return true;\n            break;\n\n        case 12:\n            if (bytes.length === 11) \n                return true;\n            break;\n\n        case 13:\n            if (bytes.length === 6) \n                return true;\n            break;\n\n        case 14:\n            if (bytes.length === 10) \n                return true;\n            break;\n\n        default:\n           break;\n    }\n\n    return false;   \n}\n\nfunction timezone_decode(tz)\n{\n    var tz_str = \"UTC\";\n\n    if (tz < 0)\n    {\n        tz_str +=\"-\";\n        tz = -tz;\n    }\n    else\n    {\n        tz_str +=\"+\";\n    }\n    \n    if (tz < 20)\n    {\n        tz_str += \"0\";\n    }\n\n    tz_str += String(parseInt(tz/2));\n    tz_str += \":\"\n\n    if (tz % 2) \n    {\n        tz_str += \"30\"\n    }\n    else\n    {\n        tz_str += \"00\"\n    }\n    \n    return tz_str;\n}\n\nfunction parse_int16(num)\n{\n    if (num & 0x8000) \n        return (num-0x10000);\n    else\n        return num;\n}\n\nfunction parse_int24(num)\n{\n    if (num & 0x800000) \n        return (num-0x1000000);\n    else\n        return num;\n}\n\nfunction Decoder(bytes, port)\n{\n    var res_data = {};\n\n    res_data.port = port;\n\n    if(command_format_check(bytes, port) == false)\n    {\n        res_data.result = 'Format wrong';\n        return res_data;\n    }  \n    res_data.timestamp = bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3];\n    res_data.timezone = timezone_decode(bytes[4])\n\n    switch(port) \n    {\n        case 5:\n            res_data.switch_state = bytes[5];\n            res_data.load_state = bytes[6];\n            break;\n\n        case 6:\n            res_data.voltage = (bytes[5]<<8 | bytes[6])/10;\n            res_data.current  = parse_int16(bytes[7]<<8 | bytes[8])/1000;\n            res_data.freq  = (bytes[9]<<8 | bytes[10])/1000;\n            break;\n        \n        case 7:\n            res_data.power = (bytes[5]<<24 | bytes[6]<<16 | bytes[7]<<8 | bytes[8]) / 10;\n            res_data.factor = bytes[9];\n            break;\n           \n        case 8:\n            res_data.all_energy = bytes[5]<<24 | bytes[6]<<16 | bytes[7]<<8 | bytes[8];\n            res_data.last_hour_energy = bytes[9]<<8 | bytes[10];\n            break;\n\n        case 9:\n            res_data.overvoltage_state = bytes[5];\n            res_data.current_voltage = (bytes[6]<<8 | bytes[7])/10;\n            res_data.protect_voltage = (bytes[8]<<8 | bytes[9])/10;\n            break;\n           \n        case 10:\n            res_data.undervoltage_state = bytes[5];\n            res_data.current_voltage = (bytes[6]<<8 | bytes[7])/10;\n            res_data.protect_voltage = (bytes[8]<<8 | bytes[9])/10;\n            break;\n\n        case 11:\n            res_data.overcurrent_state = bytes[5];\n            res_data.current_current = parse_int16(bytes[6]<<8 | bytes[7])/1000;\n            res_data.protect_current = (bytes[8]<<8 | bytes[9])/1000;\n            break;\n\n        case 12:\n            res_data.overpower_state = bytes[5];\n            res_data.current_power = parse_int24(bytes[6]<<16 | bytes[7]<<8 | bytes[8])/10;\n            res_data.protect_power = (bytes[9]<<8 | bytes[10])/10;\n            break;\n\n        case 13:\n            res_data.load_change_state  = bytes[5];\n            break;\n\n        case 14:\n            res_data.countdown_state  = bytes[5];\n            res_data.countdown_time = bytes[6]<<24 | bytes[7]<<16 | bytes[8]<<8 | bytes[9];\n            break;\n\n        default:\n           break;\n    } \n\n    return res_data;\n}\n\n//res_data = Decoder([0x61, 0xA8, 0xED, 0x71, 0x10, 0x00, 0x00], 5);\n//res_data = Decoder([0x61, 0xAD, 0x6C, 0x62, 0x10, 0x09, 0x2D, 0xF2, 0x0F, 0xC3, 0x65], 6);\n//res_data = Decoder([0x61, 0xAD, 0x6C, 0x62, 0x10, 0x00, 0x00, 0x78, 0xF9, 0x26], 7);\n//res_data = Decoder([0x61, 0xAD, 0x6C, 0x44, 0x10, 0x00, 0xB4, 0x1F, 0x3F, 0x01, 0x67], 8);\n//console.log(res_data);\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Power Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Switch State"
+                        },
+                        "properties": {
+                          "color": "#00ff00",
+                          "max": 1,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "switch_state",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Switch",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Voltage"
+                        },
+                        "properties": {
+                          "color": "#ff9900",
+                          "max": 300,
+                          "min": 0,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff9900",
+                            "name": "Voltage",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Current"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 16,
+                          "min": 0,
+                          "unit": "A"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "current",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Current",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Power"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 4000,
+                          "min": 0,
+                          "unit": "W"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "power",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Power",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Power Factor"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "factor",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "PF",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Frequency"
+                        },
+                        "properties": {
+                          "color": "#16a085",
+                          "max": 65,
+                          "min": 45,
+                          "unit": "Hz"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "freq",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Frequency",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Power History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "power",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Power (W)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Voltage & Current History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "voltage",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#ff9900",
+                            "name": "Voltage (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "current",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Current (A)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Energy Consumption"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding: 20px;\">\n  <div style=\"margin-bottom: 30px;\">\n    <h3>Total Energy Consumption</h3>\n    <div ng-repeat=\"entry in value[0] | limitTo:1\" style=\"font-size: 36px; color: #27ae60; font-weight: bold;\">\n      {{ entry.all_energy || '—' }} Wh\n    </div>\n  </div>\n  <div style=\"margin-bottom: 30px;\">\n    <h3>Last Hour Energy</h3>\n    <div ng-repeat=\"entry in value[1] | limitTo:1\" style=\"font-size: 24px; color: #2980b9; font-weight: bold;\">\n      {{ entry.last_hour_energy || '—' }} Wh\n    </div>\n  </div>\n  <table class=\"table table-striped table-condensed\" style=\"margin-top: 20px;\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Energy (Wh)</th>\n        <th>Last Hour (Wh)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value[2] | limitTo:20\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.all_energy || '—' }}</td>\n        <td>{{ entry.last_hour_energy || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "all_energy",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Total Energy",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "last_hour_energy",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2980b9",
+                            "name": "Last Hour",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw005_mp_data_bucket",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "History",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
