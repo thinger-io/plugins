@@ -1,0 +1,679 @@
+{
+  "name": "moko_lw004",
+  "version": "1.0.0",
+  "description": "LW004 is LoRaWAN based panic button with positioning function, with a compact and smart outlook, and easy to use. It integrates BLE and GPS that is specially designed for indoor and outdoor positioning of object or person.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "moko-lw004"
+  },
+  "metadata": {
+    "name": "Moko LW004",
+    "description": "LW004 is LoRaWAN based panic button with positioning function, with a compact and smart outlook, and easy to use. It integrates BLE and GPS that is specially designed for indoor and outdoor positioning of object or person.",
+    "image": "assets/lw004.jpg",
+    "category": "devices",
+    "vendor": "moko"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LW004 is LoRaWAN based panic button with positioning function, with a compact and smart outlook, and easy to use. It integrates BLE and GPS that is specially designed for indoor and outdoor positioning of object or person.",
+        "enabled": true,
+        "name": "Moko LW004",
+        "product": "moko_lw004",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lw004-.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "moko_lw004_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//LW004-PB_V3 Payload Decoder rule\n//Creation time:2022-07-22 \n//Creator:taojianfeng\n//Suitable firmware versions:LW004-PB V3.0.4 \n//Programming languages:Javascript\n//Suitable platforms:TTN\n\nvar packet_type = [\"event\",\"sys_open\",\"sys_close\",\"heart\",\"low_battery\",\"work_gps_fix_success\",\"work_gps_fix_false\",\"work_ble_fix_success\",\"work_ble_fix_false\",\"helper_gps_fix_success\",\"helper_gps_fix_false\",\"helper_ble_fix_success\",\"helper_ble_fix_false\"];\nvar dev_mode = [\"off\",\"standby\",\"timing\",\"period\",\"motion_idle\",\"motion_start\",\"motion_moving\",\"motion_stop\"];\nvar dev_status = [\"none\",\"downlink_fix\",\"mandown\",\"alert\",\"sos\"];\nvar event_type = [\"motion_start\",\"motion_moving\",\"motion_stop\",\"sos_start\",\"sos_stop\",\"alert_start\",\"alert_stop\",\"mandown_start\",\"mandown_stop\",\"downlink_fix\"];\nvar restart_reason = [\"ble_cmd_restart\",\"lorawan_cmd_restart\",\"key_restart\",\"power_restart\"];\n\n\nfunction substringBytes(bytes, start, len)\n{\n\tvar char = [];\n\tfor(var i = 0; i < len; i++)\n\t{\n\t\tchar.push(\"0x\"+ bytes[start+i].toString(16) < 0X10 ? (\"0\"+bytes[start+i].toString(16)) : bytes[start+i].toString(16) );\n\t}\n\treturn char.join(\"\");\n}\nfunction BytestoInt(bytes,start) {\n    var value = ((bytes[start] << 24) | (bytes[start+1] << 16) | (bytes[start+2] << 8) | (bytes[start+3]));\n    return value;\n}\nfunction Decoder(bytes, port)\n{\n\tvar dev_info = {};\n\tvar datas = [];\n\tvar parse_len;\n\tdev_info.pack_type = packet_type[port-1];\n\n\tif(port == 1)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.timezone = bytes[1];\t\t\t\t\t//timezone\n\t\tdev_info.timestamp = BytestoInt(bytes,2);\t\t//timestamp\n\t\tdev_info.event_type = event_type[bytes[6]];\t\t//event\n\t}\n\telse if(port == 2)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\t//work mode\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\t//device status\n\t\tdev_info.firmware_ver = \"V\" + bytes[2] + \".\" + bytes[3] + \".\" + bytes[4];\n\t\tdev_info.hardware_ver = \"V\" + bytes[5] + \".\" + bytes[6];\n\t\tdev_info.timezone = bytes[7];\t\t//timezone\n\t\tdev_info.alarm_error = bytes[8];\t//error state\n\t}\n\telse if(port == 3)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\t//work mode\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\t//device status\n\t\tdev_info.timezone = bytes[2];\t\t\t\t\t\t//timezone\n\t\tdev_info.timestamp = BytestoInt(bytes,3);\t\t//timestamp\n\t\tdev_info.pre_restart_reason = restart_reason[bytes[7]];\n\t}\n\telse if(port == 4)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\t//work mode\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\t//device status\n\t\tdev_info.timezone = bytes[2];\t\t\t\t\t//timezone\n\t\tdev_info.timestamp = BytestoInt(bytes,3);\t\t//timestamp\n\t}\n\telse if(port == 5)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\t//work mode\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\t//device status\n\t\tdev_info.timezone = bytes[2];\t\t\t\t\t//timezone\n\t\tdev_info.timestamp = BytestoInt(bytes,3);\t\t//timestamp\n\t\tdev_info.low_power_level = bytes[7];\t\t//low power level\n\t}\n\telse if(port == 6 || port == 10)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>5)&0x07];\t\t//work mode\n\t\tdev_info.dev_status = dev_status[(bytes[1]>>2)&0x07];\t//device status\n\n\t\tage = (bytes[1]&0x02) << 8 | bytes[2];\n\t\tdev_info.age = age;\n\n\t\tlon =BytestoInt(bytes,3);\n\t\tlat =BytestoInt(bytes,7);\n\n\t\tif(lat>0x80000000)\n\t\t\tlat = lat-0x100000000;\n\t\tif(lon>0x80000000)\n\t\t\tlon = lon-0x100000000;\n\n\t\tdev_info.lat = lat/10000000;\n\t\tdev_info.lon = lon/10000000;\n\t}\n\telse if(port == 7 || port == 11)\n\t{\n\t\tvar gps_fix_false_reason = [\"hardware_error\",\"down_request_fix_interrupt\",\"mandown_fix_interrupt\",\"alarm_fix_interrupt\",\"gps_fix_tech_timeout\",\"gps_fix_timeout\",\"alert_short_time\",\"sos_short_time\",\"pdop_limit\",\"motion_start_interrupt\",\"motion_stop_interrupt\"];\n\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\n\t\tdev_info.fix_false_reason = gps_fix_false_reason[bytes[2]];\n\t\tdev_info.fix_cn0 = bytes[3];\n\t\tdev_info.fix_cn1 = bytes[4];\n\t\tdev_info.fix_cn2 = bytes[5];\n\t\tdev_info.fix_cn3 = bytes[6];\n\t}\n\telse if(port == 8 || port == 12)\n\t{\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\n\t\tvar age = (bytes[2]) << 8 | bytes[3];\n\t\tdev_info.age = age;\t//age\n\n\t\tparse_len = 4;\n\t\tfor(var i=0 ; i<((bytes.length-4)/7) ; i++)\n\t\t{\n\t\t\tvar data = {};\n\t\t\tdata.mac = substringBytes(bytes, parse_len, 6);\n\t\t\tparse_len += 6;\n\t\t\tdata.rssi = bytes[parse_len++]-256 +\"dBm\";\n\t\t\tdatas.push(data);\n\t\t}\n\t\tdev_info.mac_data = datas;\n\n\t}\n\telse if(port == 9 || port == 13)\n\t{\n\t\tvar ble_fix_false_reason = [\"none\",\"hardware_error\",\"down_request_fix_interrupt\",\"mandown_fix_interrupt\",\"alarm_fix_interrupt\",\"ble_fix_timeout\",\"ble_adv\",\"motion_start_interrupt\",\"motion_stop_interrupt\"];\n\n\t\tdev_info.batterycharging = (bytes[0]>>7)&0x01;\t//Parse  Battery charging state \n\t\tdev_info.batterylevle =  (bytes[0]&0x7F) + '%';  //Parse  Battery Level\n\t\tdev_info.work_mode = dev_mode[(bytes[1]>>4)&0x0F];\n\t\tdev_info.dev_status = dev_status[bytes[1]&0x0F];\n\t\tdev_info.fix_false_reason = ble_fix_false_reason[bytes[2]];\n\n\t\tparse_len = 3;\n\t\tfor(var j=0 ; j<((bytes.length-3)/7) ; j++)\n\t\t{\n\t\t\tvar ble_data = {};\n\t\t\tble_data.mac = substringBytes(bytes, parse_len, 6);\n\t\t\tparse_len += 6;\n\t\t\tble_data.rssi = bytes[parse_len++]-256 + \"dBm\";\n\t\t\tdatas.push(ble_data);\n\t\t}\n\t\tdev_info.mac_data = datas;\n\t}\n\n\treturn dev_info;\n} \n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "moko_lw004_sos_alert": {
+              "data": {
+                "event": "device_property_update",
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "source": "event"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{\"device\": \"{{device}}\", \"event\": \"{{payload.event_type}}\", \"status\": \"{{payload.dev_status}}\", \"timestamp\": {{payload.timestamp}}, \"lat\": {{payload.lat}}, \"lon\": {{payload.lon}}}",
+                "payload_function": "",
+                "target": "topic",
+                "topic": "moko_lw004/{{device}}/alerts/sos"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "moko_lw004_battery_charging": {
+              "data": {
+                "payload": "{{payload.batterycharging}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_battery_level": {
+              "data": {
+                "payload": "{{payload.batterylevle}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_device_status": {
+              "data": {
+                "payload": "{{payload.dev_status}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_event_type": {
+              "data": {
+                "payload": "{{payload.event_type}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_latitude": {
+              "data": {
+                "payload": "{{payload.lat}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_longitude": {
+              "data": {
+                "payload": "{{payload.lon}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "moko_lw004_work_mode": {
+              "data": {
+                "payload": "{{payload.work_mode}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {},
+              "enabled": true
+            },
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Location"
+                        },
+                        "properties": {},
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "lat",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "lon",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "color": "#f1c40f",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "batterylevle",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 6,
+                          "sizeX": 1,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Charging"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "max": 1,
+                          "min": 0,
+                          "unit": ""
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "batterycharging",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Charging",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Status"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; padding:20px; overflow-y:auto\">\n  <h4>Current Status</h4>\n  <table class=\"table table-bordered\">\n    <tr>\n      <td><strong>Work Mode:</strong></td>\n      <td>{{ value[0] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Device Status:</strong></td>\n      <td>{{ value[1] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Event Type:</strong></td>\n      <td>{{ value[2] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Packet Type:</strong></td>\n      <td>{{ value[3] || '—' }}</td>\n    </tr>\n  </table>\n  \n  <h4 style=\"margin-top: 20px;\">Location</h4>\n  <table class=\"table table-bordered\">\n    <tr>\n      <td><strong>Latitude:</strong></td>\n      <td>{{ value[4] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Longitude:</strong></td>\n      <td>{{ value[5] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Age:</strong></td>\n      <td>{{ value[6] || '—' }}</td>\n    </tr>\n  </table>\n  \n  <h4 style=\"margin-top: 20px;\">Battery</h4>\n  <table class=\"table table-bordered\">\n    <tr>\n      <td><strong>Level:</strong></td>\n      <td>{{ value[7] || '—' }}</td>\n    </tr>\n    <tr>\n      <td><strong>Charging:</strong></td>\n      <td>{{ value[8] == 1 ? 'Yes' : 'No' }}</td>\n    </tr>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "work_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "work_mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "dev_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "dev_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "event_type",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "event_type",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "pack_type",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "pack_type",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "lat",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "lon",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "age",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "age",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "batterylevle",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "battery_level",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "batterycharging",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "battery_charging",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level History"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "batterylevle",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f1c40f",
+                            "name": "Battery Level",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Event History"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Event Type</th>\n        <th>Status</th>\n        <th>Mode</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'short' }}</td>\n        <td><span class=\"label label-info\">{{ entry.event_type || '—' }}</span></td>\n        <td><span class=\"label label-warning\">{{ entry.dev_status || '—' }}</span></td>\n        <td>{{ entry.work_mode || '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "event_type",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "event_type",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "dev_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "dev_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "moko_lw004_data",
+                              "mapping": "work_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "name": "work_mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
