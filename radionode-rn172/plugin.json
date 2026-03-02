@@ -1,17 +1,17 @@
 {
     "name": "Rn172",
     "version": "1.0.0",
-    "description": "HTTPS integration",
+    "description": "Radionode RN172 WiFi Sensor Data Transmitter integration for Temperature and Humidity monitoring.",
     "author": "Thinger.io",
     "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/thinger-io/plugins.git",
-        "directory": "Rn172"
+        "directory": "radionode-rn172"
     },
     "metadata": {
         "name": "Radionode - RN172",
-        "description": "HTTPS integration",
+        "description": "RN172WCD - Sensor Data Transmitter via WiFi",
         "image": "assets/radionode-rn172.png"
     },
     "resources": {
@@ -20,7 +20,7 @@
                 "config": {
                     "icons": []
                 },
-                "description": "HTTPS integration",
+                "description": "Radionode RN172 WiFi Integration",
                 "enabled": true,
                 "name": "Dekist Rn172",
                 "product": "Rn172",
@@ -72,7 +72,7 @@
                         }
                     },
                     "code": {
-                        "code": "/*decodification script created by Thinger.io*/\r\n\r\nfunction getId(payload){\r\nreturn \"rn172_\"+(payload.mac).toUpperCase();\r\n}\r\n\r\nfunction device_status(payload) {\r\n    const data = typeof payload === \"string\" ? JSON.parse(payload) : payload;\r\n\r\n    return {\r\n        battery: Number(data.bat),\r\n        signal: Number(data.sig)\r\n    };\r\n}\r\n\r\nfunction get_device_data(payload) {\r\n    const data = typeof payload === \"string\" ? JSON.parse(payload) : payload;\r\n\r\n    if (!data.C000) {\r\n        return null; \r\n    }\r\n\r\n    const c000Str = data.C000.trim();\r\n    const parts = c000Str.split(\"|\");\r\n\r\n    return {\r\n        timestamp: parseInt(parts[0], 10),\r\n        temperature: parseFloat(parts[1]),\r\n        humidity: parseFloat(parts[2])\r\n    };\r\n}\r\n\r\n",
+                        "code": "/* decodification script created by Thinger.io */\r\n\r\nfunction getId(payload) {\r\n    return \"rn172_\" + (payload.mac).toUpperCase();\r\n}\r\n\r\nfunction device_status(payload) {\r\n    const data = typeof payload === \"string\" ? JSON.parse(payload) : payload;\r\n    // Accessing through decodedPayload as per integration standards\r\n    const status = data.decodedPayload || data;\r\n    return {\r\n        battery: Number(status.bat),\r\n        signal: Number(status.sig)\r\n    };\r\n}\r\n\r\nfunction get_device_data(payload) {\r\n    const data = typeof payload === \"string\" ? JSON.parse(payload) : payload;\r\n    \r\n    // Using decodedPayload to ensure data is captured from the LNS plugin\r\n    const decoded = data.decodedPayload || data;\r\n\r\n    if (!decoded.C000) {\r\n        return null;\r\n    }\r\n\r\n    const c000Str = decoded.C000.trim();\r\n    const parts = c000Str.split(\"|\");\r\n\r\n    return {\r\n        timestamp: parseInt(parts[0], 10),\r\n        temperature: parseFloat(parts[1]),\r\n        humidity: parseFloat(parts[2])\r\n    };\r\n}",
                         "environment": "javascript",
                         "storage": "",
                         "version": "1.0"
@@ -91,7 +91,7 @@
                             },
                             "enabled": true
                         },
-                        "raw_data": {
+                        "uplink": {
                             "data": {
                                 "payload": "{{payload}}",
                                 "payload_function": "",
@@ -107,7 +107,108 @@
                     }
                 },
                 "_resources": {
-                    "properties": []
+                    "properties": [
+                        {
+                            "name": "Temp and Humidity",
+                            "tabs": [
+                                {
+                                    "icon": "fas fa-tachometer-alt",
+                                    "name": "Environmental Data",
+                                    "widgets": [
+                                        {
+                                            "layout": {
+                                                "col": 0,
+                                                "row": 0,
+                                                "sizeX": 3,
+                                                "sizeY": 9
+                                            },
+                                            "panel": {
+                                                "color": "#ffffff",
+                                                "currentColor": "#ffffff",
+                                                "link": "rn172",
+                                                "showOffline": {
+                                                    "type": "none"
+                                                },
+                                                "title": "Temperature"
+                                            },
+                                            "properties": {
+                                                "axis": true,
+                                                "fill": false,
+                                                "legend": false,
+                                                "multiple_axes": false
+                                            },
+                                            "sources": [
+                                                {
+                                                    "aggregation": {},
+                                                    "bucket": {
+                                                        "backend": "mongodb",
+                                                        "id": "RN172_data",
+                                                        "mapping": "temperature",
+                                                        "tags": {
+                                                            "device": [],
+                                                            "group": []
+                                                        }
+                                                    },
+                                                    "color": "#1abc9c",
+                                                    "name": "Temperature Source",
+                                                    "source": "bucket",
+                                                    "timespan": {
+                                                        "mode": "latest"
+                                                    }
+                                                }
+                                            ],
+                                            "type": "chart"
+                                        },
+                                        {
+                                            "layout": {
+                                                "sizeX": 1,
+                                                "sizeY": 5
+                                            },
+                                            "panel": {
+                                                "color": "#ffffff",
+                                                "currentColor": "#ffffff",
+                                                "link": "rn172",
+                                                "showOffline": {
+                                                    "type": "none"
+                                                },
+                                                "title": "Humidity"
+                                            },
+                                            "properties": {
+                                                "color": "#1E313E",
+                                                "gradient": true,
+                                                "max": 100,
+                                                "min": 0
+                                            },
+                                            "sources": [
+                                                {
+                                                    "bucket": {
+                                                        "backend": "mongodb",
+                                                        "id": "RN172_data",
+                                                        "mapping": "humidity",
+                                                        "tags": {
+                                                            "device": [],
+                                                            "group": []
+                                                        }
+                                                    },
+                                                    "color": "#1abc9c",
+                                                    "name": "Humidity Source",
+                                                    "source": "bucket",
+                                                    "timespan": {
+                                                        "mode": "latest"
+                                                    }
+                                                }
+                                            ],
+                                            "type": "gauge"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "widgets": [],
+                            "placeholders": {
+                                "sources": []
+                            }
+                        }
+                    ]
                 }
             }
         ]

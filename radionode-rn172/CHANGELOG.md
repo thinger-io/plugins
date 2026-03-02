@@ -1,5 +1,5 @@
 # Changelog
 
-## 1.0.0 - 2025-02-25
+## 1.0.0 - 2026-03-01
 
 - Initial version

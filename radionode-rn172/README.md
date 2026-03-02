@@ -25,15 +25,11 @@ To continue with this guide we will need the following:
 * RN172plus series
 * RN172WCD user manual
 
-Alongside, the corresponding plugin HTTP Plugin needs to be installed in your Thinger.io instance.
-
-
 ## Get Started
 
 ### Installation
 
-Look for the HTTP plugin in the [Thinger.io Plugin Marketplace](https://acme.thinger.io/console/plugins/marketplace) and install it in your Thinger.io instance.
- Once the plugin is installed a new Product will be created for this device.
+Look for the devices tab and click on the RN172 device as shown in the figure below.
 
  ![Radionode RN172 Plugin Installation into Thinger.io](assets/thinger-rn172.png)
 
