@@ -1,7 +1,7 @@
 {
   "name": "dragino_lsn50_v2",
   "version": "1.0.0",
-  "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors, for example, a temperature sensor probe. It can be used with many applications such as wireless alarm and security systems, home and building automation, automa",
+  "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LSN50-V2",
-    "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors, for example, a temperature sensor probe. It can be used with many applications such as wireless alarm and security systems, home and building automation, automa",
-    "image": "assets/lsn50-v2.jpg",
+    "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors.",
+    "image": "assets/lsn50-v2.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors, for example, a temperature sensor probe. It can be used with many applications such as wireless alarm and security systems, home and building automation, automa",
+        "description": "The Dragino LSN50-V2 is a LoRaWAN® end device that allows connecting various external sensors.",
         "enabled": true,
         "name": "Dragino LSN50-V2",
         "product": "dragino_lsn50_v2",
