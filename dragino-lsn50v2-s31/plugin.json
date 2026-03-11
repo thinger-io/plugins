@@ -1,7 +1,7 @@
 {
   "name": "dragino_lsn50v2_s31",
   "version": "1.0.0",
-  "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment. The measured data is then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home ",
+  "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LSN50V2-S31",
-    "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment. The measured data is then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home ",
-    "image": "assets/lsn50v2-s31-00.jpg",
+    "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
+    "image": "assets/lsn50v2-s31-00.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment. The measured data is then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home ",
+        "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
         "enabled": true,
         "name": "Dragino LSN50V2-S31",
         "product": "dragino_lsn50v2_s31",
