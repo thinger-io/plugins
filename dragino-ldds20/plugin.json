@@ -1,7 +1,7 @@
 {
   "name": "dragino_ldds20",
   "version": "1.0.0",
-  "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container. The measured liquid levels are sent to a LoRaWAN® netw",
+  "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LDDS20",
-    "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container. The measured liquid levels are sent to a LoRaWAN® netw",
-    "image": "assets/ldds20.jpg",
+    "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container.",
+    "image": "assets/ldds20.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container. The measured liquid levels are sent to a LoRaWAN® netw",
+        "description": "The Dragino LDDS20 consists of an ultrasonic liquid level sensor for measuring liquid levels. It uses a non-contact method to measure the height of liquid in a container without opening the container.",
         "enabled": true,
         "name": "Dragino LDDS20",
         "product": "dragino_ldds20",
