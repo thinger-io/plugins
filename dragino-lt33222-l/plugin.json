@@ -1,0 +1,1095 @@
+{
+  "name": "dragino_lt33222_l",
+  "version": "1.0.0",
+  "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lt33222-l"
+  },
+  "metadata": {
+    "name": "Dragino LT33222-L",
+    "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
+    "image": "assets/lt33222-l.jpg",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
+        "enabled": true,
+        "name": "Dragino LT33222-L",
+        "product": "dragino_lt33222_l",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=2}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lt33222_l_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_lt33222_l_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource": "uplink_decoded",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              }
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var port = input.fPort;\n  var bytes = input.bytes;\n  var hardware = (bytes[10] & 0xc0) >> 6;\n  var mode0 = bytes[10] & 0xff;\n  var mode = bytes[10] & 0x3f;\n  var data = {};\n  switch (input.fPort) {\n    case 2:\n      if (hardware == '0') {\n        data.Hardware_mode = 'LT33222';\n        data.DO3_status = bytes[8] & 0x04 ? 'L' : 'H';\n        if (mode0 == '1') {\n          data.DI3_status = bytes[8] & 0x20 ? 'H' : 'L';\n        }\n      } else if (hardware == '1') {\n        data.Hardware_mode = 'LT22222';\n      }\n\n      if (mode != 6) {\n        data.DO1_status = bytes[8] & 0x01 ? 'L' : 'H';\n        data.DO2_status = bytes[8] & 0x02 ? 'L' : 'H';\n        data.RO1_status = bytes[8] & 0x80 ? 'ON' : 'OFF';\n        data.RO2_status = bytes[8] & 0x40 ? 'ON' : 'OFF';\n        if (mode != 1) {\n          if (mode != 5) {\n            data.Count1_times = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];\n          }\n          data.First_status = bytes[8] & 0x20 ? 'Yes' : 'No';\n        }\n      }\n\n      if (mode == '1') {\n        data.Work_mode = '2ACI+2AVI';\n        data.AVI1_V = parseFloat(((((bytes[0] << 24) >> 16) | bytes[1]) / 1000).toFixed(3));\n        data.AVI2_V = parseFloat(((((bytes[2] << 24) >> 16) | bytes[3]) / 1000).toFixed(3));\n        data.ACI1_mA = parseFloat(((((bytes[4] << 24) >> 16) | bytes[5]) / 1000).toFixed(3));\n        data.ACI2_mA = parseFloat(((((bytes[6] << 24) >> 16) | bytes[7]) / 1000).toFixed(3));\n        data.DI1_status = bytes[8] & 0x08 ? 'H' : 'L';\n        data.DI2_status = bytes[8] & 0x10 ? 'H' : 'L';\n      } else if (mode == '2') {\n        data.Work_mode = 'Count mode 1';\n        data.Count2_times = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];\n      } else if (mode == '3') {\n        data.Work_mode = '2ACI+1Count';\n        data.ACI1_mA = parseFloat(((((bytes[4] << 24) >> 16) | bytes[5]) / 1000).toFixed(3));\n        data.ACI2_mA = parseFloat(((((bytes[6] << 24) >> 16) | bytes[7]) / 1000).toFixed(3));\n      } else if (mode == '4') {\n        data.Work_mode = 'Count mode 2';\n        data.Acount_times = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];\n      } else if (mode == '5') {\n        data.Work_mode = ' 1ACI+2AVI+1Count';\n        data.AVI1_V = parseFloat(((((bytes[0] << 24) >> 16) | bytes[1]) / 1000).toFixed(3));\n        data.AVI2_V = parseFloat(((((bytes[2] << 24) >> 16) | bytes[3]) / 1000).toFixed(3));\n        data.ACI1_mA = parseFloat(((((bytes[4] << 24) >> 16) | bytes[5]) / 1000).toFixed(3));\n        data.Count1_times = (bytes[6] << 8) | bytes[7];\n      } else if (mode == '6') {\n        data.Work_mode = 'Exit mode';\n        data.Mode_status = bytes[9] ? 'True' : 'False';\n        data.AV1L_flag = bytes[0] & 0x80 ? 'True' : 'False';\n        data.AV1H_flag = bytes[0] & 0x40 ? 'True' : 'False';\n        data.AV2L_flag = bytes[0] & 0x20 ? 'True' : 'False';\n        data.AV2H_flag = bytes[0] & 0x10 ? 'True' : 'False';\n        data.AC1L_flag = bytes[0] & 0x08 ? 'True' : 'False';\n        data.AC1H_flag = bytes[0] & 0x04 ? 'True' : 'False';\n        data.AC2L_flag = bytes[0] & 0x02 ? 'True' : 'False';\n        data.AC2H_flag = bytes[0] & 0x01 ? 'True' : 'False';\n        data.AV1L_status = bytes[1] & 0x80 ? 'True' : 'False';\n        data.AV1H_status = bytes[1] & 0x40 ? 'True' : 'False';\n        data.AV2L_status = bytes[1] & 0x20 ? 'True' : 'False';\n        data.AV2H_status = bytes[1] & 0x10 ? 'True' : 'False';\n        data.AC1L_status = bytes[1] & 0x08 ? 'True' : 'False';\n        data.AC1H_status = bytes[1] & 0x04 ? 'True' : 'False';\n        data.AC2L_status = bytes[1] & 0x02 ? 'True' : 'False';\n        data.AC2H_status = bytes[1] & 0x01 ? 'True' : 'False';\n        data.DI2_status = bytes[2] & 0x08 ? 'True' : 'False';\n        data.DI2_flag = bytes[2] & 0x04 ? 'True' : 'False';\n        data.DI1_status = bytes[2] & 0x02 ? 'True' : 'False';\n        data.DI1_flag = bytes[2] & 0x01 ? 'True' : 'False';\n      }\n\n      if (bytes.length == 11) {\n        return {\n          data: data,\n        };\n      }\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dragino_lt33222_l_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "I/O Controller",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DI1 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DI1_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "DI1_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 1,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DI2 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DI2_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "DI2_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DI3 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DI3_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "DI3_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DO1 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DO1_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "DO1_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DO2 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DO2_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "DO2_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 0,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "DO3 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "H"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "L"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "DO3_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "DO3_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "RO1 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "ON"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "OFF"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "RO1_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "RO1_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "RO2 Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#4bd763",
+                                "operator": "eq",
+                                "value": "ON"
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "OFF"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "RO2_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "RO2_status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "AVI1 Voltage (V)"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "decimals": 3,
+                          "gradient": false,
+                          "max": 30,
+                          "min": 0,
+                          "unit": "V",
+                          "units": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "AVI1_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "AVI1_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "AVI2 Voltage (V)"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "decimals": 3,
+                          "gradient": false,
+                          "max": 30,
+                          "min": 0,
+                          "unit": "V",
+                          "units": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "AVI2_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "AVI2_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 10,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "ACI1 Current (mA)"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "decimals": 3,
+                          "gradient": false,
+                          "max": 25,
+                          "min": 0,
+                          "unit": "mA",
+                          "units": "mA"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "ACI1_mA",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "ACI1_mA",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 5,
+                          "row": 10,
+                          "sizeX": 1,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "ACI2 Current (mA)"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "decimals": 3,
+                          "gradient": false,
+                          "max": 25,
+                          "min": 0,
+                          "unit": "mA",
+                          "units": "mA"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "ACI2_mA",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "ACI2_mA",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 15,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "AVI1/2 Voltage - Last 24h"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "chartType": "line",
+                          "color": "#3498db",
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "AVI1_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "AVI1_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "AVI2_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "AVI2_V",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 15,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "ACI1/2 Current - Last 24h"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "chartType": "line",
+                          "color": "#e74c3c",
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "ACI1_mA",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "ACI1_mA",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "ACI2_mA",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "ACI2_mA",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 23,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Hardware Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "65px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "Hardware_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Hardware_mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 23,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Work Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "Work_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Work_mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 23,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Count1 Times"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-calculator",
+                          "iconColor": "#16a085",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "65px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lt33222_l_data",
+                              "mapping": "Count1_times",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Count1_times",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
