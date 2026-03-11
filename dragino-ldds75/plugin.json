@@ -1,7 +1,7 @@
 {
   "name": "dragino_ldds75",
   "version": "1.0.0",
-  "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object. It is used to measure the distance between the sensor and a flat object. It uses temperature compensation to improve the reliabi",
+  "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LDDS75",
-    "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object. It is used to measure the distance between the sensor and a flat object. It uses temperature compensation to improve the reliabi",
-    "image": "assets/ldds75.jpg",
+    "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object.",
+    "image": "assets/ldds75.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object. It is used to measure the distance between the sensor and a flat object. It uses temperature compensation to improve the reliabi",
+        "description": "The Dragino LDDS75 consists of an ultrasonic detection sensor for measuring the distance between the sensor and a flat object.",
         "enabled": true,
         "name": "Dragino LDDS75",
         "product": "dragino_ldds75",
