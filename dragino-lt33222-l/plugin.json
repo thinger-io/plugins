@@ -1,7 +1,7 @@
 {
   "name": "dragino_lt33222_l",
   "version": "1.0.0",
-  "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
+  "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LT33222-L",
-    "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
-    "image": "assets/lt33222-l.jpg",
+    "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output.",
+    "image": "assets/lt33222-l.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output. The LT series I/O modules are designed to simplify the installation ",
+        "description": "The Dragino LT33222-L is a LoRaWAN® I/O module that contains different I/O Interfaces such as analog current input, analog voltage input, relay output, digital input, and digital output.",
         "enabled": true,
         "name": "Dragino LT33222-L",
         "product": "dragino_lt33222_l",
