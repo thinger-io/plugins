@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Dragino LDS02",
     "description": "LoRaWAN Door Sensor",
-    "image": "assets/lds02.jpg",
+    "image": "assets/lds02.png",
     "category": "devices",
     "vendor": "dragino"
   },
