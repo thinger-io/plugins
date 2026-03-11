@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Dragino LWL02",
     "description": "LoRaWAN Water Leak Sensor",
-    "image": "assets/lwl02.jpg",
+    "image": "assets/lwl02.png",
     "category": "devices",
     "vendor": "dragino"
   },
