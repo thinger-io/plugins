@@ -1,0 +1,831 @@
+{
+  "name": "dragino_lwl01",
+  "version": "1.0.0",
+  "description": "The Dragino LWL01 consists of a water leak sensor that detects the water leak status and sends it to the LoRaWAN® network. Suitable for wireless alarm and security systems, home and building automation, industrial monitoring and control, and much more.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lwl01"
+  },
+  "metadata": {
+    "name": "Dragino LWL01",
+    "description": "The Dragino LWL01 consists of a water leak sensor that detects the water leak status and sends it to the LoRaWAN® network. Suitable for wireless alarm and security systems, home and building automation, industrial monitoring and control, and much more.",
+    "image": "assets/lwl01.png",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Dragino LWL01 consists of a water leak sensor that detects the water leak status and sends it to the LoRaWAN® network. Suitable for wireless alarm and security systems, home and building automation, industrial monitoring and control, and much more.",
+        "enabled": true,
+        "name": "Dragino LWL01",
+        "product": "dragino_lwl01",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lwl01_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_lwl01_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink_decoded",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              }
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var port = input.fPort;\n  var bytes = input.bytes;\n  var value = ((bytes[0] << 8) | bytes[1]) & 0x3fff;\n  var bat = value / 1000; //Battery,units:V\n\n  var door_open_status = bytes[0] & 0x80 ? 1 : 0; //1:open,0:close\n  var water_leak_status = bytes[0] & 0x40 ? 1 : 0;\n\n  var mod = bytes[2];\n  var alarm = bytes[9] & 0x01;\n  var data = {};\n  switch (input.fPort) {\n    case 10:\n      if (mod == 1) {\n        var open_times = (bytes[3] << 16) | (bytes[4] << 8) | bytes[5];\n        var open_duration = (bytes[6] << 16) | (bytes[7] << 8) | bytes[8]; //units:min\n        (data.BAT_V = bat), (data.MOD = mod), (data.DOOR_OPEN_STATUS = door_open_status), (data.DOOR_OPEN_TIMES = open_times), (data.LAST_DOOR_OPEN_DURATION = open_duration), (data.ALARM = alarm);\n      } else if (mod == 2) {\n        var leak_times = (bytes[3] << 16) | (bytes[4] << 8) | bytes[5];\n        var leak_duration = (bytes[6] << 16) | (bytes[7] << 8) | bytes[8]; //units:min\n        (data.BAT_V = bat), (data.MOD = mod), (data.WATER_LEAK_STATUS = water_leak_status), (data.WATER_LEAK_TIMES = leak_times), (data.LAST_WATER_LEAK_DURATION = leak_duration);\n      } else if (mod == 3) {\n        (data.BAT_V = bat), (data.MOD = mod), (data.DOOR_OPEN_STATUS = door_open_status), (data.WATER_LEAK_STATUS = water_leak_status), (data.ALARM = alarm);\n      } else {\n        (data.BAT_V = bat), (data.MOD = mod);\n      }\n      return {\n        data: data,\n      };\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dragino_lwl01_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "LWL01 - Water Leak Sensor",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "gradient": false,
+                          "icon": "fas fa-battery-full",
+                          "iconColor": "#30a638",
+                          "iconSize": "",
+                          "majorTicks": 10,
+                          "max": 4.2,
+                          "min": 2.5,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "textColor": "#1E313E",
+                          "tickColor": "#000000",
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "BAT_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "MOD",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Leak Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#2ecc71",
+                                "operator": "eq",
+                                "value": 0
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": 1
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "WATER_LEAK_STATUS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Leak Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Door Open Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#2ecc71",
+                                "operator": "eq",
+                                "value": 0
+                              },
+                              {
+                                "color": "#f39c12",
+                                "operator": "eq",
+                                "value": 1
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "DOOR_OPEN_STATUS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Door Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Alarm Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#2ecc71",
+                                "operator": "eq",
+                                "value": 0
+                              },
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": 1
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "size": "75px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "ALARM",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Alarm",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Leak Times"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-water",
+                          "iconColor": "#3498db",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#e74c3c",
+                          "textColorConditions": [],
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "times",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "WATER_LEAK_TIMES",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Leak Times",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Door Open Times"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-door-open",
+                          "iconColor": "#f39c12",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#f39c12",
+                          "textColorConditions": [],
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "times",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "DOOR_OPEN_TIMES",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Door Open Times",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Door Open Duration"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-clock",
+                          "iconColor": "#3498db",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#3498db",
+                          "textColorConditions": [],
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "min",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "LAST_DOOR_OPEN_DURATION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Door Duration",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Water Leak Duration"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-stopwatch",
+                          "iconColor": "#9b59b6",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#9b59b6",
+                          "textColorConditions": [],
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "min",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "LAST_WATER_LEAK_DURATION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Leak Duration",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 15,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery History (7 days)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Battery (V)'\n        },\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(2);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    fill: {\n        type: 'gradient',\n        gradient: {\n            shadeIntensity: 1,\n            opacityFrom: 0.7,\n            opacityTo: 0.3\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "BAT_V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "days",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 15,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Leak Events (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 3\n    },\n    markers: {\n        size: 5,\n        hover: {\n            sizeOffset: 2\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Status'\n        },\n        labels: {\n            formatter: function (val) {\n                return val === 1 ? 'Leak' : 'Normal';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    colors: ['#e74c3c']\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "WATER_LEAK_STATUS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Leak Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 23,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Door Open Events (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 3\n    },\n    markers: {\n        size: 5,\n        hover: {\n            sizeOffset: 2\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Status'\n        },\n        labels: {\n            formatter: function (val) {\n                return val === 1 ? 'Open' : 'Closed';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    colors: ['#f39c12']\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl01_data",
+                              "mapping": "DOOR_OPEN_STATUS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Door Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
