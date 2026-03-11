@@ -1,7 +1,7 @@
 {
   "name": "dragino_laq4",
   "version": "1.0.0",
-  "description": "Air Quality Sensor",
+  "description": "The Dragino LAQ4 is a LoRaWAN-enabled indoor air quality sensor designed for smart building and environmental monitoring.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LAQ4",
-    "description": "Air Quality Sensor",
-    "image": "assets/laq4.jpg",
+    "description": "The Dragino LAQ4 is a LoRaWAN-enabled indoor air quality sensor designed for smart building and environmental monitoring.",
+    "image": "assets/laq4.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "Air Quality Sensor",
+        "description": "The Dragino LAQ4 is a LoRaWAN-enabled indoor air quality sensor designed for smart building and environmental monitoring.",
         "enabled": true,
         "name": "Dragino LAQ4",
         "product": "dragino_laq4",
