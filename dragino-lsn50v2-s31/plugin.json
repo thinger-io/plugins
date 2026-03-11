@@ -1,0 +1,640 @@
+{
+  "name": "dragino_lsn50v2_s31",
+  "version": "1.0.0",
+  "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lsn50v2-s31"
+  },
+  "metadata": {
+    "name": "Dragino LSN50V2-S31",
+    "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
+    "image": "assets/lsn50v2-s31-00.png",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Dragino LSN50v2-S31 consists of a temperature and humidity sensor for measuring the temperature and humidity in the surrounding environment.",
+        "enabled": true,
+        "name": "Dragino LSN50V2-S31",
+        "product": "dragino_lsn50v2_s31",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lsn50v2_s31_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_lsn50v2_s31_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink_decoded",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var mode = (input.bytes[6] & 0x7c) >> 2;\n  var data = {};\n  switch (input.fPort) {\n    case 2:\n      if (mode != 2 && mode != 31) {\n        data.BatV = ((input.bytes[0] << 8) | input.bytes[1]) / 1000;\n        data.TempC1 = parseFloat(((((input.bytes[2] << 24) >> 16) | input.bytes[3]) / 10).toFixed(2));\n        data.ADC_CH0V = ((input.bytes[4] << 8) | input.bytes[5]) / 1000;\n        data.Digital_IStatus = input.bytes[6] & 0x02 ? 'H' : 'L';\n        if (mode != 6) {\n          data.EXTI_Trigger = input.bytes[6] & 0x01 ? 'TRUE' : 'FALSE';\n          data.Door_status = input.bytes[6] & 0x80 ? 'CLOSE' : 'OPEN';\n        }\n      }\n      if (mode == '0') {\n        data.Work_mode = 'IIC';\n        if (((input.bytes[9] << 8) | input.bytes[10]) === 0) {\n          data.Illum = ((input.bytes[7] << 24) >> 16) | input.bytes[8];\n        } else {\n          data.TempC_SHT = parseFloat(((((input.bytes[7] << 24) >> 16) | input.bytes[8]) / 10).toFixed(2));\n          data.Hum_SHT = parseFloat((((input.bytes[9] << 8) | input.bytes[10]) / 10).toFixed(1));\n        }\n      } else if (mode == '1') {\n        data.Work_mode = ' Distance';\n        data.Distance_cm = parseFloat((((input.bytes[7] << 8) | input.bytes[8]) / 10).toFixed(1));\n        if (((input.bytes[9] << 8) | input.bytes[10]) != 65535) {\n          data.Distance_signal_strength = parseFloat(((input.bytes[9] << 8) | input.bytes[10]).toFixed(0));\n        }\n      } else if (mode == '2') {\n        data.Work_mode = ' 3ADC';\n        data.BatV = input.bytes[11] / 10;\n        data.ADC_CH0V = ((input.bytes[0] << 8) | input.bytes[1]) / 1000;\n        data.ADC_CH1V = ((input.bytes[2] << 8) | input.bytes[3]) / 1000;\n        data.ADC_CH4V = ((input.bytes[4] << 8) | input.bytes[5]) / 1000;\n        data.Digital_IStatus = input.bytes[6] & 0x02 ? 'H' : 'L';\n        data.EXTI_Trigger = input.bytes[6] & 0x01 ? 'TRUE' : 'FALSE';\n        data.Door_status = input.bytes[6] & 0x80 ? 'CLOSE' : 'OPEN';\n        if (((input.bytes[9] << 8) | input.bytes[10]) === 0) {\n          data.Illum = ((input.bytes[7] << 24) >> 16) | input.bytes[8];\n        } else {\n          data.TempC_SHT = parseFloat(((((input.bytes[7] << 24) >> 16) | input.bytes[8]) / 10).toFixed(2));\n          data.Hum_SHT = parseFloat((((input.bytes[9] << 8) | input.bytes[10]) / 10).toFixed(2));\n        }\n      } else if (mode == '3') {\n        data.Work_mode = '3DS18B20';\n        data.TempC2 = parseFloat(((((input.bytes[7] << 24) >> 16) | input.bytes[8]) / 10).toFixed(2));\n        data.TempC3 = parseFloat(((((input.bytes[9] << 24) >> 16) | input.bytes[10]) / 10).toFixed(2));\n      } else if (mode == '4') {\n        data.Work_mode = 'Weight';\n        data.Weight = ((input.bytes[7] << 24) >> 16) | input.bytes[8];\n      } else if (mode == '5') {\n        data.Work_mode = 'Count';\n        data.Count = (input.bytes[7] << 24) | (input.bytes[8] << 16) | (input.bytes[9] << 8) | input.bytes[10];\n      } else if (mode == '31') {\n        data.Work_mode = 'ALARM';\n        data.BatV = ((input.bytes[0] << 8) | input.bytes[1]) / 1000;\n        data.TempC1 = parseFloat(((((input.bytes[2] << 24) >> 16) | input.bytes[3]) / 10).toFixed(2));\n        data.TempC1MIN = (input.bytes[4] << 24) >> 24;\n        data.TempC1MAX = (input.bytes[5] << 24) >> 24;\n        data.SHTEMPMIN = (input.bytes[7] << 24) >> 24;\n        data.SHTEMPMAX = (input.bytes[8] << 24) >> 24;\n        data.SHTHUMMIN = input.bytes[9];\n        data.SHTHUMMAX = input.bytes[10];\n      }\n\n      if (input.bytes.length == 11 || input.bytes.length == 12)\n        return {\n          data: data,\n        };\n      break;\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n\nfunction normalizeUplink(input) {\n  var data = {};\n  var air = {};\n  var action = {};\n\n  if (input.data.TempC_SHT) {\n    air.temperature = input.data.TempC_SHT;\n  }\n\n  if (input.data.Hum_SHT) {\n    air.relativeHumidity = input.data.Hum_SHT;\n  }\n\n  if (input.data.Door_status === 'CLOSE' || input.data.Door_status === 'OPEN') {\n    action.contactState = input.data.Door_status === 'CLOSE' ? 'closed' : 'open';\n  }\n\n  if (Object.keys(air).length > 0) {\n    data.air = air;\n  }\n\n  if (Object.keys(action).length > 0) {\n    data.action = action;\n  }\n\n  if (input.data.BatV) {\n    data.battery = input.data.BatV;\n  }\n\n  return { data: data };\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dragino_lsn50v2_s31_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "LSN50V2-S31",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "gradient": false,
+                          "icon": "fas fa-battery-full",
+                          "iconColor": "#30a638",
+                          "majorTicks": 10,
+                          "max": 4,
+                          "min": 2,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "textColor": "#1E313E",
+                          "tickColor": "#000000",
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature (SHT)"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity (SHT)"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area'\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(1);\n            }\n        },\n        title: {\n            text: 'Temperature (°C)'\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity History (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area'\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(1);\n            }\n        },\n        title: {\n            text: 'Humidity (%)'\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity (%)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 13,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature & Humidity Combined (24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: [3, 3]\n    },\n    markers: {\n        size: 4\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: [\n        {\n            title: {\n                text: 'Temperature (°C)'\n            },\n            labels: {\n                formatter: function (val) {\n                    if (val !== null && typeof val !== 'undefined')\n                        return val.toFixed(1);\n                }\n            }\n        },\n        {\n            opposite: true,\n            title: {\n                text: 'Humidity (%)'\n            },\n            labels: {\n                formatter: function (val) {\n                    if (val !== null && typeof val !== 'undefined')\n                        return val.toFixed(1);\n                }\n            }\n        }\n    ],\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        shared: false\n    },\n    legend: {\n        position: 'top'\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "TempC_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "Hum_SHT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity (%)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 21,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Work Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "30px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "Work_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Work Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 21,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Door Status"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [
+                            {
+                              "color": "#e74c3c",
+                              "operator": "eq",
+                              "value": "OPEN"
+                            },
+                            {
+                              "color": "#27ae60",
+                              "operator": "eq",
+                              "value": "CLOSE"
+                            }
+                          ],
+                          "textSize": "30px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "Door_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Door Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 21,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Analog Input (CH0)"
+                        },
+                        "properties": {
+                          "color": "#9b59b6",
+                          "gradient": false,
+                          "max": 5,
+                          "min": 0,
+                          "showValue": true,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_s31_data",
+                              "mapping": "ADC_CH0V",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "ADC CH0",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
