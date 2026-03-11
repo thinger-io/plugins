@@ -1,7 +1,7 @@
 {
   "name": "dragino_lse01",
   "version": "1.0.0",
-  "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications. The measured data is sent to the LoRaWAN® network.",
+  "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LSE01",
-    "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications. The measured data is sent to the LoRaWAN® network.",
-    "image": "assets/lse01.jpg",
+    "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications.",
+    "image": "assets/lse01.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications. The measured data is sent to the LoRaWAN® network.",
+        "description": "The Dragino LSE01 consists of soil moisture, soil temperature, and soil conductivity sensors. It is suitable for smart agriculture applications.",
         "enabled": true,
         "name": "Dragino LSE01",
         "product": "dragino_lse01",
