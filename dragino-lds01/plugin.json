@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Dragino LDS01",
     "description": "The Dragino LDS01 consists of a magnetic sensor for detecting the opening and closing of doors, windows, garage doors, vaults, and entryways. The sensor sends a data packet on each open/close event to a LoRaWAN®network server.",
-    "image": "assets/lds01.jpg",
+    "image": "assets/lds01.png",
     "category": "devices",
     "vendor": "dragino"
   },
