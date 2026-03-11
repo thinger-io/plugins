@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Dragino LLMS01",
     "description": "LoRaWAN Leaf Moisture Sensor",
-    "image": "assets/llms01.jpg",
+    "image": "assets/llms01.png",
     "category": "devices",
     "vendor": "dragino"
   },
