@@ -1,7 +1,7 @@
 {
   "name": "dragino_lsn50v2_d20",
   "version": "1.0.0",
-  "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home and building automation, industrial moni",
+  "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LSN50V2-D20",
-    "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home and building automation, industrial moni",
-    "image": "assets/lsn50v2-d20-00.jpg",
+    "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol.",
+    "image": "assets/lsn50v2-d20-00.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol. It can be used with home and building automation, industrial moni",
+        "description": "The Dragino LSN50v2-D20 consists of a temperature sensor for measuring the temperature of the air, liquid, or any object, and then uploaded to the IoT server via LoRaWAN® wireless protocol.",
         "enabled": true,
         "name": "Dragino LSN50V2-D20",
         "product": "dragino_lsn50v2_d20",
