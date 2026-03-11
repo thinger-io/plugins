@@ -1,0 +1,584 @@
+{
+  "name": "dragino_lsn50v2_d20_d22_d23",
+  "version": "1.0.0",
+  "description": "LoRaWAN Temperature Sensor",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lsn50v2-d20-d22-d23"
+  },
+  "metadata": {
+    "name": "Dragino LSN50V2-D20-D22-D23",
+    "description": "LoRaWAN Temperature Sensor",
+    "image": "assets/lsn50v2-d20-d22-d23.png",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "LoRaWAN Temperature Sensor",
+        "enabled": true,
+        "name": "Dragino LSN50V2-D20-D22-D23",
+        "product": "dragino_lsn50v2_d20_d22_d23",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lsn50v2_d2[023]_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_lsn50v2_d20_d22_d23_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n  var port = input.fPort;\n  var bytes = input.bytes;\n  var mode = (bytes[6] & 0x7c) >> 2;\n  var data = {};\n  switch (input.fPort) {\n    case 2:\n      if (mode == '3') {\n        data.Work_mode = 'DS18B20';\n        data.BatV = ((bytes[0] << 8) | bytes[1]) / 1000;\n        data.ALARM_status = bytes[6] & 0x01 ? 'TRUE' : 'FALSE';\n\n        if (bytes[2] == 0xff && bytes[3] == 0xff) {\n          data.Temp_Red = 'NULL';\n        } else {\n          data.Temp_Red = parseFloat(((((bytes[2] << 24) >> 16) | bytes[3]) / 10).toFixed(1));\n        }\n\n        if (bytes[7] == 0xff && bytes[8] == 0xff) {\n          data.Temp_White = 'NULL';\n        } else {\n          data.Temp_White = parseFloat(((((bytes[7] << 24) >> 16) | bytes[8]) / 10).toFixed(1));\n        }\n\n        if (bytes[9] == 0xff && bytes[10] == 0xff) {\n          data.Temp_Black = 'NULL';\n        } else {\n          data.Temp_Black = parseFloat(((((bytes[9] << 24) >> 16) | bytes[10]) / 10).toFixed(1));\n        }\n      } else if (mode == '31') {\n        data.Work_mode = 'ALARM';\n        data.Temp_Red_MIN = (bytes[4] << 24) >> 24;\n        data.Temp_Red_MAX = (bytes[5] << 24) >> 24;\n        data.Temp_White_MIN = (bytes[7] << 24) >> 24;\n        data.Temp_White_MAX = (bytes[8] << 24) >> 24;\n        data.Temp_Black_MIN = (bytes[9] << 24) >> 24;\n        data.Temp_Black_MAX = (bytes[10] << 24) >> 24;\n      }\n\n      if (bytes.length == 11)\n        return {\n          data: data,\n        };\n      break;\n    default:\n      return {\n        errors: ['unknown FPort'],\n      };\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "LSN50v2 Temperature Monitoring",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Work Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "40px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Work_mode",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Work Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "decimals": 3,
+                          "gradient": false,
+                          "icon": "fas fa-battery-full",
+                          "iconColor": "#30a638",
+                          "iconSize": "",
+                          "majorTicks": 10,
+                          "max": 4.2,
+                          "min": 2.5,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "textColor": "#1E313E",
+                          "tickColor": "#000000",
+                          "unit": "V",
+                          "units": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Alarm Status"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [
+                            {
+                              "color": "#e74c3c",
+                              "operator": "eq",
+                              "value": "TRUE"
+                            },
+                            {
+                              "color": "#27ae60",
+                              "operator": "eq",
+                              "value": "FALSE"
+                            }
+                          ],
+                          "textSize": "50px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "ALARM_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Alarm",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature Red"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_Red",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temp Red",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature White"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_White",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Temp White",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature Black"
+                        },
+                        "properties": {
+                          "color": "#34495e",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_Black",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Temp Black",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature History (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true,\n            allowMouseWheelZoom: false\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 3\n    },\n    markers: {\n        size: 4,\n        hover: {\n            sizeOffset: 2\n        }\n    },\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        },\n    },\n    xaxis: {\n        type: 'datetime',\n        tooltip: {\n            enabled: false\n        },\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Temperature (°C)'\n        },\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(1);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_Red",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temp Red (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_White",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Temp White (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "Temp_Black",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Temp Black (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 18,
+                          "sizeX": 6,
+                          "sizeY": 7
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery History (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area'\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Battery (V)'\n        },\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(3);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lsn50v2_d20_d22_d23_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
