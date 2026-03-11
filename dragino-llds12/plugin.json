@@ -12,7 +12,7 @@
   "metadata": {
     "name": "Dragino LLDS12",
     "description": "LoRaWAN LiDAR ToF Distance Sensor",
-    "image": "assets/llds12.jpg",
+    "image": "assets/llds12.png",
     "category": "devices",
     "vendor": "dragino"
   },
