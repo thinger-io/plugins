@@ -1,7 +1,7 @@
 {
   "name": "dragino_sw3l",
   "version": "1.0.0",
-  "description": "SW3L LoRaWAN Outdoor Flow Sensor",
+  "description": "The Dragino SW3L is an outdoor LoRaWAN Liquid Level Transmitter designed to measure the depth of liquids in tanks, wells, or reservoirs using hydrostatic pressure.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino SW3L",
-    "description": "SW3L LoRaWAN Outdoor Flow Sensor",
+    "description": "The Dragino SW3L is an outdoor LoRaWAN Liquid Level Transmitter designed to measure the depth of liquids in tanks, wells, or reservoirs using hydrostatic pressure.",
     "image": "assets/sw3l.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "SW3L LoRaWAN Outdoor Flow Sensor",
+        "description": "The Dragino SW3L is an outdoor LoRaWAN Liquid Level Transmitter designed to measure the depth of liquids in tanks, wells, or reservoirs using hydrostatic pressure.",
         "enabled": true,
         "name": "Dragino SW3L",
         "product": "dragino_sw3l",
