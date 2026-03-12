@@ -1,7 +1,7 @@
 {
   "name": "dragino_ldds04",
   "version": "1.0.0",
-  "description": "LoRaWAN 4-Channels Distance Sensor",
+  "description": "The Dragino LDDS04 is a 4-channel LoRaWAN Ultrasonic Distance Sensor.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino LDDS04",
-    "description": "LoRaWAN 4-Channels Distance Sensor",
+    "description": "The Dragino LDDS04 is a 4-channel LoRaWAN Ultrasonic Distance Sensor.",
     "image": "assets/ldds04.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "LoRaWAN 4-Channels Distance Sensor",
+        "description": "The Dragino LDDS04 is a 4-channel LoRaWAN Ultrasonic Distance Sensor.",
         "enabled": true,
         "name": "Dragino LDDS04",
         "product": "dragino_ldds04",
