@@ -1,0 +1,1565 @@
+{
+  "name": "dragino_trackerd",
+  "version": "1.0.0",
+  "description": "The Dragino TrackerD consists of a LoRaWAN tracker based on ESP32 MCU and Semtech LoRa Wireless Chip. It features various sensors and functions such as GPS, WiFi, BLE, temperature, humidity, motion detection, alarm button and a buzzer.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-trackerd"
+  },
+  "metadata": {
+    "name": "Dragino TRACKERD",
+    "description": "The Dragino TrackerD consists of a LoRaWAN tracker based on ESP32 MCU and Semtech LoRa Wireless Chip. It features various sensors and functions such as GPS, WiFi, BLE, temperature, humidity, motion detection, alarm button and a buzzer.",
+    "image": "assets/trackerd.png",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Dragino TrackerD consists of a LoRaWAN tracker based on ESP32 MCU and Semtech LoRa Wireless Chip. It features various sensors and functions such as GPS, WiFi, BLE, temperature, humidity, motion detection, alarm button and a buzzer.",
+        "enabled": true,
+        "name": "Dragino TRACKERD",
+        "product": "dragino_trackerd",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "trackerd_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_trackerd_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink_decoded",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//The function is :\nfunction decodeUplink(input) {\n  var port = input.fPort;\n  var bytes = input.bytes;\n  // Decode an uplink message from a buffer\n  // (array) of bytes to an object of fields.\n  var i;\n  var con;\n  var str = '';\n  var major = 1;\n  var minor = 1;\n  var rssi = 0;\n  var power = 0;\n  var device_information1 = 0;\n  var device_information2 = 0;\n  var device_information3 = 0;\n  var addr = '';\n  var alarm = 0; //Alarm status\n  var batV = 0; //Battery,units:V\n  var bat = 0; //Battery,units:V\n  var mod = 0;\n  var led_updown = ''; //LED status for position,uplink and downlink\n  var Firmware = 0; // Firmware version; 5 bits\n  var hum = 0; //hum,units: °\n  var tem = 0; //tem,units: °\n  var latitude = 0; //gps latitude,units: °\n  var longitude = 0; //gps longitude,units: °\n  var location = 0;\n  var time = 0;\n  var date = 0;\n  var sub_band;\n  var freq_band;\n  var sensor;\n  var firm_ver;\n  var sensor_mod;\n  var gps_mod;\n  var ble_mod;\n  var pnackmd;\n  var lon;\n  var intwk;\n  switch (input.fPort) {\n    case 2:\n      var decode = {};\n      bat = ((bytes[8] & 0x3f) << 8) | bytes[9]; //Battery,units:V\n      latitude = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) / 1000000; //gps latitude,units: °\n      longitude = ((bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7]) / 1000000; //gps longitude,units: °\n\n      if (latitude < 190 && latitude > -190) {\n        if (longitude < 190 && longitude > -190) {\n          if (latitude !== 0 && longitude !== 0) {\n            field: 'location', (location = '' + latitude + ',' + longitude + '');\n          }\n        }\n      } else location = 'invalid value';\n\n      alarm = bytes[8] & 0x40 ? 'TRUE' : 'FALSE'; //Alarm status\n      batV = (((bytes[8] & 0x3f) << 8) | bytes[9]) / 1000; //Battery,units:V\n      mod = bytes[10] & 0xc0;\n\n      if (mod !== 1) {\n        hum = ((bytes[11] << 8) | bytes[12]) / 10; //hum,units: °\n        tem = ((bytes[13] << 8) | bytes[14]) / 10; //tem,units: °\n      }\n      led_updown = bytes[10] & 0x20 ? 'ON' : 'OFF'; //LED status for position,uplink and downlink\n      intwk = bytes[10] & 0x10 ? 'MOVE' : 'STILL';\n\n      {\n        var decode = {};\n        decode.Location = location;\n        decode.Latitude = latitude;\n        decode.Longitude = longitude;\n        decode.Hum = hum;\n        decode.Tem = tem;\n        decode.ALARM_status = alarm;\n        decode.MD = mod;\n        decode.LON = led_updown;\n        decode.Transport = intwk;\n        return {\n          data: decode,\n        };\n      }\n\n      break;\n    case 3:\n      {\n        var decode = {};\n\n        bat = ((bytes[8] & 0x3f) << 8) | bytes[9]; //Battery,units:V\n\n        latitude = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) / 1000000; //gps latitude,units: °\n        longitude = ((bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7]) / 1000000; //gps longitude,units: °\n\n        if (latitude < 190 && latitude > -190) {\n          if (longitude < 190 && longitude > -190) {\n            if (latitude !== 0 && longitude !== 0) {\n              field: 'location', (location = '' + latitude + ',' + longitude + '');\n            }\n          }\n        } else location = 'invalid value';\n\n        alarm = bytes[8] & 0x40 ? 'TRUE' : 'FALSE'; //Alarm status\n        batV = (((bytes[8] & 0x3f) << 8) | bytes[9]) / 1000; //Battery,units:V\n        mod = bytes[10] & 0xc0;\n\n        if (mod !== 1) {\n          hum = ((bytes[11] << 8) | bytes[12]) / 10; //hum,units: °\n          tem = ((bytes[13] << 8) | bytes[14]) / 10; //tem,units: °\n        }\n        led_updown = bytes[10] & 0x20 ? 'ON' : 'OFF'; //LED status for position,uplink and downlink\n        intwk = bytes[10] & 0x10 ? 'MOVE' : 'STILL';\n        {\n          var decode = {};\n          decode.Location = location;\n          decode.Latitude = latitude;\n          decode.Longitude = longitude;\n          decode.BatV = batV;\n          decode.ALARM_status = alarm;\n          decode.MD = mod;\n          decode.LON = led_updown;\n          decode.Transport = intwk;\n          return {\n            data: decode,\n          };\n        }\n      }\n      break;\n    case 4:\n      {\n        var decode = {};\n        latitude = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) / 1000000; //gps latitude,units: °\n        longitude = ((bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7]) / 1000000; //gps longitude,units: °\n\n        if (latitude < 190 && latitude > -190) {\n          if (longitude < 190 && longitude > -190) {\n            if (latitude !== 0 && longitude !== 0) {\n              field: 'location', (location = '' + latitude + ',' + longitude + '');\n            }\n          }\n        } else location = 'invalid value';\n\n        var year = (bytes[8] << 8) | bytes[9];\n        var Month = bytes[10];\n        var day = bytes[11];\n        var hour = bytes[12];\n        var min = bytes[13];\n        var sen = bytes[14];\n\n        date = year + ':' + Month + ':' + day;\n        time = hour + ':' + min + ':' + sen;\n\n        decode.Location = location;\n        decode.Latitude = latitude;\n        decode.Date = date;\n        decode.Time = time;\n        return {\n          data: decode,\n        };\n      }\n      break;\n    case 7:\n      {\n        var decode = {};\n        alarm = bytes[0] & 0x40 ? 'TRUE' : 'FALSE'; //Alarm status\n        batV = (((bytes[0] & 0x3f) << 8) | bytes[1]) / 1000; //Battery,units:V\n        mod = bytes[2] & 0xc0;\n        led_updown = bytes[2] & 0x20 ? 'ON' : 'OFF'; //LED status for position,uplink and downlink\n\n        decode.BatV = batV;\n        decode.ALARM_status = alarm;\n        decode.MD = mod;\n        decode.LON = led_updown;\n        return {\n          data: decode,\n        };\n      }\n      break;\n    case 8:\n      {\n        var decode = {};\n        con = '';\n        for (i = 0; i < 6; i++) {\n          con = bytes[i].toString();\n          str += String.fromCharCode(con);\n        }\n        var wifissid = str,\n          rssi = (bytes[6] << 24) >> 24;\n        alarm = bytes[7] & 0x40 ? 'TRUE' : 'FALSE'; //Alarm status\n        batV = (((bytes[7] & 0x3f) << 8) | bytes[8]) / 1000; //Battery,units:V\n        mod = (bytes[9] & 0xc0) >> 6;\n        led_updown = bytes[9] & 0x20 ? 'ON' : 'OFF'; //LED status for position,uplink and downlink\n\n        decode.WIFISSID = wifissid;\n        decode.RSSI = rssi;\n        decode.BatV = batV;\n        decode.ALARM_status = alarm;\n        decode.MD = mod;\n        decode.LON = led_updown;\n        return {\n          data: decode,\n        };\n      }\n      break;\n    case 5:\n      {\n        var decode = {};\n        if (bytes[0] == 0x13) sensor_mode = 'TrackerD';\n        else sensor_mode = 'NULL';\n\n        if (bytes[4] == 0xff) sub_band = 'NULL';\n        else sub_band = bytes[4];\n\n        if (bytes[3] == 0x01) freq_band = 'EU868';\n        else if (bytes[3] == 0x02) freq_band = 'US915';\n        else if (bytes[3] == 0x03) freq_band = 'IN865';\n        else if (bytes[3] == 0x04) freq_band = 'AU915';\n        else if (bytes[3] == 0x05) freq_band = 'KZ865';\n        else if (bytes[3] == 0x06) freq_band = 'RU864';\n        else if (bytes[3] == 0x07) freq_band = 'AS923';\n        else if (bytes[3] == 0x08) freq_band = 'AS923_1';\n        else if (bytes[3] == 0x09) freq_band = 'AS923_2';\n        else if (bytes[3] == 0x0a) freq_band = 'AS923_3';\n        else if (bytes[3] == 0x0b) freq_band = 'CN470';\n        else if (bytes[3] == 0x0c) freq_band = 'EU433';\n        else if (bytes[3] == 0x0d) freq_band = 'KR920';\n        else if (bytes[3] == 0x0e) freq_band = 'MA869';\n\n        firm_ver = (bytes[1] & 0x0f) + '.' + ((bytes[2] >> 4) & 0x0f) + '.' + (bytes[2] & 0x0f);\n        batV = ((bytes[5] << 8) | bytes[6]) / 1000;\n        semsor_mod = (bytes[7] >> 6) & 0x3f;\n        gps_mod = (bytes[7] >> 4) & 0x03;\n        ble_mod = bytes[7] & 0x0f;\n        panackmd = bytes[8] & 0x04;\n        lon = (bytes[8] >> 1) & 0x01 ? 'ON' : 'OFF';\n        intwk = bytes[8] & 0x01;\n\n        if (semsor_mod == 1) sensor = 'GPS';\n        else if (semsor_mod == 2) sensor = 'BLE';\n        else if (intwk == 1) sensor = 'Spots';\n        else if (semsor_mod == 3) sensor = 'BLE+GPS Hybrid';\n\n        decode.BatV = batV;\n        decode.SENSOR_MODEL = sensor_mode;\n        decode.FIRMWARE_VERSION = firm_ver;\n        decode.FREQUENCY_BAND = freq_band;\n        decode.SUB_BAND = sub_band;\n        decode.SMODE = sensor;\n        decode.GPS_M0D = gps_mod;\n        decode.BLE_MD = ble_mod;\n        decode.PNACKMD = pnackmd;\n        decode.LON = lon;\n        decode.Intwk = intwk;\n        return {\n          data: decode,\n        };\n      }\n      break;\n    case 6: {\n      var decode = {};\n      major = (bytes[16] << 8) | bytes[17];\n\n      minor = (bytes[18] << 8) | bytes[19];\n\n      power = bytes[15];\n\n      rssi = (bytes[23] << 24) >> 24;\n\n      con = '';\n      for (i = 0; i < 16; i++) {\n        con += bytes[i].toString(16);\n      }\n      value = con;\n      var uuid = value;\n      alarm = bytes[24] & 0x40 ? 'TRUE' : 'FALSE'; //Alarm status\n      batV = (((bytes[24] & 0x3f) << 8) | bytes[25]) / 1000; //Battery,units:V\n      mod = (bytes[26] & 0xc0) >> 6;\n      led_updown = bytes[26] & 0x20 ? 'ON' : 'OFF'; //LED status for position,uplink and downlink\n      if (bytes[26] & (0xc0 == 0x40)) {\n        hum = ((bytes[27] << 8) | bytes[28]) / 10; //hum,units: °\n        tem = ((bytes[29] << 8) | bytes[30]) / 10; //tem,units: °\n      }\n      decode.BatV = batV;\n      decode.ALARM_status = alarm;\n      decode.MD = mod;\n      decode.LON = led_updown;\n      decode.UUID = uuid;\n      decode.MAJOR = major;\n      decode.MINOR = minor;\n      decode.RSSI = rssi;\n      decode.POWER = power;\n      return {\n        data: decode,\n      };\n    }\n  }\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dragino_trackerd_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "GPS Tracking",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Location"
+                        },
+                        "properties": {
+                          "center": {
+                            "lat": 0,
+                            "lon": 0
+                          },
+                          "zoom": 2
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Location",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Location",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latitude"
+                        },
+                        "properties": {
+                          "decimalPlaces": 6,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Latitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Longitude"
+                        },
+                        "properties": {
+                          "decimalPlaces": 6,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 12,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Date & Time"
+                        },
+                        "properties": {
+                          "extraText": "{{Date}}",
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "24px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Time",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Time",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 16,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Location History (Last 7 days)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'scatter',\n        zoom: {\n            enabled: true,\n            type: 'xy'\n        }\n    },\n    xaxis: {\n        type: 'numeric',\n        title: {\n            text: 'Longitude (°)'\n        },\n        labels: {\n            formatter: function(val) {\n                return val.toFixed(4);\n            }\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Latitude (°)'\n        },\n        labels: {\n            formatter: function(val) {\n                return val.toFixed(4);\n            }\n        }\n    },\n    markers: {\n        size: 6\n    },\n    tooltip: {\n        x: {\n            formatter: function(val) {\n                return 'Lon: ' + val.toFixed(6);\n            }\n        },\n        y: {\n            formatter: function(val) {\n                return 'Lat: ' + val.toFixed(6);\n            }\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Location",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "GPS Track",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Sensors & Status",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "gradient": false,
+                          "icon": "fas fa-battery-three-quarters",
+                          "iconColor": "#27ae60",
+                          "majorTicks": 10,
+                          "max": 4.2,
+                          "min": 2.5,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "color": "#e74c3c",
+                          "max": 85,
+                          "min": -40,
+                          "unit": "°C"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Tem",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Hum",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "donutchart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Alarm Status"
+                        },
+                        "properties": {
+                          "icon": "fas fa-bell",
+                          "iconColor": "#e74c3c",
+                          "iconColorConditions": [
+                            {
+                              "color": "#27ae60",
+                              "operator": "eq",
+                              "value": "FALSE"
+                            },
+                            {
+                              "color": "#e74c3c",
+                              "operator": "eq",
+                              "value": "TRUE"
+                            }
+                          ],
+                          "iconPosition": "above-value",
+                          "iconSize": "40px",
+                          "textAlign": "center",
+                          "textColor": "#e74c3c",
+                          "textColorConditions": [
+                            {
+                              "color": "#27ae60",
+                              "operator": "eq",
+                              "value": "FALSE"
+                            },
+                            {
+                              "color": "#e74c3c",
+                              "operator": "eq",
+                              "value": "TRUE"
+                            }
+                          ],
+                          "textSize": "50px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "ALARM_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Alarm",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Transport Status"
+                        },
+                        "properties": {
+                          "icon": "fas fa-car",
+                          "iconColor": "#3498db",
+                          "iconPosition": "above-value",
+                          "iconSize": "40px",
+                          "textAlign": "center",
+                          "textColor": "#3498db",
+                          "textColorConditions": [
+                            {
+                              "color": "#95a5a6",
+                              "operator": "eq",
+                              "value": "STILL"
+                            },
+                            {
+                              "color": "#f39c12",
+                              "operator": "eq",
+                              "value": "MOVE"
+                            }
+                          ],
+                          "textSize": "50px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Transport",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Transport",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "LED Status"
+                        },
+                        "properties": {
+                          "icon": "fas fa-lightbulb",
+                          "iconColor": "#f39c12",
+                          "iconPosition": "above-value",
+                          "iconSize": "40px",
+                          "textAlign": "center",
+                          "textColor": "#f39c12",
+                          "textColorConditions": [
+                            {
+                              "color": "#95a5a6",
+                              "operator": "eq",
+                              "value": "OFF"
+                            },
+                            {
+                              "color": "#f39c12",
+                              "operator": "eq",
+                              "value": "ON"
+                            }
+                          ],
+                          "textSize": "50px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "LON",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "LED",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 9,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature & Humidity (Last 24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": true,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        }\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 3\n    },\n    markers: {\n        size: 4\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: [\n        {\n            title: {\n                text: 'Temperature (°C)'\n            },\n            labels: {\n                formatter: function(val) {\n                    return val !== null ? val.toFixed(1) : '';\n                }\n            }\n        },\n        {\n            opposite: true,\n            title: {\n                text: 'Humidity (%)'\n            },\n            labels: {\n                formatter: function(val) {\n                    return val !== null ? val.toFixed(1) : '';\n                }\n            }\n        }\n    ],\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Tem",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature (°C)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Hum",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity (%)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 17,
+                          "sizeX": 6,
+                          "sizeY": 7
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery History (Last 7 days)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": true,
+                          "legend": false,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        zoom: {\n            enabled: true\n        }\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    fill: {\n        type: 'gradient',\n        gradient: {\n            shadeIntensity: 1,\n            opacityFrom: 0.7,\n            opacityTo: 0.2\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Battery (V)'\n        },\n        min: 2.5,\n        max: 4.2,\n        labels: {\n            formatter: function(val) {\n                return val !== null ? val.toFixed(2) : '';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "BatV",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "WiFi & BLE",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "WiFi SSID"
+                        },
+                        "properties": {
+                          "icon": "fas fa-wifi",
+                          "iconColor": "#3498db",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#3498db",
+                          "textSize": "36px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "WIFISSID",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "WiFi SSID",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "WiFi RSSI"
+                        },
+                        "properties": {
+                          "color": "#3498db",
+                          "gradient": true,
+                          "majorTicks": 10,
+                          "max": -30,
+                          "min": -100,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "unit": "dBm"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "RSSI",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "RSSI",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 6,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Beacon UUID"
+                        },
+                        "properties": {
+                          "icon": "fas fa-bluetooth",
+                          "iconColor": "#9b59b6",
+                          "iconPosition": "before-value",
+                          "iconSize": "40px",
+                          "textAlign": "center",
+                          "textColor": "#9b59b6",
+                          "textSize": "24px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "UUID",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "UUID",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 9,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Major"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "MAJOR",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Major",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 9,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Minor"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "MINOR",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Minor",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 9,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Power"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light",
+                          "unit": "dBm",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "POWER",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Power",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 13,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "WiFi RSSI History (Last 24h)"
+                        },
+                        "properties": {
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            enabled: true\n        }\n    },\n    stroke: {\n        curve: 'straight',\n        width: 3\n    },\n    markers: {\n        size: 5\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'RSSI (dBm)'\n        },\n        min: -100,\n        max: -30,\n        labels: {\n            formatter: function(val) {\n                return val !== null ? val.toFixed(0) : '';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    annotations: {\n        yaxis: [\n            {\n                y: -70,\n                borderColor: '#FEB019',\n                label: {\n                    text: 'Good Signal',\n                    style: {\n                        color: '#fff',\n                        background: '#FEB019'\n                    }\n                }\n            }\n        ]\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "RSSI",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "WiFi RSSI (dBm)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Device Info",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor Model"
+                        },
+                        "properties": {
+                          "icon": "fas fa-microchip",
+                          "iconColor": "#34495e",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#2c3e50",
+                          "textSize": "40px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "SENSOR_MODEL",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Model",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Firmware Version"
+                        },
+                        "properties": {
+                          "icon": "fas fa-code-branch",
+                          "iconColor": "#16a085",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#16a085",
+                          "textSize": "40px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "FIRMWARE_VERSION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Firmware",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Frequency Band"
+                        },
+                        "properties": {
+                          "textAlign": "center",
+                          "textColor": "#8e44ad",
+                          "textSize": "32px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "FREQUENCY_BAND",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#8e44ad",
+                            "name": "Freq Band",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sub Band"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "SUB_BAND",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#8e44ad",
+                            "name": "Sub Band",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 4,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor Mode"
+                        },
+                        "properties": {
+                          "textAlign": "center",
+                          "textColor": "#d35400",
+                          "textSize": "28px",
+                          "textWeight": "font-bold"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "SMODE",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#d35400",
+                            "name": "Sensor Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "GPS_M0D",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "GPS Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 8,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "BLE Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "BLE_MD",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "BLE Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 8,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "MD",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "PNACKMD"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "PNACKMD",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#7f8c8d",
+                            "name": "PNACKMD",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 12,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Intwk"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_trackerd_data",
+                              "mapping": "Intwk",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#95a5a6",
+                            "name": "Intwk",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
