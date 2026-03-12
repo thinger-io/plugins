@@ -1,0 +1,782 @@
+{
+  "name": "dragino_lwl03a",
+  "version": "1.0.0",
+  "description": "The Dragino LWL03A is a LoRaWAN None-Position Rope Type Water Leak Controller. User can lay the LWL03A + Water Leak Cable on the ground to detect water leakage.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dragino-lwl03a"
+  },
+  "metadata": {
+    "name": "Dragino LWL03A",
+    "description": "The Dragino LWL03A is a LoRaWAN None-Position Rope Type Water Leak Controller. User can lay the LWL03A + Water Leak Cable on the ground to detect water leakage.",
+    "image": "assets/lwl03a.png",
+    "category": "devices",
+    "vendor": "dragino"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The Dragino LWL03A is a LoRaWAN None-Position Rope Type Water Leak Controller. User can lay the LWL03A + Water Leak Cable on the ground to detect water leakage.",
+        "enabled": true,
+        "name": "Dragino LWL03A",
+        "product": "dragino_lwl03a",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "lwl03a_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "dragino_lwl03a_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink_decoded",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction datalog(i, bytes) {\n  var aa = bytes[0 + i] & 0x02 ? 'TRUE' : 'FALSE';\n  var bb = bytes[0 + i] & 0x01 ? 'LEAK' : 'NO LEAK';\n  var cc = ((bytes[1 + i] << 16) | (bytes[2 + i] << 8) | bytes[3 + i]).toString(10);\n  var dd = ((bytes[4 + i] << 16) | (bytes[5 + i] << 8) | bytes[6 + i]).toString(10);\n  var ee = getMyDate(((bytes[7 + i] << 24) | (bytes[8 + i] << 16) | (bytes[9 + i] << 8) | bytes[10 + i]).toString(10));\n  var string = '[' + aa + ',' + bb + ',' + cc + ',' + dd + ',' + ee + ']' + ',';\n  return string;\n}\n\nfunction getzf(c_num) {\n  if (parseInt(c_num) < 10) c_num = '0' + c_num;\n  return c_num;\n}\n\nfunction getMyDate(str) {\n  var c_Date;\n  if (str > 9999999999) {\n    c_Date = new Date(parseInt(str));\n  } else {\n    c_Date = new Date(parseInt(str) * 1000);\n  }\n  var c_Year = c_Date.getUTCFullYear(),\n    c_Month = c_Date.getUTCMonth() + 1,\n    c_Day = c_Date.getUTCDate(),\n    c_Hour = c_Date.getUTCHours(),\n    c_Min = c_Date.getUTCMinutes(),\n    c_Sen = c_Date.getUTCSeconds();\n  var c_Time = c_Year + '-' + getzf(c_Month) + '-' + getzf(c_Day) + ' ' + getzf(c_Hour) + ':' + getzf(c_Min) + ':' + getzf(c_Sen);\n  return c_Time;\n}\n\nfunction Decoder(bytes, port) {\n  if (port == 0x03) {\n    for (var i = 0; i < bytes.length; i = i + 11) {\n      var data = datalog(i, bytes);\n      if (i == '0') data_sum = data;\n      else data_sum += data;\n    }\n    return {\n      DATALOG: data_sum,\n    };\n  } else if (port == 0x04) {\n    var tdc = (bytes[0] << 16) | (bytes[1] << 8) | bytes[2];\n    var disalarm = bytes[3] & 0x01;\n    var keep_status = bytes[4] & 0x01;\n    var keep_time = (bytes[5] << 8) | bytes[6];\n    var leak_alarm_time = bytes[7];\n\n    return {\n      TDC: tdc,\n      DISALARM: disalarm,\n      KEEP_STATUS: keep_status,\n      KEEP_TIME: keep_time,\n      LEAK_ALARM_TIME: leak_alarm_time,\n    };\n  } else if (port == 0x05) {\n    var sub_band;\n    var freq_band;\n    var sensor;\n\n    if (bytes[0] == 0x14) sensor = 'LWL03A';\n\n    if (bytes[4] == 0xff) sub_band = 'NULL';\n    else sub_band = bytes[4];\n\n    if (bytes[3] == 0x01) freq_band = 'EU868';\n    else if (bytes[3] == 0x02) freq_band = 'US915';\n    else if (bytes[3] == 0x03) freq_band = 'IN865';\n    else if (bytes[3] == 0x04) freq_band = 'AU915';\n    else if (bytes[3] == 0x05) freq_band = 'KZ865';\n    else if (bytes[3] == 0x06) freq_band = 'RU864';\n    else if (bytes[3] == 0x07) freq_band = 'AS923';\n    else if (bytes[3] == 0x08) freq_band = 'AS923_1';\n    else if (bytes[3] == 0x09) freq_band = 'AS923_2';\n    else if (bytes[3] == 0x0a) freq_band = 'AS923_3';\n    else if (bytes[3] == 0x0b) freq_band = 'CN470';\n    else if (bytes[3] == 0x0c) freq_band = 'EU433';\n    else if (bytes[3] == 0x0d) freq_band = 'KR920';\n    else if (bytes[3] == 0x0e) freq_band = 'MA869';\n\n    var firm_ver = (bytes[1] & 0x0f) + '.' + ((bytes[2] >> 4) & 0x0f) + '.' + (bytes[2] & 0x0f);\n    var bat = ((bytes[5] << 8) | bytes[6]) / 1000;\n\n    return {\n      SENSOR_MODEL: sensor,\n      FIRMWARE_VERSION: firm_ver,\n      FREQUENCY_BAND: freq_band,\n      SUB_BAND: sub_band,\n      BAT: bat,\n    };\n  } else {\n    var tdc_interval = bytes[0] & 0x04 ? 'YES' : 'NO';\n    var alarm = bytes[0] & 0x02 ? 'TRUE' : 'FALSE';\n    var leak_status = bytes[0] & 0x01 ? 'LEAK' : 'NO LEAK';\n    var leak_times = (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];\n    var leak_duration = (bytes[4] << 16) | (bytes[5] << 8) | bytes[6];\n    var data_time = getMyDate(((bytes[7] << 24) | (bytes[8] << 16) | (bytes[9] << 8) | bytes[10]).toString(10));\n\n    if (bytes.length == 11) {\n      return {\n        TDC: tdc_interval,\n        ALARM: alarm,\n        WATER_LEAK_STATUS: leak_status,\n        WATER_LEAK_TIMES: leak_times,\n        LAST_WATER_LEAK_DURATION: leak_duration,\n        TIME: data_time,\n      };\n    }\n  }\n}\n\nfunction decodeUplink(input) {\n  return {\n    data: Decoder(input.bytes, input.fPort),\n  };\n}\n\nfunction normalizeUplink(input) {\n  var data = [];\n\n  if (input.data.WATER_LEAK_STATUS) {\n    data.push({\n      water: {\n        leak: input.data.WATER_LEAK_STATUS === 'LEAK',\n      },\n    });\n  }\n\n  if (input.data.BAT) {\n    data.push({\n      battery: input.data.BAT,\n    });\n  }\n\n  return { data: data };\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dragino_lwl03a_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Water Leak Monitor",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Leak Status"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [
+                            {
+                              "color": "#e74c3c",
+                              "operator": "eq",
+                              "value": "LEAK"
+                            },
+                            {
+                              "color": "#27ae60",
+                              "operator": "eq",
+                              "value": "NO LEAK"
+                            }
+                          ],
+                          "textSize": "60px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "WATER_LEAK_STATUS",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Leak Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Alarm Status"
+                        },
+                        "properties": {
+                          "color": "#95a5a6",
+                          "colorCondition": {
+                            "conditions": [
+                              {
+                                "color": "#e74c3c",
+                                "operator": "eq",
+                                "value": "TRUE"
+                              },
+                              {
+                                "color": "#27ae60",
+                                "operator": "eq",
+                                "value": "FALSE"
+                              }
+                            ],
+                            "enabled": true
+                          },
+                          "colors": [],
+                          "size": "100px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "ALARM",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Alarm",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Total Leak Events"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "times",
+                          "extraTextColor": "#95a5a6",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-exclamation-triangle",
+                          "iconColor": "#e67e22",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "above-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#e67e22",
+                          "textColorConditions": [],
+                          "textSize": "48px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "WATER_LEAK_TIMES",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Leak Times",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Leak Duration"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "seconds",
+                          "extraTextColor": "#95a5a6",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "below-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-clock",
+                          "iconColor": "#9b59b6",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "above-value",
+                          "iconSize": "40px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#9b59b6",
+                          "textColorConditions": [],
+                          "textSize": "48px",
+                          "textWeight": "font-bold",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "LAST_WATER_LEAK_DURATION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Duration",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#27ae60",
+                          "gradient": true,
+                          "icon": "fas fa-battery-three-quarters",
+                          "iconColor": "#27ae60",
+                          "iconSize": "",
+                          "majorTicks": 10,
+                          "max": 3.6,
+                          "min": 2.5,
+                          "plateColor": "#ffffff",
+                          "showValue": true,
+                          "textColor": "#1E313E",
+                          "tickColor": "#000000",
+                          "unit": "V"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "BAT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 11,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Water Leak Events History (7 days)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": false,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        zoom: {\n            type: 'x',\n            enabled: true,\n            autoScaleYaxis: true\n        },\n        toolbar: {\n            autoSelected: 'zoom'\n        }\n    },\n    stroke: {\n        curve: 'stepline',\n        width: 3\n    },\n    markers: {\n        size: 6,\n        hover: {\n            sizeOffset: 3\n        }\n    },\n    colors: ['#e74c3c', '#f39c12'],\n    grid: {\n        row: {\n            colors: ['#f3f3f3', 'transparent'],\n            opacity: 0.5\n        }\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(0);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "WATER_LEAK_TIMES",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Leak Events Count",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "days",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "LAST_WATER_LEAK_DURATION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "Leak Duration (sec)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "days",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 19,
+                          "sizeX": 6,
+                          "sizeY": 7
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Voltage History (30 days)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "axis": true,
+                          "fill": true,
+                          "legend": true,
+                          "multiple_axes": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area'\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    fill: {\n        type: 'gradient',\n        gradient: {\n            shadeIntensity: 1,\n            opacityFrom: 0.7,\n            opacityTo: 0.3\n        }\n    },\n    colors: ['#27ae60'],\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        min: 2.5,\n        max: 3.6,\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(2) + ' V';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        },\n        y: {\n            formatter: function(val) {\n                return val.toFixed(2) + ' V';\n            }\n        }\n    }\n};\n"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "BAT",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#27ae60",
+                            "name": "Battery (V)",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "units": "days",
+                              "value": 30
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 26,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor Model"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-microchip",
+                          "iconColor": "#34495e",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "above-value",
+                          "iconSize": "30px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#34495e",
+                          "textColorConditions": [],
+                          "textSize": "24px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "SENSOR_MODEL",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Model",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 26,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Firmware Version"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-code-branch",
+                          "iconColor": "#34495e",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "above-value",
+                          "iconSize": "30px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#34495e",
+                          "textColorConditions": [],
+                          "textSize": "24px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "FIRMWARE_VERSION",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Firmware",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 26,
+                          "sizeX": 2,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Frequency Band"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-broadcast-tower",
+                          "iconColor": "#34495e",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "above-value",
+                          "iconSize": "30px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#34495e",
+                          "textColorConditions": [],
+                          "textSize": "24px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "dragino_lwl03a_data",
+                              "mapping": "FREQUENCY_BAND",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "Frequency",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
