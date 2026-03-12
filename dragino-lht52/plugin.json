@@ -1,7 +1,7 @@
 {
   "name": "dragino_lht52",
   "version": "1.0.0",
-  "description": "LHT52 indoor LoRaWAN Temperature & Humidity Sensor",
+  "description": "The Dragino LHT52 is a compact, indoor LoRaWAN Temperature & Humidity sensor designed for professional wireless sensor networks.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino LHT52",
-    "description": "LHT52 indoor LoRaWAN Temperature & Humidity Sensor",
+    "description": "The Dragino LHT52 is a compact, indoor LoRaWAN Temperature & Humidity sensor designed for professional wireless sensor networks.",
     "image": "assets/lht52.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "LHT52 indoor LoRaWAN Temperature & Humidity Sensor",
+        "description": "The Dragino LHT52 is a compact, indoor LoRaWAN Temperature & Humidity sensor designed for professional wireless sensor networks.",
         "enabled": true,
         "name": "Dragino LHT52",
         "product": "dragino_lht52",
