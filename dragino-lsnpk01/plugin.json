@@ -1,7 +1,7 @@
 {
   "name": "dragino_lsnpk01",
   "version": "1.0.0",
-  "description": "LoRaWAN Soil NPK Sensor",
+  "description": "The Dragino LSNPK01 is a LoRaWAN-enabled soil nutrient sensor specifically designed for smart agriculture.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LSNPK01",
-    "description": "LoRaWAN Soil NPK Sensor",
-    "image": "assets/lsnpk01.jpg",
+    "description": "The Dragino LSNPK01 is a LoRaWAN-enabled soil nutrient sensor specifically designed for smart agriculture.",
+    "image": "assets/lsnpk01.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "LoRaWAN Soil NPK Sensor",
+        "description": "The Dragino LSNPK01 is a LoRaWAN-enabled soil nutrient sensor specifically designed for smart agriculture.",
         "enabled": true,
         "name": "Dragino LSNPK01",
         "product": "dragino_lsnpk01",
