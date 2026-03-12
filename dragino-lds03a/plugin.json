@@ -1,7 +1,7 @@
 {
   "name": "dragino_lds03a",
   "version": "1.0.0",
-  "description": "LDS03A Outdoor Open/Close Door Sensor",
+  "description": "The Dragino LDS03A is an outdoor-ready LoRaWAN Door/Window Sensor designed to detect open/close status and count events.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino LDS03A",
-    "description": "LDS03A Outdoor Open/Close Door Sensor",
+    "description": "The Dragino LDS03A is an outdoor-ready LoRaWAN Door/Window Sensor designed to detect open/close status and count events.",
     "image": "assets/lds03a.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "LDS03A Outdoor Open/Close Door Sensor",
+        "description": "The Dragino LDS03A is an outdoor-ready LoRaWAN Door/Window Sensor designed to detect open/close status and count events.",
         "enabled": true,
         "name": "Dragino LDS03A",
         "product": "dragino_lds03a",
