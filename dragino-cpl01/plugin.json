@@ -1,7 +1,7 @@
 {
   "name": "dragino_cpl01",
   "version": "1.0.0",
-  "description": "CPL01 -- Outdoor LoRaWAN Open/Close Dry Contact Sensor",
+  "description": "The Dragino CPL01 is an outdoor-rated LoRaWAN Open/Close Dry Contact Sensor.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino CPL01",
-    "description": "CPL01 -- Outdoor LoRaWAN Open/Close Dry Contact Sensor",
+    "description": "The Dragino CPL01 is an outdoor-rated LoRaWAN Open/Close Dry Contact Sensor.",
     "image": "assets/cpl01.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "CPL01 -- Outdoor LoRaWAN Open/Close Dry Contact Sensor",
+        "description": "The Dragino CPL01 is an outdoor-rated LoRaWAN Open/Close Dry Contact Sensor.",
         "enabled": true,
         "name": "Dragino CPL01",
         "product": "dragino_cpl01",
