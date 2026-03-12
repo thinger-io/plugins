@@ -1,7 +1,7 @@
 {
   "name": "dragino_ltc2",
   "version": "1.0.0",
-  "description": "Industrial LoRaWAN Temperature Transmitter",
+  "description": "The Dragino LTC2 is an industrial-grade LoRaWAN Temperature Transmitter designed for precise monitoring in demanding environments.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,15 +11,15 @@
   },
   "metadata": {
     "name": "Dragino LTC2",
-    "description": "Industrial LoRaWAN Temperature Transmitter",
-    "image": "assets/ltc2.jpg",
+    "description": "The Dragino LTC2 is an industrial-grade LoRaWAN Temperature Transmitter designed for precise monitoring in demanding environments.",
+    "image": "assets/ltc2.png",
     "category": "devices",
     "vendor": "dragino"
   },
   "resources": {
     "products": [
       {
-        "description": "Industrial LoRaWAN Temperature Transmitter",
+        "description": "The Dragino LTC2 is an industrial-grade LoRaWAN Temperature Transmitter designed for precise monitoring in demanding environments.",
         "enabled": true,
         "name": "Dragino LTC2",
         "product": "dragino_ltc2",
