@@ -1,7 +1,7 @@
 {
   "name": "dragino_ldds45",
   "version": "1.0.0",
-  "description": "LoRaWAN Distance Detection Sensor",
+  "description": "The Dragino LDDS45 is a LoRaWAN-enabled ultrasonic distance sensor designed for non-contact measurement of the distance between the sensor and flat objects.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Dragino LDDS45",
-    "description": "LoRaWAN Distance Detection Sensor",
+    "description": "The Dragino LDDS45 is a LoRaWAN-enabled ultrasonic distance sensor designed for non-contact measurement of the distance between the sensor and flat objects.",
     "image": "assets/ldds45.png",
     "category": "devices",
     "vendor": "dragino"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "LoRaWAN Distance Detection Sensor",
+        "description": "The Dragino LDDS45 is a LoRaWAN-enabled ultrasonic distance sensor designed for non-contact measurement of the distance between the sensor and flat objects.",
         "enabled": true,
         "name": "Dragino LDDS45",
         "product": "dragino_ldds45",
