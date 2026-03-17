@@ -1,0 +1,7 @@
+site_name: plugins/devices/dragino-lsn50v2-s31
+docs_dir: .
+
+nav:
+  - "index.md"
+  - Changelog: "changelog.md"
+  - Plugin file: "plugin_file.md"
