@@ -1,7 +1,7 @@
 {
     "name": "milesight-iot-am307",
     "version": "1.0.0",
-    "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC. It features a tri-co",
+    "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC.",
     "author": "Thinger.io",
     "license": "MIT",
     "repository": {
@@ -11,15 +11,16 @@
     },
     "metadata": {
         "name": "Milesight-Iot AM307",
-        "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC. It features a tri-co",
-        "image": "assets/am307.png",
-        "category": "devices",
-        "vendor": "milesight-iot"
+        "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC.",
+        "image": ""
     },
     "resources": {
         "products": [
             {
-                "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC. It features a tri-co",
+                "config": {
+                    "icons": []
+                },
+                "description": "Milesight AM307 collects various indoor ambience conditions through 7 built-in sensors and delivers the data to the mobile App and its 4.2-inch E-ink screen. It supports batteries or DC power supply and can be easily equipped via NFC.",
                 "enabled": true,
                 "name": "Milesight-Iot AM307",
                 "product": "milesight_iot_am307",
