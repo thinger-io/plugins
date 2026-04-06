@@ -1,0 +1,42 @@
+{
+  "name": "easym2m",
+  "version": "1.0.0",
+  "description": "Plugin for managing EasyM2M NB-IoT SIM cards from Thinger.io",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "easym2m"
+  },
+  "metadata": {
+    "name": "EasyM2M",
+    "description": "NB-IoT SIM Card Management via EasyM2M API",
+    "category": "connectivity",
+    "image": "assets/easym2m-logo.png",
+    "icon": "assets/easym2m-logo.png"
+  },
+  "tokens": {
+    "easym2m_plugin": {
+      "name": "Access from EasyM2M plugin to Thinger.io account",
+      "allow": {
+        "Plugin": {
+          "easym2m": "*"
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "thinger/easym2m-plugin",
+    "port": 3000
+  },
+  "interface": {
+    "main": {
+      "proxy_to": {
+        "plugin": "easym2m",
+        "port": 3000
+      }
+    }
+  }
+}

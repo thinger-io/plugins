@@ -1,0 +1,125 @@
+<nz-card [nzTitle]="titleTemplate" nzSize="small" nzType="inner" [nzExtra]="extraTemplate" [nzBodyStyle]="{'padding': 0}">
+  <nz-table
+    #simTable
+    [nzData]="simCards"
+    nzSize="small"
+    [nzLoading]="loading"
+    [nzFrontPagination]="false"
+    [nzTotal]="totalItems"
+    [nzPageIndex]="pageIndex"
+    [nzPageSize]="pageSize"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+    [nzShowTotal]="totalTemplate">
+
+    <thead>
+      <tr>
+        <th>ICCID</th>
+        <th>Alias</th>
+        <th>Status</th>
+        <th class="tw-hidden lg:tw-table-cell">IP Address</th>
+        <th class="tw-hidden lg:tw-table-cell">Connected</th>
+        <th class="tw-hidden lg:tw-table-cell">Activation Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (sim of simTable.data; track sim.iccid) {
+        <tr class="tw-cursor-pointer hover:tw-bg-gray-50" (click)="openDetail(sim)">
+          <td>
+            <span class="tw-font-mono tw-text-xs tw-text-gray-700">{{ sim.iccid }}</span>
+          </td>
+          <td>
+            <span class="tw-font-medium tw-text-gray-800">{{ sim.alias || '—' }}</span>
+            @if (sim.imsi) {
+              <div class="tw-text-xs tw-text-gray-400">{{ sim.imsi }}</div>
+            }
+          </td>
+          <td>
+            @if (sim.status) {
+              <nz-tag [nzColor]="getStatusColor(sim.status)">
+                {{ getStatusLabel(sim.status) }}
+              </nz-tag>
+            } @else {
+              <span class="tw-text-gray-400">—</span>
+            }
+          </td>
+          <td class="tw-hidden lg:tw-table-cell tw-font-mono tw-text-xs">
+            {{ sim.ipAddress || '—' }}
+          </td>
+          <td class="tw-hidden lg:tw-table-cell">
+            @if (sim.ipConnected !== undefined) {
+              <span [class]="sim.ipConnected ? 'tw-text-green-600' : 'tw-text-gray-400'">
+                <fa-icon [icon]="faCircle" class="tw-text-xs tw-mr-1"></fa-icon>
+                {{ sim.ipConnected ? 'Online' : 'Offline' }}
+              </span>
+            } @else {
+              <span class="tw-text-gray-400">—</span>
+            }
+          </td>
+          <td class="tw-hidden lg:tw-table-cell tw-text-xs tw-text-gray-600">
+            {{ sim.activationDate ? (sim.activationDate | date:'dd/MM/yyyy') : '—' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<!-- Title template -->
+<ng-template #titleTemplate>
+  <span class="tw-mr-2">
+    <fa-icon [icon]="faIdCard"></fa-icon>
+  </span>
+  <span class="tw-font-bold">SIM Cards</span>
+  @if (totalItems > 0) {
+    <span class="tw-ml-2 tw-text-xs tw-text-gray-500 tw-font-normal">{{ totalItems }} total</span>
+  }
+</ng-template>
+
+<!-- Extra controls: status filter + refresh -->
+<ng-template #extraTemplate>
+  <div class="tw-flex tw-items-center tw-gap-2">
+    <fa-icon [icon]="faFilter" class="tw-text-gray-400 tw-text-xs"></fa-icon>
+    <nz-select
+      [(ngModel)]="selectedStatus"
+      (ngModelChange)="onStatusChange()"
+      nzPlaceHolder="All statuses"
+      nzAllowClear
+      nzSize="small"
+      style="width: 160px;">
+      @for (s of statuses; track s.value) {
+        <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
+      }
+    </nz-select>
+    <button nz-button nzSize="small" nzType="default" (click)="loadSimCards()" [disabled]="loading"
+      nz-tooltip="Refresh">
+      <fa-icon [icon]="faRotateRight"></fa-icon>
+    </button>
+  </div>
+</ng-template>
+
+<!-- Total records template -->
+<ng-template #totalTemplate let-total>
+  <span class="tw-text-xs tw-text-gray-500">{{ total }} SIM cards</span>
+</ng-template>
+
+<!-- SIM Card Detail Modal -->
+<nz-modal
+  [(nzVisible)]="detailVisible"
+  [nzTitle]="detailTitle"
+  [nzWidth]="720"
+  [nzFooter]="null"
+  (nzOnCancel)="closeDetail()">
+  <ng-container *nzModalContent>
+    <app-simcard-detail [simCard]="selectedSimCard" [loading]="detailLoading"></app-simcard-detail>
+  </ng-container>
+</nz-modal>
+
+<ng-template #detailTitle>
+  <span class="tw-mr-2">
+    <fa-icon [icon]="faIdCard"></fa-icon>
+  </span>
+  <span>{{ selectedSimCard?.alias || selectedSimCard?.iccid || 'SIM Card Details' }}</span>
+</ng-template>
