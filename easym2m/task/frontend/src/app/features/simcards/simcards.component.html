@@ -113,7 +113,11 @@
   [nzFooter]="null"
   (nzOnCancel)="closeDetail()">
   <ng-container *nzModalContent>
-    <app-simcard-detail [simCard]="selectedSimCard" [loading]="detailLoading"></app-simcard-detail>
+    <app-simcard-detail
+      [simCard]="selectedSimCard"
+      [loading]="detailLoading"
+      (simUpdated)="onSimUpdated($event)">
+    </app-simcard-detail>
   </ng-container>
 </nz-modal>
 

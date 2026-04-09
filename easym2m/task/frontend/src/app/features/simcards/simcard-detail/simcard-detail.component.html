@@ -4,110 +4,450 @@
   }
 
   @if (simCard) {
-    <!-- Identity -->
-    <nz-descriptions nzTitle="Identity" nzBordered nzSize="small" [nzColumn]="2">
-      <nz-descriptions-item nzTitle="ICCID" [nzSpan]="2">
-        <span class="tw-font-mono tw-text-xs">{{ simCard.iccid || '—' }}</span>
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="Alias">{{ simCard.alias || '—' }}</nz-descriptions-item>
-      <nz-descriptions-item nzTitle="Status">
-        @if (simCard.status) {
-          <nz-tag [nzColor]="getStatusColor(simCard.status)">{{ getStatusLabel(simCard.status) }}</nz-tag>
-        } @else {
-          <span>—</span>
-        }
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="IMSI">
-        <span class="tw-font-mono tw-text-xs">{{ simCard.imsi || '—' }}</span>
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="MSISDN">
-        <span class="tw-font-mono tw-text-xs">{{ simCard.msisdn || '—' }}</span>
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="IMEI">
-        <span class="tw-font-mono tw-text-xs">{{ simCard.imei || '—' }}</span>
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="Activation Date">
-        {{ simCard.activationDate ? (simCard.activationDate | date:'dd/MM/yyyy HH:mm') : '—' }}
-      </nz-descriptions-item>
-    </nz-descriptions>
+    <nz-tabset nzSize="small" (nzSelectedIndexChange)="onTabChange($event)">
 
-    <nz-divider></nz-divider>
+      <!-- ══ TAB 1: OVERVIEW ══════════════════════════════════════════ -->
+      <nz-tab nzTitle="Overview">
 
-    <!-- Network & Connectivity -->
-    <nz-descriptions nzTitle="Network & Connectivity" nzBordered nzSize="small" [nzColumn]="2">
-      <nz-descriptions-item nzTitle="APN">{{ simCard.apn || '—' }}</nz-descriptions-item>
-      <nz-descriptions-item nzTitle="IP Address">
-        <span class="tw-font-mono tw-text-xs">{{ simCard.ipAddress || '—' }}</span>
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="IP Connected">
-        @if (simCard.ipConnected !== undefined && simCard.ipConnected !== null) {
-          <span [class]="simCard.ipConnected ? 'tw-text-green-600 tw-font-medium' : 'tw-text-red-500'">
-            <fa-icon [icon]="simCard.ipConnected ? faCircleCheck : faCircleXmark" class="tw-mr-1"></fa-icon>
-            {{ simCard.ipConnected ? 'Connected' : 'Disconnected' }}
-          </span>
-        } @else {
-          <span>—</span>
-        }
-      </nz-descriptions-item>
-      <nz-descriptions-item nzTitle="GPRS Connected">
-        @if (simCard.gprsConnected !== undefined && simCard.gprsConnected !== null) {
-          <span [class]="simCard.gprsConnected ? 'tw-text-green-600 tw-font-medium' : 'tw-text-gray-400'">
-            {{ simCard.gprsConnected ? 'Yes' : 'No' }}
-          </span>
-        } @else {
-          <span>—</span>
-        }
-      </nz-descriptions-item>
-      @if (simCard.simModel || simCard.simType) {
-        <nz-descriptions-item nzTitle="SIM Model">{{ simCard.simModel || '—' }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="SIM Type">{{ simCard.simType || '—' }}</nz-descriptions-item>
-      }
-      @if (simCard.deviceManufacturer || simCard.deviceModel) {
-        <nz-descriptions-item nzTitle="Device Manufacturer">{{ simCard.deviceManufacturer || '—' }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="Device Model">{{ simCard.deviceModel || '—' }}</nz-descriptions-item>
-      }
-      @if (simCard.latitude !== undefined || simCard.longitude !== undefined) {
-        <nz-descriptions-item nzTitle="Location" [nzSpan]="2">
-          {{ simCard.latitude ?? '—' }}, {{ simCard.longitude ?? '—' }}
-        </nz-descriptions-item>
-      }
-    </nz-descriptions>
-
-    <!-- Extra fields from API (dynamic / consumption data) -->
-    @if (getExtraFields().length > 0) {
-      <nz-divider></nz-divider>
-      <div class="tw-mb-2 tw-font-semibold tw-text-sm tw-text-gray-700">Additional Data</div>
-      <div class="tw-bg-gray-50 tw-rounded-md tw-p-3 tw-overflow-x-auto tw-max-h-64 tw-overflow-y-auto">
-        <pre class="tw-text-xs tw-text-gray-700 tw-m-0 tw-whitespace-pre-wrap">{{ getExtraObject() | json }}</pre>
-      </div>
-    }
-
-    <!-- Sensitive fields -->
-    @if (hasSensitiveData()) {
-      <nz-divider></nz-divider>
-      <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-        <span class="tw-font-semibold tw-text-sm tw-text-gray-700">Sensitive Data (PIN / PUK)</span>
-        <button nz-button nzSize="small" nzType="default" (click)="sensitivesVisible = !sensitivesVisible">
-          <fa-icon [icon]="sensitivesVisible ? faEyeSlash : faEye" class="tw-mr-1"></fa-icon>
-          {{ sensitivesVisible ? 'Hide' : 'Show' }}
-        </button>
-      </div>
-      @if (sensitivesVisible) {
-        <nz-descriptions nzBordered nzSize="small" [nzColumn]="2">
-          <nz-descriptions-item nzTitle="PIN 1">
-            <span class="tw-font-mono">{{ simCard.pin1 || '—' }}</span>
+        <!-- Identity -->
+        <nz-descriptions nzTitle="Identity" nzBordered nzSize="small" [nzColumn]="2">
+          <nz-descriptions-item nzTitle="ICCID" [nzSpan]="2">
+            <span class="tw-font-mono tw-text-xs">{{ simCard.iccid || '—' }}</span>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="PIN 2">
-            <span class="tw-font-mono">{{ simCard.pin2 || '—' }}</span>
+          <nz-descriptions-item nzTitle="Alias">{{ simCard.alias || '—' }}</nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Status">
+            @if (simCard.status) {
+              <nz-tag [nzColor]="getStatusColor(simCard.status)">{{ getStatusLabel(simCard.status) }}</nz-tag>
+            } @else {
+              <span>—</span>
+            }
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="PUK 1">
-            <span class="tw-font-mono">{{ simCard.puk1 || '—' }}</span>
+          <nz-descriptions-item nzTitle="IMSI">
+            <span class="tw-font-mono tw-text-xs">{{ simCard.imsi || '—' }}</span>
           </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="PUK 2">
-            <span class="tw-font-mono">{{ simCard.puk2 || '—' }}</span>
+          <nz-descriptions-item nzTitle="MSISDN">
+            <span class="tw-font-mono tw-text-xs">{{ simCard.msisdn || '—' }}</span>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="IMEI">
+            <span class="tw-font-mono tw-text-xs">{{ simCard.imei || '—' }}</span>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="Activation Date">
+            {{ simCard.activationDate ? (simCard.activationDate | date:'dd/MM/yyyy HH:mm') : '—' }}
           </nz-descriptions-item>
         </nz-descriptions>
-      }
-    }
+
+        <nz-divider></nz-divider>
+
+        <!-- Network & Connectivity -->
+        <nz-descriptions nzTitle="Network & Connectivity" nzBordered nzSize="small" [nzColumn]="2">
+          <nz-descriptions-item nzTitle="APN">{{ simCard.apn || '—' }}</nz-descriptions-item>
+          <nz-descriptions-item nzTitle="IP Address">
+            <span class="tw-font-mono tw-text-xs">{{ simCard.ipAddress || '—' }}</span>
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="IP Connected">
+            @if (simCard.ipConnected !== undefined && simCard.ipConnected !== null) {
+              <span [class]="simCard.ipConnected ? 'tw-text-green-600 tw-font-medium' : 'tw-text-red-500'">
+                <fa-icon [icon]="simCard.ipConnected ? faCircleCheck : faCircleXmark" class="tw-mr-1"></fa-icon>
+                {{ simCard.ipConnected ? 'Connected' : 'Disconnected' }}
+              </span>
+            } @else {
+              <span>—</span>
+            }
+          </nz-descriptions-item>
+          <nz-descriptions-item nzTitle="GPRS Connected">
+            @if (simCard.gprsConnected !== undefined && simCard.gprsConnected !== null) {
+              <span [class]="simCard.gprsConnected ? 'tw-text-green-600 tw-font-medium' : 'tw-text-gray-400'">
+                {{ simCard.gprsConnected ? 'Yes' : 'No' }}
+              </span>
+            } @else {
+              <span>—</span>
+            }
+          </nz-descriptions-item>
+          @if (simCard.simModel || simCard.simType) {
+            <nz-descriptions-item nzTitle="SIM Model">{{ simCard.simModel || '—' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="SIM Type">{{ simCard.simType || '—' }}</nz-descriptions-item>
+          }
+          @if (simCard.deviceManufacturer || simCard.deviceModel) {
+            <nz-descriptions-item nzTitle="Device Manufacturer">{{ simCard.deviceManufacturer || '—' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Device Model">{{ simCard.deviceModel || '—' }}</nz-descriptions-item>
+          }
+          @if (simCard.latitude !== undefined || simCard.longitude !== undefined) {
+            <nz-descriptions-item nzTitle="Location" [nzSpan]="2">
+              {{ simCard.latitude ?? '—' }}, {{ simCard.longitude ?? '—' }}
+            </nz-descriptions-item>
+          }
+        </nz-descriptions>
+
+        <!-- Extra fields -->
+        @if (getExtraFields().length > 0) {
+          <nz-divider></nz-divider>
+          <div class="tw-mb-2 tw-font-semibold tw-text-sm tw-text-gray-700">Additional Data</div>
+          <div class="tw-bg-gray-50 tw-rounded-md tw-p-3 tw-overflow-x-auto tw-max-h-64 tw-overflow-y-auto">
+            <pre class="tw-text-xs tw-text-gray-700 tw-m-0 tw-whitespace-pre-wrap">{{ getExtraObject() | json }}</pre>
+          </div>
+        }
+
+        <!-- Sensitive fields -->
+        @if (hasSensitiveData()) {
+          <nz-divider></nz-divider>
+          <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+            <span class="tw-font-semibold tw-text-sm tw-text-gray-700">Sensitive Data (PIN / PUK)</span>
+            <button nz-button nzSize="small" nzType="default" (click)="sensitivesVisible = !sensitivesVisible">
+              <fa-icon [icon]="sensitivesVisible ? faEyeSlash : faEye" class="tw-mr-1"></fa-icon>
+              {{ sensitivesVisible ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          @if (sensitivesVisible) {
+            <nz-descriptions nzBordered nzSize="small" [nzColumn]="2">
+              <nz-descriptions-item nzTitle="PIN 1">
+                <span class="tw-font-mono">{{ simCard.pin1 || '—' }}</span>
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="PIN 2">
+                <span class="tw-font-mono">{{ simCard.pin2 || '—' }}</span>
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="PUK 1">
+                <span class="tw-font-mono">{{ simCard.puk1 || '—' }}</span>
+              </nz-descriptions-item>
+              <nz-descriptions-item nzTitle="PUK 2">
+                <span class="tw-font-mono">{{ simCard.puk2 || '—' }}</span>
+              </nz-descriptions-item>
+            </nz-descriptions>
+          }
+        }
+
+      </nz-tab>
+
+      <!-- ══ TAB 2: EDIT ══════════════════════════════════════════════ -->
+      <nz-tab nzTitle="Edit">
+        <form nz-form [formGroup]="editForm" nzLayout="vertical" class="tw-max-w-lg">
+
+          <!-- Basic info -->
+          <div class="tw-mb-4 tw-font-semibold tw-text-sm tw-text-gray-700">Basic Information</div>
+
+          <nz-form-item>
+            <nz-form-label>Alias</nz-form-label>
+            <nz-form-control nzExtra="Max 32 characters">
+              <input nz-input formControlName="alias" placeholder="Descriptive name for this SIM" maxlength="32" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Lifecycle Status</nz-form-label>
+            <nz-form-control nzExtra="Only activation and deactivation are supported via API">
+              <nz-select formControlName="lifeCycleStatus" nzPlaceHolder="Leave unchanged" nzAllowClear style="width: 100%">
+                @for (s of editableStatuses; track s.value) {
+                  <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>Alarm Profile</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                formControlName="idAlarm"
+                nzPlaceHolder="No alarm assigned"
+                nzAllowClear
+                [nzLoading]="alarmsLoading"
+                style="width: 100%">
+                @for (alarm of alarms; track alarm.id) {
+                  <nz-option [nzValue]="alarm.id" [nzLabel]="alarm.name + (alarm.description ? ' — ' + alarm.description : '')"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-divider nzText="Daily Consumption Thresholds" nzOrientation="left"></nz-divider>
+
+          <ng-container formGroupName="dailyConsumptionThreshold">
+            <div class="tw-grid tw-grid-cols-2 tw-gap-x-4">
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="dataEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">Data limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="dataLimit"
+                    [nzMin]="0"
+                    [nzStep]="1024"
+                    nzPlaceHolder="bytes"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="voiceEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">Voice limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="voiceLimit"
+                    [nzMin]="0"
+                    nzPlaceHolder="seconds"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="smsEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">SMS limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="smsLimit"
+                    [nzMin]="0"
+                    nzPlaceHolder="messages"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </ng-container>
+
+          <nz-divider nzText="Monthly Consumption Thresholds" nzOrientation="left"></nz-divider>
+
+          <ng-container formGroupName="monthlyConsumptionThreshold">
+            <div class="tw-grid tw-grid-cols-2 tw-gap-x-4">
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="dataEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">Data limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="dataLimit"
+                    [nzMin]="0"
+                    [nzStep]="1024"
+                    nzPlaceHolder="bytes"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="voiceEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">Voice limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="voiceLimit"
+                    [nzMin]="0"
+                    nzPlaceHolder="seconds"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div class="tw-flex tw-items-center tw-gap-2 tw-mb-3">
+                <nz-switch formControlName="smsEnabled" nzSize="small"></nz-switch>
+                <span class="tw-text-sm">SMS limit</span>
+              </div>
+              <nz-form-item class="tw-mb-3">
+                <nz-form-control>
+                  <nz-input-number
+                    formControlName="smsLimit"
+                    [nzMin]="0"
+                    nzPlaceHolder="messages"
+                    style="width: 100%">
+                  </nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </ng-container>
+
+          <div class="tw-flex tw-gap-2 tw-mt-2">
+            <button nz-button nzType="primary" type="button" (click)="saveSimCard()" [nzLoading]="saving">
+              <fa-icon [icon]="faSave" class="tw-mr-2"></fa-icon>Save changes
+            </button>
+          </div>
+
+        </form>
+      </nz-tab>
+
+      <!-- ══ TAB 3: CONSUMPTION ═══════════════════════════════════════ -->
+      <nz-tab nzTitle="Consumption">
+
+        <!-- Filters -->
+        <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-mb-4">
+          <nz-select
+            [(ngModel)]="consumptionYear"
+            (ngModelChange)="onConsumptionParamsChange()"
+            nzSize="small"
+            style="width: 90px">
+            @for (y of yearOptions; track y) {
+              <nz-option [nzValue]="y" [nzLabel]="y.toString()"></nz-option>
+            }
+          </nz-select>
+
+          <nz-select
+            [(ngModel)]="consumptionMonth"
+            (ngModelChange)="onConsumptionParamsChange()"
+            nzSize="small"
+            style="width: 120px">
+            @for (m of monthOptions; track m.value) {
+              <nz-option [nzValue]="m.value" [nzLabel]="m.label"></nz-option>
+            }
+          </nz-select>
+
+          <nz-select
+            [(ngModel)]="consumptionService"
+            (ngModelChange)="onConsumptionParamsChange()"
+            nzSize="small"
+            style="width: 130px">
+            @for (s of serviceTypes; track s.value) {
+              <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
+            }
+          </nz-select>
+
+          <button nz-button nzSize="small" (click)="loadConsumption()" [disabled]="consumptionLoading">
+            <fa-icon [icon]="faRotateRight"></fa-icon>
+          </button>
+        </div>
+
+        <nz-table
+          [nzData]="consumptionRecords"
+          nzSize="small"
+          [nzLoading]="consumptionLoading"
+          [nzFrontPagination]="false"
+          [nzTotal]="consumptionTotal"
+          [nzPageIndex]="consumptionPageIndex"
+          [nzPageSize]="consumptionPageSize"
+          (nzPageIndexChange)="onConsumptionPageChange($event)">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Uploaded</th>
+              <th>Downloaded</th>
+              <th>Total</th>
+              <th>Sessions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (record of consumptionRecords; track record.timeStamp) {
+              <tr>
+                <td class="tw-text-xs tw-font-mono">{{ record.timeStamp || '—' }}</td>
+                <td class="tw-text-xs">{{ formatBytes(record.uploadedBytes) }}</td>
+                <td class="tw-text-xs">{{ formatBytes(record.downloadedBytes) }}</td>
+                <td class="tw-text-xs tw-font-medium">{{ formatBytes(record.transferedBytes) }}</td>
+                <td class="tw-text-xs">{{ record.transmissions ?? '—' }}</td>
+              </tr>
+            }
+            @empty {
+              <tr>
+                <td colspan="5" class="tw-text-center tw-text-gray-400 tw-py-6">
+                  No consumption records for the selected period
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+
+      </nz-tab>
+
+      <!-- ══ TAB 4: BALANCE ═══════════════════════════════════════════ -->
+      <nz-tab nzTitle="Balance">
+
+        <nz-spin [nzSpinning]="balanceLoading">
+
+          @if (balanceLoaded) {
+            <div class="tw-flex tw-items-start tw-gap-8 tw-mb-6">
+              <nz-statistic
+                nzTitle="Current Balance"
+                [nzValue]="balance ?? 0"
+                nzPrefix="€"
+                [nzValueStyle]="{ 'font-size': '32px', 'color': (balance ?? 0) > 0 ? '#52c41a' : '#ff4d4f' }">
+              </nz-statistic>
+            </div>
+          }
+
+          <div class="tw-mt-2">
+            <div class="tw-mb-3 tw-font-semibold tw-text-sm tw-text-gray-700">Top-up</div>
+            <div class="tw-flex tw-items-center tw-gap-3">
+              <nz-input-number
+                [(ngModel)]="topupAmount"
+                [nzMin]="0.01"
+                [nzStep]="1"
+                [nzPrecision]="2"
+                nzPrefix="€"
+                nzPlaceHolder="Amount in €"
+                style="width: 160px">
+              </nz-input-number>
+              <button
+                nz-button
+                nzType="primary"
+                [nzLoading]="toppingUp"
+                [disabled]="!topupAmount || topupAmount <= 0"
+                (click)="topup()">
+                <fa-icon [icon]="faCoins" class="tw-mr-2"></fa-icon>Top up
+              </button>
+            </div>
+            <p class="tw-text-xs tw-text-gray-400 tw-mt-2">
+              The amount will be deducted from the main customer account balance.
+            </p>
+          </div>
+
+        </nz-spin>
+
+      </nz-tab>
+
+      <!-- ══ TAB 5: DIAGNOSTICS ════════════════════════════════════════ -->
+      <nz-tab nzTitle="Diagnostics">
+
+        <p class="tw-text-sm tw-text-gray-500 tw-mb-5">
+          Run live connectivity tests on this SIM card. Results indicate whether the connection is currently up or down.
+        </p>
+
+        <div class="tw-flex tw-flex-col tw-gap-4">
+
+          <!-- GSM -->
+          <div class="tw-flex tw-items-center tw-gap-4">
+            <button
+              nz-button
+              nzType="default"
+              [nzLoading]="diagnosticGsmRunning"
+              (click)="runDiagnostics('gsm')"
+              style="width: 160px">
+              <fa-icon [icon]="faHeartPulse" class="tw-mr-2"></fa-icon>Run GSM test
+            </button>
+            @if (diagnosticGsmResult) {
+              <nz-alert
+                [nzType]="diagnosticStatus(diagnosticGsmResult)"
+                [nzMessage]="diagnosticLabel(diagnosticGsmResult, 'GSM')"
+                nzShowIcon>
+              </nz-alert>
+            }
+          </div>
+
+          <!-- GPRS -->
+          <div class="tw-flex tw-items-center tw-gap-4">
+            <button
+              nz-button
+              nzType="default"
+              [nzLoading]="diagnosticGprsRunning"
+              (click)="runDiagnostics('gprs')"
+              style="width: 160px">
+              <fa-icon [icon]="faHeartPulse" class="tw-mr-2"></fa-icon>Run GPRS test
+            </button>
+            @if (diagnosticGprsResult) {
+              <nz-alert
+                [nzType]="diagnosticStatus(diagnosticGprsResult)"
+                [nzMessage]="diagnosticLabel(diagnosticGprsResult, 'GPRS')"
+                nzShowIcon>
+              </nz-alert>
+            }
+          </div>
+
+        </div>
+
+      </nz-tab>
+
+    </nz-tabset>
   }
 </nz-spin>

@@ -34,13 +34,70 @@ export interface SimCard {
   puk1?: string;
   puk2?: string;
   idAlarm?: string;
-  // Allow any additional fields from the API
   [key: string]: any;
 }
 
 export interface SimCardsResponse {
   info: SimCardPageInfo;
   data: SimCard[];
+}
+
+export interface ConsumptionThreshold {
+  dataEnabled?: boolean;
+  dataLimit?: number;
+  voiceEnabled?: boolean;
+  voiceLimit?: number;
+  smsEnabled?: boolean;
+  smsLimit?: number;
+}
+
+export interface UpdateSimCardPayload {
+  lifeCycleStatus?: 'ACTIVE' | 'DEACTIVATED';
+  alias?: string;
+  idAlarm?: string | null;
+  dailyConsumptionThreshold?: ConsumptionThreshold;
+  monthlyConsumptionThreshold?: ConsumptionThreshold;
+}
+
+export interface Alarm {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface AlarmsResponse {
+  info: SimCardPageInfo;
+  data: Alarm[];
+}
+
+export interface ConsumptionRecord {
+  timeStamp?: string;
+  msisdn?: string;
+  icc?: string;
+  imsi?: string;
+  operatorNetwork?: string;
+  uploadedBytes?: number;
+  downloadedBytes?: number;
+  transferedBytes?: number;
+  transmissions?: number;
+  seconds?: number;
+  calls?: number;
+  sms?: number;
+  [key: string]: any;
+}
+
+export interface ConsumptionResponse {
+  info: SimCardPageInfo;
+  data: ConsumptionRecord[];
+}
+
+export interface BalanceResponse {
+  iccid?: string;
+  balance: number;
+}
+
+export interface DiagnosticsResult {
+  output: string;
 }
 
 export const SIM_STATUSES: { value: string; label: string }[] = [
@@ -71,5 +128,61 @@ export class SimCardsService {
 
   getSimCard(iccid: string): Observable<SimCard> {
     return this.http.get<SimCard>(`./simcard/${iccid}`);
+  }
+
+  updateSimCard(iccid: string, payload: UpdateSimCardPayload): Observable<any> {
+    return this.http.put(`./simcard/${iccid}`, payload);
+  }
+
+  listAlarms(size = 100, index = 1): Observable<AlarmsResponse> {
+    const params = new HttpParams()
+      .set('size', size.toString())
+      .set('index', index.toString());
+    return this.http.get<AlarmsResponse>('./alarms', { params });
+  }
+
+  getAlarm(id: string): Observable<Alarm> {
+    return this.http.get<Alarm>(`./alarm/${id}`);
+  }
+
+  createAlarm(payload: object): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('./alarm', payload);
+  }
+
+  updateAlarm(id: string, payload: object): Observable<any> {
+    return this.http.put(`./alarm/${id}`, payload);
+  }
+
+  deleteAlarm(id: string): Observable<any> {
+    return this.http.delete(`./alarm/${id}`);
+  }
+
+  getSimConsumption(
+    iccid: string,
+    year: string,
+    month: string,
+    service: string,
+    size: number,
+    index: number
+  ): Observable<ConsumptionResponse> {
+    const params = new HttpParams()
+      .set('year', year)
+      .set('month', month)
+      .set('service', service)
+      .set('size', size.toString())
+      .set('index', index.toString());
+    return this.http.get<ConsumptionResponse>(`./simcard/${iccid}/consumption`, { params });
+  }
+
+  getSimBalance(iccid: string): Observable<BalanceResponse> {
+    return this.http.get<BalanceResponse>(`./simcard/${iccid}/balance`);
+  }
+
+  topupBalance(iccid: string, amount: number): Observable<any> {
+    return this.http.post(`./simcard/${iccid}/balance/topup`, { amount });
+  }
+
+  runDiagnostics(iccid: string, type: 'gsm' | 'gprs'): Observable<DiagnosticsResult> {
+    return this.http.get<DiagnosticsResult>(`./simcard/${iccid}/diagnostics/${type}`);
   }
 }

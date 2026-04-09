@@ -129,6 +129,18 @@ export class SimCardsComponent implements OnInit {
     this.selectedSimCard = null;
   }
 
+  onSimUpdated(updated: SimCard): void {
+    this.selectedSimCard = updated;
+    const idx = this.simCards.findIndex(s => s.iccid === updated.iccid);
+    if (idx !== -1) {
+      this.simCards = [
+        ...this.simCards.slice(0, idx),
+        { ...this.simCards[idx], ...updated },
+        ...this.simCards.slice(idx + 1),
+      ];
+    }
+  }
+
   getStatusColor(status: string | undefined): string {
     const colors: Record<string, string> = {
       ACTIVE: 'green',
