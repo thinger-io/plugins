@@ -1,4 +1,7 @@
-const EASYM2M_BASE_URL = 'https://private-anon-14930b318d-easym2mmanagementapiv2en.apiary-mock.com/api';
+const EASYM2M_BASE_URL = 'https://services.lantia.io/api';
+
+// for development purposes (mock server)
+// const EASYM2M_BASE_URL = 'https://private-anon-14930b318d-easym2mmanagementapiv2en.apiary-mock.com/api';
 
 export interface EasyM2MCredentials {
   apiClientId: string;
