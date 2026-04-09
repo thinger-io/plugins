@@ -34,6 +34,14 @@ const dataSourceSchema = z.union([
   }).strict(),
 
   z.object({
+    target: z.literal("resource_stream"),
+    resource_stream: z.string(),
+    payload: z.string().optional(),
+    payload_function: z.string().optional(),
+    payload_type: z.string().optional(),
+  }).strict(),
+
+  z.object({
     source: z.literal("resource_stream"),
     resource_stream: z.string(),
     payload: z.string().optional(),
