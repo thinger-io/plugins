@@ -1,0 +1,465 @@
+{
+  "name": "kamstrup_flowiq2200_02k73a",
+  "version": "1.0.0",
+  "description": "Kamstrup flowIQ®2200 OMS over LoRaWAN water meter. Configuration no 02K73A******",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "kamstrup-flowiq2200-02k73a"
+  },
+  "metadata": {
+    "name": "Kamstrup FLOWIQ2200-02K73A",
+    "description": "Kamstrup flowIQ®2200 OMS over LoRaWAN water meter. Configuration no 02K73A******",
+    "image": "assets/flowiq2200-02k73a.png",
+    "category": "devices",
+    "vendor": "kamstrup"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Kamstrup flowIQ®2200 OMS over LoRaWAN water meter. Configuration no 02K73A******",
+        "enabled": true,
+        "name": "Kamstrup FLOWIQ2200-02K73A",
+        "product": "kamstrup_flowiq2200_02k73a",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "kamstrup_flowiq2200_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "kamstrup_flowiq2200_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,\n * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\n * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT\n * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\n * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n */\n\n// Primary VIF table according to Table 10 in 13757-3:2018\nvar PriVifTable = {\n    0x10: { type: \"Volume\", unit: \"m3\", resolution: 1E-6, ConversionType: \"B\" },\n    0x11: { type: \"Volume\", unit: \"m3\", resolution: 1E-5, ConversionType: \"B\" },\n    0x12: { type: \"Volume\", unit: \"m3\", resolution: 1E-4, ConversionType: \"B\" },\n    0x13: { type: \"Volume\", unit: \"m3\", resolution: 1E-3, ConversionType: \"B\" },\n    0x14: { type: \"Volume\", unit: \"m3\", resolution: 1E-2, ConversionType: \"B\" },\n    0x15: { type: \"Volume\", unit: \"m3\", resolution: 1E-1, ConversionType: \"B\" },\n    0x16: { type: \"Volume\", unit: \"m3\", resolution: 1E-0, ConversionType: \"B\" },\n    0x17: { type: \"Volume\", unit: \"m3\", resolution: 1E+1, ConversionType: \"B\" },\n    0x38: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-6, ConversionType: \"B\" },\n    0x39: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-5, ConversionType: \"B\" },\n    0x3A: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-4, ConversionType: \"B\" },\n    0x3B: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-3, ConversionType: \"B\" },\n    0x3C: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-2, ConversionType: \"B\" },\n    0x3D: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-1, ConversionType: \"B\" },\n    0x3E: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E-0, ConversionType: \"B\" },\n    0x3F: { type: \"Volume flow\", unit: \"m3/h\", resolution: 1E+1, ConversionType: \"B\" },\n    0x58: { type: \"Flow temperature\", unit: \"C\", resolution: 1E-3, ConversionType: \"B\" },\n    0x59: { type: \"Flow temperature\", unit: \"C\", resolution: 1E-2, ConversionType: \"B\" },\n    0x5A: { type: \"Flow temperature\", unit: \"C\", resolution: 1E-1, ConversionType: \"B\" },\n    0x5B: { type: \"Flow temperature\", unit: \"C\", resolution: 1E-0, ConversionType: \"B\" },\n    0x64: { type: \"External temperature\", unit: \"C\", resolution: 1E-3, ConversionType: \"B\" },\n    0x65: { type: \"External temperature\", unit: \"C\", resolution: 1E-2, ConversionType: \"B\" },\n    0x66: { type: \"External temperature\", unit: \"C\", resolution: 1E-1, ConversionType: \"B\" },\n    0x67: { type: \"External temperature\", unit: \"C\", resolution: 1E-0, ConversionType: \"B\" },\n    0x6C: { type: \"Date/time\", unit: \"NA\", resolution: 1, ConversionType: \"G\" },\n    0x6D: { type: \"Date/time\", unit: \"NA\", resolution: 1, ConversionType: \"F/J/I/M\" },\n};\n\n// Manufacture specific VIFE\nvar ManuVifeTable = {\n    0x25: { type: \"Infocode\", unit: \"NA\", resolution: 1, ConversionType: \"D\" },\n    0x1C: { type: \"ALD last day\", unit: \"NA\", resolution: 1, ConversionType: \"C\" },\n    0x16: { type: \"Module type/config number\", unit: \"NA\", resolution: 1, ConversionType: \"C\" },\n    0x1B: { type: \"ALD\", unit: \"NA\", resolution: 1, ConversionType: \"C\" },\n};\n\n// Orthogonal VIFE table according to Table 15 in 13757-3:2018\nvar OrthoVifeTable = {\n    0x13: \"Inverse Compact Profile\",\n    0x3C: \"Reverse\",\n};\n\nvar InfocodeTable = {\n    0: \"Dry\",\n    1: \"Reverse\",\n    2: \"Leak\",\n    3: \"Burst\",\n    4: \"Tamper\",\n    5: \"Low Battery\",\n    6: \"Low Ambient Temperature\",\n    7: \"High Ambient Temperature\",\n};\n\n/**\n * Parse Value Information Block (VIB)\n * @param VIBArray - Array containing the VIB\n * @returns - The VIB object\n */\nfunction parseVIB(VIBArray) {\n    var VIBObj = {};\n    if (VIBArray[0] == 0xFF) {\n        if (VIBArray[1] in ManuVifeTable) {\n            var tempObj = ManuVifeTable[VIBArray[1]];\n            VIBObj = { type: tempObj.type, unit: tempObj.unit,\n                resolution: tempObj.resolution, ConversionType: tempObj.ConversionType }; // Copy instead of reference\n            VIBObj.OrthoVife = \"NA\";\n        } else {\n            return null;\n        }\n    } else if ((VIBArray[0] & 0x7F) in PriVifTable) {\n        var tempObj = PriVifTable[VIBArray[0] & 0x7F];\n        VIBObj = { type: tempObj.type, unit: tempObj.unit,\n            resolution: tempObj.resolution, ConversionType: tempObj.ConversionType }; // Copy instead of reference\n        if ((VIBArray[0] & 0x80) != 0) {\n            if (VIBArray[1] in OrthoVifeTable) {\n                VIBObj.OrthoVife = OrthoVifeTable[VIBArray[1]];\n            } else {\n                return null;\n            }\n        } else {\n            VIBObj.OrthoVife = \"NA\";\n        }\n    } else {\n        // Unsupported VIF\n        return null;\n    }\n    VIBObj.isProfileData = false;\n    if (VIBObj.OrthoVife == \"Inverse Compact Profile\") {\n        VIBObj.isProfileData = true;\n    }\n    return VIBObj;\n}\n\n/**\n * Reads an unsigned little endian integer from a buffer.\n * @param buffer - The input buffer.\n * @param offset - The byte index to start reading from.\n * @param byteLength - The number of bytes to read.\n * @returns - The unsigned integer value.\n */\n function readUIntLE(buffer, offset, byteLength) {\n    var value = 0;\n    for (var i = 0; i < byteLength; i++) {\n        value |= buffer[offset + i] << (8 * i);\n    }\n    return value >>> 0; // Ensure it's treated as an unsigned 32-bit integer\n}\n\n/**\n * Reads a signed little-endian integer using two's complement representation.\n * @param buffer - The input buffer.\n * @param offset - The byte index to start reading from.\n * @param byteLength - The number of bytes to read.\n * @returns - The signed integer value.\n */\nfunction readIntLE(buffer, offset, byteLength) {\n    var value = readUIntLE(buffer, offset, byteLength);\n    var maxVal = 1 << (8 * byteLength - 1); // Two's complement sign bit position\n\n    return (value & maxVal) ? value - (1 << (8 * byteLength)) : value;\n}\n\n/**\n * Mbus Type A - BCD to a number as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing the BCD in little endian.\n * @param idx - Index at which the BCD starts.\n * @param size - Size in bytes of the BCD.\n * @returns - The converted number or undefined if invalid.\n */\nfunction TypeA(buffer, idx, size) {\n    var result = 0;\n    var multiplier = 1;\n    for (var j = idx; j < idx + size; j++) {\n        var lsb = buffer[j] & 0xF;\n        var msb = (buffer[j] >> 4) & 0xF;\n        if (lsb > 9 || msb > 9) {\n            // Invalid value\n            return undefined;\n        }\n        result += lsb * multiplier;\n        result += msb * multiplier * 10;\n        multiplier *= 100;\n    }\n    return result;\n}\n\n/**\n * Mbus Type B - Binary signed integer as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - The converted number or undefined if invalid.\n */\nfunction TypeB(buffer, idx, size) {\n    var invalidValues = { 1: -0x80, 2: -0x8000, 3: -0x800000, 4: -0x80000000, 6: -0x800000000000 };\n    var result = readIntLE(buffer, idx, size);\n    if (result == invalidValues[size]) {\n        result = undefined;\n    }\n    return result;\n}\n\n/**\n * Mbus Type C - Binary unsigned integer as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - The converted number or undefined if invalid.\n */\nfunction TypeC(buffer, idx, size) {\n    var invalidValues = { 1: 0xFF, 2: 0xFFFF, 3: 0xFFFFFF, 4: 0xFFFFFFFF, 6: 0xFFFFFFFFFFFF };\n    var result = readUIntLE(buffer, idx, size);\n    if (result == invalidValues[size]) {\n        result = undefined;\n    }\n    return result;\n}\n\n/**\n * Mbus Type D - Boolean array as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - The converted number.\n */\nfunction TypeD(buffer, idx, size) {\n    return readUIntLE(buffer, idx, size);\n}\n\n/**\n * Mbus Type F - Date and Time (CP32) as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - Timestamp.\n */\nfunction TypeF(buffer, idx, size) {\n    var data = readUIntLE(buffer, idx, size);\n    if ((data & 0x00000080) != 0) {\n        return undefined;\n    }\n    var minutes = data & 0x0000003f;\n    var hours = (data >> 8) & 0x0000001f;\n    var days = (data >> 16) & 0x0000001f;\n    var months = (data >> 24) & 0x0000000f;\n    var years = (data >> 21) & 0x00000007;\n    years += ((data >> 28) & 0x0000000f) << 3;\n    var hYears = (data >> 13) & 0x00000003;\n    years += 1900 + (hYears * 100);\n    return new Date(Date.UTC(years, months - 1, days, hours, minutes));\n}\n\n/**\n * Mbus Type G - Date as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - Timestamp.\n */\nfunction TypeG(buffer, idx, size) {\n    var data = readUIntLE(buffer, idx, size);\n    if (data == 0xFFFF) {\n        return undefined;\n    }\n    var days = (data >> 0) & 0x001f;\n    var months = (data >> 8) & 0x000f;\n    var years = 2000 + ((data >> 5) & 0x0007);\n    years += ((data >> 12) & 0x000f) << 3;\n    return new Date(Date.UTC(years, months - 1, days));\n}\n\n/**\n * Mbus Type I - Date and Time (CP48) as described in EN13757-2018 Annex A.\n * @param buffer - Buffer input containing value to convert in little endian.\n * @param idx - Index at which the value starts.\n * @param size - Size in bytes.\n * @returns - Timestamp.\n */\n function TypeI(buffer, idx, size) {\n    if ((buffer[idx + 1] & 0x80) != 0) {\n        return undefined;\n    }\n    var seconds = buffer[idx] & 0x3f;\n    var minutes = buffer[idx + 1] & 0x3f;\n    var hours = buffer[idx + 2] & 0x1f;\n    var days = buffer[idx + 3] & 0x1f;\n    var months = buffer[idx + 4] & 0xf;\n    var years = (buffer[idx + 3] >> 5) & 0x7;\n    years += ((buffer[idx + 4] >> 4) & 0xf) << 3;\n    years += 2000;\n    return new Date(Date.UTC(years, months - 1, days, hours, minutes, seconds));\n}\n\n/**\n * Inverse Compact Profile - Parsing of Inverse Compact Profile as described in EN13757-2018 Annex F.\n * @param buffer - The input buffer.\n * @param idx - The index at which Inverse Compact Profile header starts (byte after LVAR).\n * @param size - The size of the inverse compact profile (equal to LVAR).\n * @returns - An object containing the profile data.\n */\nfunction InverseCompactProfile(buffer, idx, size) {\n    var result = {};\n    var spacingControl = buffer[idx];\n    idx++;\n    result.spacingValue = buffer[idx];\n    idx++;\n    var elementSize = spacingControl & 0x0F;\n    result.spacingUnit = (spacingControl >> 4) & 0x03;\n    result.incMode = (spacingControl >> 6) & 0x03;\n    result.profileValues = [];\n    if (elementSize < 1 || elementSize > 4 || result.incMode == 0) {\n        return null;\n    }\n    for (var k = 0; k < size - 2; k += elementSize) {\n        if (result.incMode == 0x3) { // Signed difference - TypeB\n            result.profileValues.push(TypeB(buffer, idx, elementSize));\n        } else { // Unsigned increments or decrements - TypeC\n            result.profileValues.push(TypeC(buffer, idx, elementSize));\n        }\n        idx += elementSize;\n    }\n    return result;\n}\n\n/**\n * GetNextTimestamp - Calculate next timestamp for delta values based on spacing unit/value as described in EN13757-2018 Annex F.\n * @param timestamp - The timestamp to operate on.\n * @param spacingUnit - The spacing unit as described in EN13757-2018 Annex F.\n * @param spacingValue - The spacing value as described in EN13757-2018 Annex F.\n * @returns - The status of the operation.\n */\nfunction getNextTimestamp(timestamp, spacingUnit, spacingValue) {\n    if (spacingValue > 0 && spacingValue < 251) {\n        if (spacingUnit == 0) { // Seconds\n            timestamp.setUTCSeconds(timestamp.getUTCSeconds() - spacingValue);\n        } else if (spacingUnit == 1) { // Minutes\n            timestamp.setUTCMinutes(timestamp.getUTCMinutes() - spacingValue);\n        } else if (spacingUnit == 2) { // Hours\n            timestamp.setUTCHours(timestamp.getUTCHours() - spacingValue);\n        } else if (spacingUnit == 3) { // Days/Months\n            timestamp.setUTCDate(timestamp.getUTCDate() - spacingValue);\n        }\n    } else if (spacingValue == 254 && spacingUnit == 3) {\n        timestamp.setUTCMonth(timestamp.getUTCMonth() - 1);\n    } else if (spacingValue == 254 && spacingUnit == 2) {\n        timestamp.setUTCMonth(timestamp.getUTCMonth() - 3);\n    } else if (spacingValue == 254 && spacingUnit == 1) {\n        timestamp.setUTCMonth(timestamp.getUTCMonth() - 6);\n    } else {\n        return false;\n    }\n    return true;\n}\n\n/**\n * Normalize a number based on the given resolution.\n * This function multiplies the number by the resolution and rounds it to avoid floating-point precision issues.\n * @param number - The number to normalize.\n * @param resolution - The resolution to use for normalization.\n * @returns - The normalized number.\n */\nfunction normalize(number, resolution) {\n    return Math.round(number * resolution * 1e10) / 1e10;\n}\n\n/**\n * Decode uplink\n * @param {Object} input - An object provided by the IoT Flow framework\n * @param {number[]} input.bytes - Array of bytes represented as numbers as it has been sent from the device\n * @param {number} input.fPort - The Port Field on which the uplink has been sent\n * @param {Date} input.recvTime - The uplink message time recorded by the LoRaWAN network server\n * @returns {DecodedUplink} - The decoded object\n */\nfunction decodeUplink(input) {\n    var result = {\n        data: {},\n        errors: [],\n        warnings: []\n    };\n    var i = 0;\n    var configfield = 0;\n    var raw = input.bytes;\n\n    ////////////////// TPL according to EN 13757-7 //////////////////\n    if (raw.length < 1) {\n        result.errors.push(\"Invalid uplink payload: Could not retrieve CI field\");\n        return result;\n    }\n    var CI = raw[i];\n    i++;\n    if (CI == 0x7A) { // Short data header\n        if (raw.length < i + 4) {\n            result.errors.push(\"Invalid uplink payload: Could not retrieve TPL layer\");\n            return result;\n        }\n        i += 2; // ACC, STS\n        configfield = raw[i] | (raw[i + 1] << 8);\n        i += 2;\n    } else if (CI == 0x72) { // Long data header\n        if (raw.length < i + 12) {\n            result.errors.push(\"Invalid uplink payload: Could not retrieve TPL layer\");\n            return result;\n        }\n        i += 10; // IdentNo, Manu, Ver, DevType, ACC, STS\n        configfield = raw[i] | (raw[i + 1] << 8);\n        i += 2;\n    } else if (CI == 0x78) { // No data header\n        // Do nothing\n    } else { // Unsupported header\n        result.errors.push(\"Invalid uplink payload: Invalid CI in TPL layer\");\n        return result;\n    }\n    if ((configfield & 0x1F00) != 0x0) { // Security mode different from 0\n        result.errors.push(\"Invalid uplink payload: MBus TPL encryption is not supported\");\n        return result;\n    }\n\n    ////////////////// APL according to EN 13757-3 //////////////////\n    var temp;\n    var mbusRecords = [];\n    while (i < raw.length) { // Check for more records\n        var record = {\n            dib: {},\n            vib: {},\n            data: {},\n            profileData: {},\n        };\n\n        temp = raw[i];\n        i++;\n        if (temp == 0x2F) {\n            // Skip Filler bytes\n        } else if (temp == 0x0F || temp == 0x1F || temp == 0x7F) {\n            // Unsupported special DIF functions\n            result.errors.push(\"Invalid uplink payload: Unsupported special DIF function\");\n            return result;\n        } else { // No special function - continue\n            // DIB\n            record.dib.datafield = temp & 0xF;\n            record.dib.functionfield = (temp & 0x30) >> 4;\n            record.dib.storagenumber = (temp & 0x40) >> 6;\n            var snBitShift = 1;\n            while ((temp & 0x80) != 0 && i < raw.length) { // Extension\n                temp = raw[i];\n                i++;\n                record.dib.storagenumber += ((temp & 0xF) << snBitShift);\n                snBitShift += 4;\n            }\n            // VIB\n            temp = raw[i];\n            i++;\n            var vibBytes = [temp];\n            while ((temp & 0x80) != 0 && i < raw.length) { // Extension\n                temp = raw[i];\n                i++;\n                vibBytes.push(temp);\n            }\n            // Parse VIF code\n            record.vib = parseVIB(vibBytes);\n            if (record.vib == null) {\n                // Unsupported special VIB functions\n                result.errors.push(\"Invalid uplink payload: Unsupported VIB\");\n                return result;\n            }\n            // Data\n            var sizeByte = 0;\n            var bcd = false;\n            var lvar = false;\n            switch (record.dib.datafield) {\n                case 0:\n                case 0x8:\n                    // No data\n                    sizeByte = 0;\n                    break;\n                case 0x9:\n                    bcd = true;\n                case 0x1:\n                    sizeByte = 1;\n                    break;\n                case 0xA:\n                    bcd = true;\n                case 0x2:\n                    sizeByte = 2;\n                    break;\n                case 0xB:\n                    bcd = true;\n                case 0x3:\n                    sizeByte = 3;\n                    break;\n                case 0xC:\n                    bcd = true;\n                case 0x4:\n                case 0x5:\n                    sizeByte = 4;\n                    break;\n                case 0xE:\n                    bcd = true;\n                case 0x6:\n                    sizeByte = 6;\n                    break;\n                case 0x7:\n                    sizeByte = 8;\n                    break;\n                case 0xD:\n                    sizeByte = 1; // Lvar # bytes\n                    lvar = true;\n                    break;\n            }\n            if (raw.length < i + sizeByte || sizeByte > 6) {\n                result.errors.push(\"Invalid uplink payload: Not enough bytes for datafield or datafield is larger than 6 bytes\");\n                return result;\n            }\n            if (!lvar) {\n                if (bcd) {\n                    record.data = TypeA(raw, i, sizeByte);\n                } else {\n                    if (record.vib.ConversionType == \"C\") {\n                        record.data = TypeC(raw, i, sizeByte);\n                    } else if (record.vib.ConversionType == \"B\") {\n                        record.data = TypeB(raw, i, sizeByte);\n                    } else if (record.vib.ConversionType == \"D\") {\n                        record.data = TypeD(raw, i, sizeByte);\n                    } else if (record.vib.ConversionType == \"G\") {\n                        record.data = TypeG(raw, i, sizeByte);\n                    } else if (record.vib.ConversionType == \"F/J/I/M\") {\n                        if (sizeByte == 4) {\n                            record.data = TypeF(raw, i, sizeByte);\n                        } else if (sizeByte == 6) {\n                            record.data = TypeI(raw, i, sizeByte);\n                        }\n                    }\n                }\n                i += sizeByte;\n            } else { // Lvar\n                var nbBytes = raw[i];\n                i++;\n                if (raw.length < i + nbBytes || nbBytes < 3) {\n                    result.errors.push(\"Invalid uplink payload: Not enough bytes for LVAR\");\n                    return result;\n                }\n                if (!record.vib.isProfileData) {\n                    result.errors.push(\"Invalid uplink payload: LVAR that is not Inverse Compact Profile is not supported\");\n                    return result;\n                }\n                record.profileData = InverseCompactProfile(raw, i, nbBytes);\n                i += nbBytes;\n                if (record.profileData == null) {\n                    result.errors.push(\"Invalid uplink payload: Could not parse Inverse Compact Profile\");\n                    return result;\n                }\n            }\n            mbusRecords.push(record);\n        }\n    }\n\n    // Append functionfield and orthogonal VIFE to type\n    for (var l = 0; l < mbusRecords.length; l++) {\n        var functionFieldText = \"\";\n        if (mbusRecords[l].vib.OrthoVife != \"NA\" && mbusRecords[l].vib.OrthoVife != \"Inverse Compact Profile\") {\n            // Append orthogonal VIFE in beginning of type, e.g., \"Reverse \"flow.\n            mbusRecords[l].vib.type = mbusRecords[l].vib.OrthoVife + \" \" + mbusRecords[l].vib.type;\n        }\n        switch (mbusRecords[l].dib.functionfield) {\n            case 0x0:\n                functionFieldText = \"\"; // Instantaneous value is left untouched\n                break;\n            case 0x1:\n                functionFieldText = \"Max \"; // Instantaneous value is left untouched\n                break;\n            case 0x2:\n                functionFieldText = \"Min \"; // Instantaneous value is left untouched\n                break;\n            case 0x3:\n                functionFieldText = \"Error state \"; // Instantaneous value is left untouched\n                break;\n        }\n        // Append functionfield in beginning of type, e.g., \"Max \"flow.\n        mbusRecords[l].vib.type = functionFieldText + mbusRecords[l].vib.type;\n    }\n\n    // Retrieve timestamps\n    var timestamps = {};\n    for (var k = 0; k < mbusRecords.length; k++) {\n        if (mbusRecords[k].vib.type == \"Date/time\") {\n            if (mbusRecords[k].data !== undefined) {\n                timestamps[mbusRecords[k].dib.storagenumber] = mbusRecords[k].data;\n            } else {\n                result.warnings.push(\"Invalid value among timestamps\");\n            }\n        }\n    }\n\n    // Generate the output data\n    result.data.values = [];\n    for (var p = 0; p < mbusRecords.length; p++) {\n        var type;\n        var value = null;\n        var unit;\n        var timestamp = null;\n\n        var currentRecord = mbusRecords[p];\n        // Add records to values array\n        if (currentRecord.vib.type == \"Date/time\") { // Skip timestamps as they are mapped directly onto records\n            // Skip\n        } else if (currentRecord.vib.type.includes(\"Infocode\") && currentRecord.data !== undefined) { // Special infocode handling\n            for (var j = 0; j < Object.keys(InfocodeTable).length; j++) {\n                type = InfocodeTable[j];\n                value = (currentRecord.data & (1 << j)) != 0;\n                unit = currentRecord.vib.unit;\n                if (currentRecord.dib.storagenumber in timestamps) {\n                    if (timestamps[currentRecord.dib.storagenumber] instanceof Date) {\n                        timestamp = timestamps[currentRecord.dib.storagenumber].toISOString().replace(\"Z\",\"\");\n                    }\n                }\n                result.data.values.push({ Type: type, Value: value, Unit: unit, Timestamp: timestamp });\n            }\n        } else if (!currentRecord.vib.isProfileData) { // Regular values\n            type = currentRecord.vib.type;\n            unit = currentRecord.vib.unit;\n            // If invalid ALD\n            if (type === \"ALD last day\" && currentRecord.data == 4095) {\n                currentRecord.data = undefined;\n            }\n            // Normalize and add data if it is not undefined\n            if (currentRecord.data !== undefined) {\n                value = normalize(currentRecord.data, currentRecord.vib.resolution);\n            } else {\n                unit = \"Invalid\";\n                result.warnings.push(\"Invalid value among data\");\n            }\n            // Add timestamp\n            if (currentRecord.dib.storagenumber in timestamps) {\n                if (timestamps[currentRecord.dib.storagenumber] instanceof Date) {\n                    timestamp = timestamps[currentRecord.dib.storagenumber].toISOString().replace(\"Z\",\"\");\n                }\n            }\n            result.data.values.push({ Type: type, Value: value, Unit: unit, Timestamp: timestamp });\n            if (type === \"Volume\") { // Special handling for latest volume\n                result.data.latestVolume = value;\n            }\n        } else { // Profile values\n            type = currentRecord.vib.type;\n            unit = currentRecord.vib.unit;\n            // Find base value where storage number and vib type, unit and resolution fits\n            var baserecord = mbusRecords.find(item => item.vib.type === type && item.vib.unit === unit && item.dib.storagenumber === currentRecord.dib.storagenumber &&\n                item.vib.resolution === currentRecord.vib.resolution && item.vib.isProfileData !== currentRecord.vib.isProfileData);\n            if (baserecord === undefined || baserecord.data === undefined) {\n                result.errors.push(\"Invalid uplink payload: Could not find base value for profile data\");\n                return result;\n            }\n            var tempVal = baserecord.data;\n            // Find base time\n            if (currentRecord.dib.storagenumber in timestamps) {\n                timestamp = timestamps[currentRecord.dib.storagenumber];\n            } else {\n                result.errors.push(\"Invalid uplink payload: Could not find base time for profile data\");\n                return result;\n            }\n            var ts = new Date(timestamp.getTime()); // Clone timestamp\n            // Loop through delta values\n            for (var m = 0; m < currentRecord.profileData.profileValues.length; m++) {\n                var deltavalue = currentRecord.profileData.profileValues[m];\n                var status = getNextTimestamp(ts, currentRecord.profileData.spacingUnit, currentRecord.profileData.spacingValue);\n                if (deltavalue === undefined || status == false || isNaN(ts)) {\n                    result.warnings.push(\"Invalid value among profile values or timestamps for profile values\");\n                    break;\n                }\n                // Value\n                if (currentRecord.profileData.incMode == 2) {\n                    tempVal += deltavalue;\n                } else {\n                    tempVal -= deltavalue;\n                }\n                value = normalize(tempVal, currentRecord.vib.resolution);\n                // Timestamp\n                timestamp = ts.toISOString().replace(\"Z\",\"\");\n                result.data.values.push({ Type: type, Value: value, Unit: unit, Timestamp: timestamp });\n            }\n        }\n    }\n    return result;\n}\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "kamstrup_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Main",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Latest Volume"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "75px",
+                          "textWeight": "font-light",
+                          "unit": "m³",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "kamstrup_flowiq2200_data",
+                              "mapping": "latestVolume",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Volume",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 10
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Volume (7 days)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(2);\n            }\n        },\n        title: {\n            text: 'm³'\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "kamstrup_flowiq2200_data",
+                              "mapping": "latestVolume",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1E88E5",
+                            "name": "Volume",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Flow Temperature"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "60px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°C",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "color": "#FF5722",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "flow_temperature"
+                            },
+                            "name": "Temperature",
+                            "source": "property"
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 10,
+                          "sizeX": 4,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Alarms / Status"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'bar',\n        stacked: true\n    },\n    plotOptions: {\n        bar: {\n            horizontal: true\n        }\n    },\n    dataLabels: {\n        enabled: false\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Alarm Status'\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    colors: ['#FF5252', '#FF6F00', '#FDD835', '#29B6F6', '#AB47BC', '#EC407A', '#66BB6A', '#EF5350']\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "color": "#FF5252",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Dry"
+                            },
+                            "name": "Dry",
+                            "source": "property"
+                          },
+                          {
+                            "color": "#FF6F00",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Reverse"
+                            },
+                            "name": "Reverse",
+                            "source": "property"
+                          },
+                          {
+                            "color": "#FDD835",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Leak"
+                            },
+                            "name": "Leak",
+                            "source": "property"
+                          },
+                          {
+                            "color": "#29B6F6",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Burst"
+                            },
+                            "name": "Burst",
+                            "source": "property"
+                          },
+                          {
+                            "color": "#AB47BC",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Tamper"
+                            },
+                            "name": "Tamper",
+                            "source": "property"
+                          },
+                          {
+                            "color": "#EC407A",
+                            "device": {
+                              "id": "{{device}}",
+                              "interval": 5000,
+                              "property": "Low Battery"
+                            },
+                            "name": "Low Battery",
+                            "source": "property"
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Recent Data"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; overflow-y:auto; padding:10px;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Timestamp</th>\n        <th>Volume (m³)</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value | limitTo:10\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ (entry.latestVolume || 0).toFixed(2) }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "kamstrup_flowiq2200_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "ts",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "kamstrup_flowiq2200_data",
+                              "mapping": "latestVolume",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1E88E5",
+                            "name": "volume",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 1
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
