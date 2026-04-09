@@ -1,0 +1,1181 @@
+{
+  "name": "milesight_iot_at101_fh",
+  "version": "1.0.0",
+  "description": "Milesight AT101 is an exceptional outdoor LoRaWAN GPS tracker that combines GNSS and Wi-Fi AP MAC Address Scanning technologies to deliver highly accurate positioning data. It is equipped with tilt and temperature sensors, enabling extensive data collecti",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "milesight-iot-at101-fh"
+  },
+  "metadata": {
+    "name": "Milesight-Iot AT101-FH",
+    "description": "Milesight AT101 is an exceptional outdoor LoRaWAN GPS tracker that combines GNSS and Wi-Fi AP MAC Address Scanning technologies to deliver highly accurate positioning data. It is equipped with tilt and temperature sensors, enabling extensive data collecti",
+    "image": "assets/at101-fh.png",
+    "category": "devices",
+    "vendor": "milesight-iot"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "Milesight AT101 is an exceptional outdoor LoRaWAN GPS tracker that combines GNSS and Wi-Fi AP MAC Address Scanning technologies to deliver highly accurate positioning data. It is equipped with tilt and temperature sensors, enabling extensive data collecti",
+        "enabled": true,
+        "name": "Milesight-Iot AT101-FH",
+        "product": "milesight_iot_at101_fh",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "at101_fh_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "milesight_at101_fh_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * Payload Decoder\n *\n * Copyright 2024 Milesight IoT\n *\n * @product AT101\n */\nvar RAW_VALUE = 0x00;\n\n/* eslint no-redeclare: \"off\" */\n/* eslint-disable */\n// Chirpstack v4\nfunction decodeUplink(input) {\n    var decoded = milesightDeviceDecode(input.bytes);\n    return { data: decoded };\n}\n\n// Chirpstack v3\nfunction Decode(fPort, bytes) {\n    return milesightDeviceDecode(bytes);\n}\n\n// The Things Network\nfunction Decoder(bytes, port) {\n    return milesightDeviceDecode(bytes);\n}\n/* eslint-enable */\n\nfunction milesightDeviceDecode(bytes) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length; ) {\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n\n        // IPSO VERSION\n        if (channel_id === 0xff && channel_type === 0x01) {\n            decoded.ipso_version = readProtocolVersion(bytes[i]);\n            i += 1;\n        }\n        // HARDWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x09) {\n            decoded.hardware_version = readHardwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // FIRMWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x0a) {\n            decoded.firmware_version = readFirmwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // TSL VERSION\n        else if (channel_id === 0xff && channel_type === 0xff) {\n            decoded.tsl_version = readTslVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // SERIAL NUMBER\n        else if (channel_id === 0xff && channel_type === 0x16) {\n            decoded.sn = readSerialNumber(bytes.slice(i, i + 8));\n            i += 8;\n        }\n        // LORAWAN CLASS TYPE\n        else if (channel_id === 0xff && channel_type === 0x0f) {\n            decoded.lorawan_class = readLoRaWANClass(bytes[i]);\n            i += 1;\n        }\n        // RESET EVENT\n        else if (channel_id === 0xff && channel_type === 0xfe) {\n            decoded.reset_event = readResetEvent(1);\n            i += 1;\n        }\n        // DEVICE STATUS\n        else if (channel_id === 0xff && channel_type === 0x0b) {\n            decoded.device_status = readDeviceStatus(1);\n            i += 1;\n        }\n        // BATTERY\n        else if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = readUInt8(bytes[i]);\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        }\n        // LOCATION\n        else if ((channel_id === 0x04 || channel_id == 0x84) && channel_type === 0x88) {\n            decoded.latitude = readInt32LE(bytes.slice(i, i + 4)) / 1000000;\n            decoded.longitude = readInt32LE(bytes.slice(i + 4, i + 8)) / 1000000;\n            var status = readUInt8(bytes[i + 8]);\n            var status_value = status & 0x0f;\n            if (status_value === 0x04 || status_value === 0x05) {\n                decoded.tilt_status = readTiltStatus(status_value);\n            } else {\n                decoded.motion_status = readMotionStatus(status_value);\n            }\n            decoded.geofence_status = readGeofenceStatus(status >> 4);\n            i += 9;\n        }\n        // DEVICE POSITION\n        else if (channel_id === 0x05 && channel_type === 0x00) {\n            decoded.position = readDevicePosition(bytes[i]);\n            i += 1;\n        }\n        // Wi-Fi SCAN RESULT\n        else if (channel_id === 0x06 && channel_type === 0xd9) {\n            var wifi = {};\n            wifi.group = readUInt8(bytes[i]);\n            wifi.mac = readMAC(bytes.slice(i + 1, i + 7));\n            wifi.rssi = readInt8(bytes[i + 7]);\n            var status = readUInt8(bytes[i + 8]);\n            var status_value = status & 0x0f;\n            if (status_value === 0x04 || status_value === 0x05) {\n                wifi.tilt_status = readTiltStatus(status_value);\n                decoded.tilt_status = wifi.tilt_status;\n            } else {\n                wifi.motion_status = readMotionStatus(status_value);\n                decoded.motion_status = wifi.motion_status;\n            }\n            i += 9;\n\n            decoded.wifi_scan_result = \"finish\";\n            if (wifi.mac === \"ff:ff:ff:ff:ff:ff\") {\n                decoded.wifi_scan_result = \"timeout\";\n                continue;\n            }\n\n            decoded.wifi = decoded.wifi || [];\n            decoded.wifi.push(wifi);\n        }\n        // TAMPER STATUS\n        else if (channel_id === 0x07 && channel_type === 0x00) {\n            decoded.tamper_status = readTamperStatus(bytes[i]);\n            i += 1;\n        }\n        // ANGLE\n        else if (channel_id === 0x08 && channel_type === 0x9b) {\n            decoded.initial_angle_x = readInt8(bytes[i]);\n            decoded.initial_angle_y = readInt8(bytes[i + 1]);\n            decoded.initial_angle_z = readInt8(bytes[i + 2]);\n            decoded.inclination_angle_x = readInt8(bytes[i + 3]);\n            decoded.inclination_angle_y = readInt8(bytes[i + 4]);\n            decoded.inclination_angle_z = readInt8(bytes[i + 5]);\n            i += 6;\n        }\n        // TEMPERATURE WITH ABNORMAL\n        else if (channel_id === 0x83 && channel_type === 0x67) {\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            decoded.temperature_alarm = readTemperatureAlarm(bytes[i + 2]);\n            i += 3;\n        }\n        // HISTORICAL DATA\n        else if (channel_id === 0x20 && channel_type === 0xce) {\n            var data = {};\n            data.timestamp = readUInt32LE(bytes.slice(i, i + 4));\n            data.longitude = readInt32LE(bytes.slice(i + 4, i + 8)) / 1000000;\n            data.latitude = readInt32LE(bytes.slice(i + 8, i + 12)) / 1000000;\n            data.initial_angle_x = readInt8(bytes[i + 12]);\n            data.initial_angle_y = readInt8(bytes[i + 13]);\n            data.initial_angle_z = readInt8(bytes[i + 14]);\n            data.inclination_angle_x = readInt8(bytes[i + 15]);\n            data.inclination_angle_y = readInt8(bytes[i + 16]);\n            data.inclination_angle_z = readInt8(bytes[i + 17]);\n            i += 18;\n            decoded.history = decoded.history || [];\n            decoded.history.push(data);\n        }\n        // DOWNLINK RESPONSE\n        else if (channel_id === 0xfe || channel_id === 0xff) {\n            var result = handle_downlink_response(channel_type, bytes, i);\n            decoded = Object.assign(decoded, result.data);\n            i = result.offset;\n        } else {\n            break;\n        }\n    }\n\n    return decoded;\n}\n\nfunction handle_downlink_response(channel_type, bytes, offset) {\n    var decoded = {};\n\n    switch (channel_type) {\n        case 0x10:\n            decoded.reboot = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x13:\n            decoded.motion_report_config = {};\n            decoded.motion_report_config.enable = readEnableStatus(readUInt8(bytes[offset]));\n            decoded.motion_report_config.interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            offset += 3;\n            break;\n        case 0x17:\n            decoded.time_zone = readTimeZone(readInt16LE(bytes.slice(offset, offset + 2)));\n            offset += 2;\n            break;\n        case 0x28:\n            decoded.report_status = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x2d:\n            var wifi_positioning_config = {};\n            wifi_positioning_config.mode = readWiFiScanMode(readUInt8(bytes[offset]));\n            wifi_positioning_config.num_of_bssid = readUInt8(bytes[offset + 1]);\n            wifi_positioning_config.timeout = readUInt8(bytes[offset + 2]);\n            offset += 3;\n            decoded.wifi_positioning_config = wifi_positioning_config;\n            break;\n        case 0x3b:\n            decoded.time_sync_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x3c:\n            decoded.gnss_positioning_timeout = readUInt8(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x4a:\n            decoded.sync_time = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x58:\n            var detection_type_value = readUInt8(bytes[offset]);\n            if (detection_type_value === 0x00) {\n                decoded.motion_detection_config = {};\n                decoded.motion_detection_config.delta_g = readUInt8(bytes[offset + 1]);\n                decoded.motion_detection_config.duration = readUInt16LE(bytes.slice(offset + 2, offset + 4));\n            } else if (detection_type_value === 0x01) {\n                decoded.static_detection_config = {};\n                decoded.static_detection_config.delta_g = readUInt8(bytes[offset + 1]);\n                decoded.static_detection_config.duration = readUInt16LE(bytes.slice(offset + 2, offset + 4));\n            }\n            offset += 4;\n            break;\n        case 0x66:\n            decoded.report_strategy = readReportStrategy(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x71:\n            decoded.positioning_strategy = readPositioningStrategy(bytes[offset]);\n            offset += 1;\n            break;\n        case 0x7e:\n            decoded.geofence_alarm_config = {};\n            decoded.geofence_alarm_config.enable = readEnableStatus(readUInt8(bytes[offset]));\n            decoded.geofence_alarm_config.interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            decoded.geofence_alarm_config.counts = readUInt8(bytes[offset + 3]);\n            offset += 4;\n            break;\n        case 0x87:\n            decoded.tamper_detection_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x88:\n            decoded.geofence_center_config = decoded.geofence_center_config || {};\n            decoded.geofence_center_config.latitude = readInt32LE(bytes.slice(offset, offset + 4)) / 1000000;\n            decoded.geofence_center_config.longitude = readInt32LE(bytes.slice(offset + 4, offset + 8)) / 1000000;\n            offset += 8;\n            break;\n        case 0x89:\n            decoded.geofence_center_config = decoded.geofence_center_config || {};\n            decoded.geofence_center_config.radius = readUInt32LE(bytes.slice(offset, offset + 4));\n            offset += 4;\n            break;\n        case 0x8a:\n            var timed_report_config = {};\n            timed_report_config.index = readUInt8(bytes[offset]) + 1;\n            timed_report_config.time = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            offset += 3;\n            decoded.timed_report_config = decoded.timed_report_config || [];\n            decoded.timed_report_config.push(timed_report_config);\n            break;\n        case 0x8f:\n            decoded.bluetooth_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x8e:\n            var report_type_value = readUInt8(bytes[offset]);\n            if (report_type_value === 0x00) {\n                decoded.report_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            } else if (report_type_value === 0x01) {\n                decoded.motion_report_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            } else if (report_type_value === 0x02) {\n                decoded.location_report_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            }\n            offset += 3;\n            break;\n        default:\n            throw new Error(\"unknown downlink response\");\n    }\n\n    return { data: decoded, offset: offset };\n}\n\nfunction readProtocolVersion(bytes) {\n    var major = (bytes & 0xf0) >> 4;\n    var minor = bytes & 0x0f;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readHardwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff) >> 4;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readFirmwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff).toString(16);\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readTslVersion(bytes) {\n    var major = bytes[0] & 0xff;\n    var minor = bytes[1] & 0xff;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readSerialNumber(bytes) {\n    var temp = [];\n    for (var idx = 0; idx < bytes.length; idx++) {\n        temp.push((\"0\" + (bytes[idx] & 0xff).toString(16)).slice(-2));\n    }\n    return temp.join(\"\");\n}\n\nfunction readLoRaWANClass(type) {\n    var class_map = {\n        0: \"Class A\",\n        1: \"Class B\",\n        2: \"Class C\",\n        3: \"Class CtoB\",\n    };\n    return getValue(class_map, type);\n}\n\nfunction readResetEvent(status) {\n    var status_map = { 0: \"normal\", 1: \"reset\" };\n    return getValue(status_map, status);\n}\n\nfunction readDeviceStatus(status) {\n    var status_map = { 0: \"off\", 1: \"on\" };\n    return getValue(status_map, status);\n}\n\nfunction readMAC(bytes) {\n    var temp = [];\n    for (var idx = 0; idx < bytes.length; idx++) {\n        temp.push((\"0\" + (bytes[idx] & 0xff).toString(16)).slice(-2));\n    }\n    return temp.join(\":\");\n}\n\nfunction readMotionStatus(type) {\n    var motion_status_map = {\n        0: \"unknown\",\n        1: \"start\",\n        2: \"moving\",\n        3: \"stop\",\n    };\n    return getValue(motion_status_map, type);\n}\n\nfunction readTiltStatus(type) {\n    var tilt_status_map = {\n        4: \"normal\",\n        5: \"tilt\",\n    };\n    return getValue(tilt_status_map, type);\n}\n\nfunction readGeofenceStatus(type) {\n    var geofence_status_map = {\n        0: \"inside\",\n        1: \"outside\",\n        2: \"unset\",\n        3: \"unknown\",\n    };\n    return getValue(geofence_status_map, type);\n}\n\nfunction readDevicePosition(type) {\n    var device_position_map = { 0: \"normal\", 1: \"tilt\" };\n    return getValue(device_position_map, type);\n}\n\nfunction readTamperStatus(type) {\n    var tamper_status_map = { 0: \"install\", 1: \"uninstall\" };\n    return getValue(tamper_status_map, type);\n}\n\nfunction readTemperatureAlarm(type) {\n    var alarm_map = { 0: \"normal\", 1: \"abnormal\" };\n    return getValue(alarm_map, type);\n}\n\nfunction readYesNoStatus(status) {\n    var yes_no_map = { 0: \"no\", 1: \"yes\" };\n    return getValue(yes_no_map, status);\n}\n\nfunction readEnableStatus(status) {\n    var status_map = { 0: \"disable\", 1: \"enable\" };\n    return getValue(status_map, status);\n}\n\nfunction readTimeZone(time_zone) {\n    var timezone_map = { \"-120\": \"UTC-12\", \"-110\": \"UTC-11\", \"-100\": \"UTC-10\", \"-95\": \"UTC-9:30\", \"-90\": \"UTC-9\", \"-80\": \"UTC-8\", \"-70\": \"UTC-7\", \"-60\": \"UTC-6\", \"-50\": \"UTC-5\", \"-40\": \"UTC-4\", \"-35\": \"UTC-3:30\", \"-30\": \"UTC-3\", \"-20\": \"UTC-2\", \"-10\": \"UTC-1\", 0: \"UTC\", 10: \"UTC+1\", 20: \"UTC+2\", 30: \"UTC+3\", 35: \"UTC+3:30\", 40: \"UTC+4\", 45: \"UTC+4:30\", 50: \"UTC+5\", 55: \"UTC+5:30\", 57: \"UTC+5:45\", 60: \"UTC+6\", 65: \"UTC+6:30\", 70: \"UTC+7\", 80: \"UTC+8\", 90: \"UTC+9\", 95: \"UTC+9:30\", 100: \"UTC+10\", 105: \"UTC+10:30\", 110: \"UTC+11\", 120: \"UTC+12\", 127: \"UTC+12:45\", 130: \"UTC+13\", 140: \"UTC+14\" };\n    return getValue(timezone_map, time_zone);\n}\n\nfunction readReportStrategy(type) {\n    var report_strategy_map = { 0: \"periodic\", 1: \"motion\", 2: \"timing\" };\n    return getValue(report_strategy_map, type);\n}\n\nfunction readPositioningStrategy(type) {\n    var positioning_strategy_map = { 0: \"gnss\", 1: \"wifi\", 2: \"wifi_gnss\" };\n    return getValue(positioning_strategy_map, type);\n}\n\nfunction readWiFiScanMode(type) {\n    var wifi_scan_mode_map = { 0: \"low_power\", 1: \"high_accuracy\" };\n    return getValue(wifi_scan_mode_map, type);\n}\n\nfunction readUInt8(bytes) {\n    return bytes & 0xff;\n}\n\nfunction readInt8(bytes) {\n    var ref = readUInt8(bytes);\n    return ref > 0x7f ? ref - 0x100 : ref;\n}\n\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}\n\nfunction readUInt32LE(bytes) {\n    var value = (bytes[3] << 24) + (bytes[2] << 16) + (bytes[1] << 8) + bytes[0];\n    return (value & 0xffffffff) >>> 0;\n}\n\nfunction readInt32LE(bytes) {\n    var ref = readUInt32LE(bytes);\n    return ref > 0x7fffffff ? ref - 0x100000000 : ref;\n}\n\nfunction getValue(map, key) {\n    if (RAW_VALUE) return key;\n    var value = map[key];\n    if (!value) value = \"unknown\";\n    return value;\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "milesight_at101_fh_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#2ebd59",
+                          "gradient": false,
+                          "max": 100,
+                          "min": 0,
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ebd59",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "fas fa-thermometer-half",
+                          "iconColor": "#d1311f",
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "°C",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#d1311f",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 10
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Location"
+                        },
+                        "properties": {
+                          "center": {
+                            "auto": true,
+                            "location": [
+                              0,
+                              0
+                            ]
+                          },
+                          "zoom": 15
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "latitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Motion Status"
+                        },
+                        "properties": {
+                          "color": "#4bd763",
+                          "colors": [
+                            {
+                              "blink": false,
+                              "color": "#95a5a6",
+                              "max": 0,
+                              "min": 0
+                            },
+                            {
+                              "blink": true,
+                              "color": "#f39c12",
+                              "max": 1,
+                              "min": 1
+                            },
+                            {
+                              "blink": true,
+                              "color": "#2ecc71",
+                              "max": 2,
+                              "min": 2
+                            },
+                            {
+                              "blink": false,
+                              "color": "#e74c3c",
+                              "max": 3,
+                              "min": 3
+                            }
+                          ],
+                          "size": "100px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "motion_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Motion",
+                            "processing": {
+                              "input": "motionStatusToCode"
+                            },
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Tilt Status"
+                        },
+                        "properties": {
+                          "color": "#2ecc71",
+                          "colors": [
+                            {
+                              "blink": false,
+                              "color": "#2ecc71",
+                              "max": 0,
+                              "min": 0
+                            },
+                            {
+                              "blink": true,
+                              "color": "#e74c3c",
+                              "max": 1,
+                              "min": 1
+                            }
+                          ],
+                          "size": "100px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "tilt_status",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Tilt",
+                            "processing": {
+                              "input": "tiltStatusToCode"
+                            },
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "led"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        min: 0,\n        max: 100,\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(0) + '%';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ebd59",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 10,
+                          "sizeX": 3,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(1) + '°C';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#d1311f",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Location & Tracking",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "GPS Track (Last 7 Days)"
+                        },
+                        "properties": {
+                          "center": {
+                            "auto": true,
+                            "location": [
+                              0,
+                              0
+                            ]
+                          },
+                          "zoom": 13
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "latitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "day",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Geofence Status"
+                        },
+                        "type": "group_widget",
+                        "widgets": [
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 0,
+                              "sizeX": 1,
+                              "sizeY": 5
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Legend"
+                            },
+                            "properties": {
+                              "source": "code",
+                              "template": "<div style=\"width:100%; padding:10px; font-family:Arial, sans-serif;\">\n  <div style=\"padding:8px; background-color:#2ecc71; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">\n    Inside\n  </div>\n  <div style=\"padding:8px; background-color:#e74c3c; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">\n    Outside\n  </div>\n  <div style=\"padding:8px; background-color:#95a5a6; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">\n    Unset\n  </div>\n  <div style=\"padding:8px; background-color:#34495e; color:#fff; text-align:center; border-radius:5px;\">\n    Unknown\n  </div>\n</div>"
+                            },
+                            "sources": [],
+                            "type": "html_time"
+                          },
+                          {
+                            "layout": {
+                              "col": 1,
+                              "row": 0,
+                              "sizeX": 1,
+                              "sizeY": 5
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Status"
+                            },
+                            "properties": {
+                              "color": "#2ecc71",
+                              "colors": [
+                                {
+                                  "blink": false,
+                                  "color": "#2ecc71",
+                                  "max": 0,
+                                  "min": 0
+                                },
+                                {
+                                  "blink": true,
+                                  "color": "#e74c3c",
+                                  "max": 1,
+                                  "min": 1
+                                },
+                                {
+                                  "blink": false,
+                                  "color": "#95a5a6",
+                                  "max": 2,
+                                  "min": 2
+                                },
+                                {
+                                  "blink": false,
+                                  "color": "#34495e",
+                                  "max": 3,
+                                  "min": 3
+                                }
+                              ],
+                              "size": "120px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "milesight_at101_fh_data",
+                                  "mapping": "geofence_status",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#1abc9c",
+                                "name": "Geofence",
+                                "processing": {
+                                  "input": "geofenceStatusToCode"
+                                },
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "led"
+                          }
+                        ]
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Current Position"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"width:100%; height:100%; padding:20px; font-family:Arial, sans-serif;\">\n  <div style=\"margin-bottom:15px;\">\n    <strong style=\"color:#34495e;\">Latitude:</strong>\n    <span style=\"color:#1abc9c; font-size:18px;\">{{ value[0] | number:6 }}°</span>\n  </div>\n  <div style=\"margin-bottom:15px;\">\n    <strong style=\"color:#34495e;\">Longitude:</strong>\n    <span style=\"color:#e74c3c; font-size:18px;\">{{ value[1] | number:6 }}°</span>\n  </div>\n  <div style=\"margin-top:20px; padding:10px; background-color:#ecf0f1; border-radius:5px;\">\n    <small style=\"color:#7f8c8d;\">Last update: {{ value[2] | date:'medium' }}</small>\n  </div>\n</div>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "latitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "latitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "longitude",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "longitude",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "ts",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "timestamp",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Inclination & Angles",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Initial Angle X"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "initial_angle_x",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Initial X",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Initial Angle Y"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "initial_angle_y",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Initial Y",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Initial Angle Z"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "initial_angle_z",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Initial Z",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Inclination Angle X"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_x",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "Inclination X",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Inclination Angle Y"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_y",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#8e44ad",
+                            "name": "Inclination Y",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 6,
+                          "sizeX": 2,
+                          "sizeY": 6
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Inclination Angle Z"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "icon": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "°",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_z",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#d35400",
+                            "name": "Inclination Z",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 12,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Inclination Angles (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(0) + '°';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_x",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "X Axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_y",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#8e44ad",
+                            "name": "Y Axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_at101_fh_data",
+                              "mapping": "inclination_angle_z",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#d35400",
+                            "name": "Z Axis",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
