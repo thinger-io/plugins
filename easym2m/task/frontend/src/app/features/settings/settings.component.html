@@ -1,0 +1,94 @@
+<nz-card [nzTitle]="titleTemplate" nzSize="small" nzType="inner">
+  <nz-spin [nzSpinning]="loading">
+    <!-- Status banner -->
+    <div class="tw-mb-6">
+      @if (hasCredentials) {
+        <div class="tw-flex tw-items-center tw-gap-2 tw-text-green-700 tw-bg-green-50 tw-border tw-border-green-200 tw-rounded-lg tw-px-4 tw-py-3">
+          <fa-icon [icon]="faCircleCheck"></fa-icon>
+          <span class="tw-font-medium">Credentials configured — EasyM2M API is ready to use.</span>
+        </div>
+      } @else {
+        <div class="tw-flex tw-items-center tw-gap-2 tw-text-amber-700 tw-bg-amber-50 tw-border tw-border-amber-200 tw-rounded-lg tw-px-4 tw-py-3">
+          <fa-icon [icon]="faTriangleExclamation"></fa-icon>
+          <span class="tw-font-medium">No credentials configured. Please enter your EasyM2M API credentials below.</span>
+        </div>
+      }
+    </div>
+
+    <!-- Credentials form -->
+    <form nz-form [formGroup]="form" nzLayout="vertical" class="tw-max-w-lg">
+      <nz-form-item>
+        <nz-form-label nzRequired>API Client ID</nz-form-label>
+        <nz-form-control nzErrorTip="API Client ID is required">
+          <input nz-input formControlName="apiClientId" placeholder="Your EasyM2M API Client ID" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>API Password</nz-form-label>
+        <nz-form-control nzErrorTip="API Password is required">
+          <nz-input-group [nzSuffix]="passwordSuffix">
+            <input nz-input formControlName="apiPassword"
+              [type]="passwordVisible ? 'text' : 'password'"
+              placeholder="Your EasyM2M API Password" />
+          </nz-input-group>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>API Key</nz-form-label>
+        <nz-form-control nzErrorTip="API Key is required">
+          <nz-input-group [nzSuffix]="apiKeySuffix">
+            <input nz-input formControlName="apiKey"
+              [type]="apiKeyVisible ? 'text' : 'password'"
+              placeholder="Your EasyM2M API Key" />
+          </nz-input-group>
+        </nz-form-control>
+      </nz-form-item>
+
+      <!-- Action buttons -->
+      <div class="tw-flex tw-gap-2 tw-mt-2">
+        @if (!editMode) {
+          <button nz-button nzType="default" type="button" (click)="enterEditMode()">
+            <fa-icon [icon]="faPenToSquare" class="tw-mr-2"></fa-icon>Edit Credentials
+          </button>
+        } @else {
+          <button nz-button nzType="primary" type="button" (click)="saveSettings()" [nzLoading]="saving">
+            <fa-icon [icon]="faSave" class="tw-mr-2"></fa-icon>Save
+          </button>
+          <button nz-button nzType="default" type="button" (click)="cancelEdit()" [disabled]="saving">
+            Cancel
+          </button>
+        }
+      </div>
+    </form>
+  </nz-spin>
+</nz-card>
+
+<!-- Card title -->
+<ng-template #titleTemplate>
+  <span class="tw-mr-2">
+    <fa-icon [icon]="faKey"></fa-icon>
+  </span>
+  <span class="tw-font-bold">EasyM2M API Credentials</span>
+</ng-template>
+
+<!-- Password visibility toggle -->
+<ng-template #passwordSuffix>
+  @if (editMode) {
+    <button nz-button nzType="text" nzSize="small" type="button"
+      (click)="passwordVisible = !passwordVisible">
+      <fa-icon [icon]="passwordVisible ? faEyeSlash : faEye"></fa-icon>
+    </button>
+  }
+</ng-template>
+
+<!-- API Key visibility toggle -->
+<ng-template #apiKeySuffix>
+  @if (editMode) {
+    <button nz-button nzType="text" nzSize="small" type="button"
+      (click)="apiKeyVisible = !apiKeyVisible">
+      <fa-icon [icon]="apiKeyVisible ? faEyeSlash : faEye"></fa-icon>
+    </button>
+  }
+</ng-template>

@@ -1,0 +1,58 @@
+
+<form nz-form [formGroup]="applicationForm" (ngSubmit)="onSubmit()">
+
+  <!-- Application Name -->
+  <nz-form-item>
+      <nz-form-label
+        [nzSpan]="8"
+        [nzXs]="26"
+        nzFor="applicationName"
+        nzTooltipTitle="Application name that will be used to link to the application in the TTN stack platform"
+        nzRequired
+      >
+        Application Name
+      </nz-form-label>
+      <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+        <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName" placeholder="Application name" />
+      </nz-form-control>
+  </nz-form-item>
+
+  <!-- Prefix -->
+  <nz-form-item>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="deviceIdPrefix"
+      nzTooltipTitle="The prefix for the device IDs and which will be used to match against the Thinger.io Product autoprovision feature"
+      nzRequired
+    >
+      Device Id Prefix
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorPrefixField">
+      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix" placeholder="Ex: my_device_" />
+      <ng-template #errorPrefixField let-control>
+        @if (control.errors?.['prefixUnique']) {
+          The Device Id Prefix must be unique
+        }
+      </ng-template>
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Enabled -->
+  <nz-form-item>
+      <nz-form-label
+              [nzSpan]="8"
+              [nzXs]="26"
+              nzFor="enabled"
+              nzTooltipTitle="Enable or disable the application data proccesing"
+              nzRequired
+      >
+          Enabled
+      </nz-form-label>
+      <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+          <nz-switch formControlName="enabled"></nz-switch>
+      </nz-form-control>
+  </nz-form-item>
+
+
+</form>
