@@ -46,8 +46,6 @@ export interface UpdateSimCardPayload {
   lifeCycleStatus?: 'ACTIVE' | 'TEST' | 'ACTIVATION_READY' | 'SUSPENDED';
   alias?: string;
   idAlarm: string | null;
-  dailyConsumptionThreshold?: ConsumptionThreshold;
-  monthlyConsumptionThreshold?: ConsumptionThreshold;
 }
 
 export interface Alarm {
