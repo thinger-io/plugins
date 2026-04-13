@@ -13,8 +13,8 @@
     "name": "EasyM2M",
     "description": "NB-IoT SIM Card Management via EasyM2M API",
     "category": "connectivity",
-    "image": "assets/easym2m-logo.png",
-    "icon": "assets/easym2m-logo.png"
+    "image": "assets/easym2m_logo.png",
+    "icon": "assets/easym2m_logo.png"
   },
   "tokens": {
     "easym2m_plugin": {

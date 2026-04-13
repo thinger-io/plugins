@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subscription, interval } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SimCardsService, SimCard, SimCardsResponse, SIM_STATUSES } from '../../core/services/simcards.service';
@@ -36,7 +37,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
   ],
   templateUrl: './simcards.component.html',
 })
-export class SimCardsComponent implements OnInit {
+export class SimCardsComponent implements OnInit, OnDestroy {
   simCards: SimCard[] = [];
   loading = false;
   totalItems = 0;
@@ -47,6 +48,9 @@ export class SimCardsComponent implements OnInit {
   detailVisible = false;
   detailLoading = false;
   selectedSimCard: SimCard | null = null;
+
+  private refreshSub?: Subscription;
+  private readonly REFRESH_INTERVAL_MS = 30_000;
 
   protected faRotateRight = faRotateRight;
   protected faFilter = faFilter;
@@ -63,6 +67,15 @@ export class SimCardsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSimCards();
+    this.refreshSub = interval(this.REFRESH_INTERVAL_MS).subscribe(() => {
+      if (!this.loading && !this.detailVisible) {
+        this.loadSimCards();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
   }
 
   loadSimCards(): void {

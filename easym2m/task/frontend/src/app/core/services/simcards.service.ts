@@ -42,19 +42,10 @@ export interface SimCardsResponse {
   data: SimCard[];
 }
 
-export interface ConsumptionThreshold {
-  dataEnabled?: boolean;
-  dataLimit?: number;
-  voiceEnabled?: boolean;
-  voiceLimit?: number;
-  smsEnabled?: boolean;
-  smsLimit?: number;
-}
-
 export interface UpdateSimCardPayload {
-  lifeCycleStatus?: 'ACTIVE' | 'DEACTIVATED';
+  lifeCycleStatus?: 'ACTIVE' | 'TEST' | 'ACTIVATION_READY' | 'SUSPENDED';
   alias?: string;
-  idAlarm?: string | null;
+  idAlarm: string | null;
   dailyConsumptionThreshold?: ConsumptionThreshold;
   monthlyConsumptionThreshold?: ConsumptionThreshold;
 }
@@ -68,36 +59,6 @@ export interface Alarm {
 export interface AlarmsResponse {
   info: SimCardPageInfo;
   data: Alarm[];
-}
-
-export interface ConsumptionRecord {
-  timeStamp?: string;
-  msisdn?: string;
-  icc?: string;
-  imsi?: string;
-  operatorNetwork?: string;
-  uploadedBytes?: number;
-  downloadedBytes?: number;
-  transferedBytes?: number;
-  transmissions?: number;
-  seconds?: number;
-  calls?: number;
-  sms?: number;
-  [key: string]: any;
-}
-
-export interface ConsumptionResponse {
-  info: SimCardPageInfo;
-  data: ConsumptionRecord[];
-}
-
-export interface BalanceResponse {
-  iccid?: string;
-  balance: number;
-}
-
-export interface DiagnosticsResult {
-  output: string;
 }
 
 export const SIM_STATUSES: { value: string; label: string }[] = [
@@ -157,32 +118,4 @@ export class SimCardsService {
     return this.http.delete(`./alarm/${id}`);
   }
 
-  getSimConsumption(
-    iccid: string,
-    year: string,
-    month: string,
-    service: string,
-    size: number,
-    index: number
-  ): Observable<ConsumptionResponse> {
-    const params = new HttpParams()
-      .set('year', year)
-      .set('month', month)
-      .set('service', service)
-      .set('size', size.toString())
-      .set('index', index.toString());
-    return this.http.get<ConsumptionResponse>(`./simcard/${iccid}/consumption`, { params });
-  }
-
-  getSimBalance(iccid: string): Observable<BalanceResponse> {
-    return this.http.get<BalanceResponse>(`./simcard/${iccid}/balance`);
-  }
-
-  topupBalance(iccid: string, amount: number): Observable<any> {
-    return this.http.post(`./simcard/${iccid}/balance/topup`, { amount });
-  }
-
-  runDiagnostics(iccid: string, type: 'gsm' | 'gprs'): Observable<DiagnosticsResult> {
-    return this.http.get<DiagnosticsResult>(`./simcard/${iccid}/diagnostics/${type}`);
-  }
 }
