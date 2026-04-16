@@ -1,0 +1,538 @@
+{
+  "name": "milesight_iot_em410_rdl",
+  "version": "1.0.0",
+  "description": "EM410-RDL is a non-contact radar distance/level sensor using millimeter wave technology. It measures signals at higher frequencies for stable performance over long distances with minimal environmental interference.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "milesight-iot-em410-rdl"
+  },
+  "metadata": {
+    "name": "Milesight-Iot EM410-RDL",
+    "description": "EM410-RDL is a non-contact radar distance/level sensor using millimeter wave technology. It measures signals at higher frequencies for stable performance over long distances with minimal environmental interference.",
+    "image": "assets/em410-rdl.png",
+    "category": "devices",
+    "vendor": "milesight-iot"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "EM410-RDL is a non-contact radar distance/level sensor using millimeter wave technology. It measures signals at higher frequencies for stable performance over long distances with minimal environmental interference.",
+        "enabled": true,
+        "name": "Milesight-Iot EM410-RDL",
+        "product": "milesight_iot_em410_rdl",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "em410_rdl_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "milesight_em410_rdl_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              }
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink(input) {\n    var res = Decoder(input.bytes, input.fPort);\n    if (res.error) {\n        return {\n            errors: [res.error],\n        };\n    }\n    return {\n        data: res,\n    };\n}\n/**\n * Payload Decoder\n *\n * Copyright 2025 Milesight IoT\n *\n * @product EM410-RDL\n */\nvar RAW_VALUE = 0x00;\n\n/* eslint no-redeclare: \"off\" */\n/* eslint-disable */\n\n// The Things Network\nfunction Decoder(bytes, port) {\n    return milesightDeviceDecode(bytes);\n}\n/* eslint-enable */\n\nfunction milesightDeviceDecode(bytes) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length; ) {\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n\n        // IPSO VERSION\n        if (channel_id === 0xff && channel_type === 0x01) {\n            decoded.ipso_version = readProtocolVersion(bytes[i]);\n            i += 1;\n        }\n        // HARDWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x09) {\n            decoded.hardware_version = readHardwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // FIRMWARE VERSION\n        else if (channel_id === 0xff && channel_type === 0x0a) {\n            decoded.firmware_version = readFirmwareVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // TSL VERSION\n        else if (channel_id === 0xff && channel_type === 0xff) {\n            decoded.tsl_version = readTslVersion(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // SERIAL NUMBER\n        else if (channel_id === 0xff && channel_type === 0x16) {\n            decoded.sn = readSerialNumber(bytes.slice(i, i + 8));\n            i += 8;\n        }\n        // LORAWAN CLASS TYPE\n        else if (channel_id === 0xff && channel_type === 0x0f) {\n            decoded.lorawan_class = readLoRaWANClass(bytes[i]);\n            i += 1;\n        }\n        // RESET EVENT\n        else if (channel_id === 0xff && channel_type === 0xfe) {\n            decoded.reset_event = readResetEvent(1);\n            i += 1;\n        }\n        // DEVICE STATUS\n        else if (channel_id === 0xff && channel_type === 0x0b) {\n            decoded.device_status = readOnOffStatus(1);\n            i += 1;\n        }\n        // BATTERY\n        else if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = readUInt8(bytes[i]);\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        }\n        // DISTANCE\n        else if (channel_id === 0x04 && channel_type === 0x82) {\n            decoded.distance = readInt16LE(bytes.slice(i, i + 2));\n            i += 2;\n        }\n        // POSITION\n        else if (channel_id === 0x05 && channel_type === 0x00) {\n            decoded.position = readPositionStatus(bytes[i]);\n            i += 1;\n        }\n        // RADAR SIGNAL STRENGTH\n        else if (channel_id === 0x06 && channel_type === 0xc7) {\n            decoded.radar_signal_rssi = readInt16LE(bytes.slice(i, i + 2)) / 100;\n            i += 2;\n        }\n        // DISTANCE ALARM\n        else if (channel_id === 0x84 && channel_type === 0x82) {\n            var data = {};\n            data.distance = readInt16LE(bytes.slice(i, i + 2));\n            data.distance_alarm = readDistanceAlarm(bytes[i + 2]);\n            i += 3;\n\n            decoded.distance = data.distance;\n            decoded.event = decoded.event || [];\n            decoded.event.push(data);\n        }\n        // DISTANCE MUTATION ALARM\n        else if (channel_id === 0x94 && channel_type === 0x82) {\n            var data = {};\n            data.distance = readInt16LE(bytes.slice(i, i + 2));\n            data.distance_mutation = readInt16LE(bytes.slice(i + 2, i + 4));\n            data.distance_alarm = readDistanceAlarm(bytes[i + 4]);\n            i += 5;\n\n            decoded.distance = data.distance;\n            decoded.event = decoded.event || [];\n            decoded.event.push(data);\n        }\n        // DISTANCE EXCEPTION ALARM\n        else if (channel_id === 0xb4 && channel_type === 0x82) {\n            var distance_raw_data = readUInt16LE(bytes.slice(i, i + 2));\n            var distance_value = readInt16LE(bytes.slice(i, i + 2));\n            var distance_exception = readDistanceException(bytes[i + 2]);\n            i += 3;\n\n            var data = {};\n            if (distance_raw_data === 0xfffd || distance_raw_data === 0xffff) {\n                // IGNORE NO TARGET AND SENSOR EXCEPTION\n            } else {\n                data.distance = distance_value;\n            }\n            data.distance_exception = distance_exception;\n\n            decoded.event = decoded.event || [];\n            decoded.event.push(data);\n        }\n        // HISTORY\n        else if (channel_id === 0x20 && channel_type === 0xce) {\n            var timestamp = readUInt32LE(bytes.slice(i, i + 4));\n            var distance_raw_data = readUInt16LE(bytes.slice(i + 4, i + 6));\n            var distance_value = readInt16LE(bytes.slice(i + 4, i + 6));\n            var temperature_raw_data = readUInt16LE(bytes.slice(i + 6, i + 8));\n            var temperature_value = readInt16LE(bytes.slice(i + 6, i + 8)) / 10;\n            var mutation = readInt16LE(bytes.slice(i + 8, i + 10));\n            var event_value = readUInt8(bytes[i + 10]);\n            i += 11;\n\n            var data = {};\n            data.timestamp = timestamp;\n            if (distance_raw_data === 0xfffd) {\n                data.distance_sensor_status = \"no target\";\n            } else if (distance_raw_data === 0xffff) {\n                data.distance_sensor_status = \"sensor exception\";\n            } else if (distance_raw_data === 0xfffe) {\n                data.distance_sensor_status = \"disabled\";\n            } else {\n                data.distance = distance_value;\n            }\n\n            if (temperature_raw_data === 0xfffe) {\n                data.temperature_sensor_status = \"disabled\";\n            } else if (temperature_raw_data === 0xffff) {\n                data.temperature_sensor_status = \"sensor exception\";\n            } else {\n                data.temperature = temperature_value;\n            }\n\n            var event = readHistoryEvent(event_value);\n            if (event.length > 0) {\n                data.event = event;\n            }\n            if (event.indexOf(\"mutation alarm\") !== -1) {\n                data.distance_mutation = mutation;\n            }\n\n            decoded.history = decoded.history || [];\n            decoded.history.push(data);\n        }\n        // DOWNLINK RESPONSE\n        else if (channel_id === 0xfe || channel_id === 0xff) {\n            var result = handle_downlink_response(channel_type, bytes, i);\n            decoded = Object.assign(decoded, result.data);\n            i = result.offset;\n        }\n        // DOWNLINK RESPONSE\n        else if (channel_id === 0xf8 || channel_id === 0xf9) {\n            var result = handle_downlink_response_ext(channel_id, channel_type, bytes, i);\n            decoded = Object.assign(decoded, result.data);\n            i = result.offset;\n        } else {\n            break;\n        }\n    }\n\n    return decoded;\n}\n\n// 0xFE\nfunction handle_downlink_response(channel_type, bytes, offset) {\n    var decoded = {};\n\n    switch (channel_type) {\n        case 0x06:\n            var data = readUInt8(bytes[offset]);\n            var min = readInt16LE(bytes.slice(offset + 1, offset + 3));\n            var max = readInt16LE(bytes.slice(offset + 3, offset + 5));\n            // skip 4 bytes (reserved)\n            offset += 9;\n\n            var condition_type = data & 0x07;\n            var id = (data >>> 3) & 0x07;\n            var alarm_release_enable = (data >>> 7) & 0x01;\n            if (id === 1) {\n                decoded.distance_alarm_config = {};\n                decoded.distance_alarm_config.enable = readEnableStatus(condition_type === 0 ? 0 : 1);\n                decoded.distance_alarm_config.condition = readConditionType(condition_type);\n                decoded.distance_alarm_config.alarm_release_enable = readEnableStatus(alarm_release_enable);\n                decoded.distance_alarm_config.threshold_min = min;\n                decoded.distance_alarm_config.threshold_max = max;\n            } else if (id === 2) {\n                decoded.distance_mutation_alarm_config = {};\n                decoded.distance_mutation_alarm_config.enable = readEnableStatus(condition_type === 0 ? 0 : 1);\n                decoded.distance_mutation_alarm_config.alarm_release_enable = readEnableStatus(alarm_release_enable);\n                decoded.distance_mutation_alarm_config.mutation = max;\n            } else if (id === 3) {\n                decoded.tank_mode_distance_alarm_config = {};\n                decoded.tank_mode_distance_alarm_config.enable = readEnableStatus(condition_type === 0 ? 0 : 1);\n                decoded.tank_mode_distance_alarm_config.condition = readConditionType(condition_type);\n                decoded.tank_mode_distance_alarm_config.alarm_release_enable = readEnableStatus(alarm_release_enable);\n                decoded.tank_mode_distance_alarm_config.threshold_min = min;\n                decoded.tank_mode_distance_alarm_config.threshold_max = max;\n            } else if (id === 4) {\n                decoded.tank_mode_distance_mutation_alarm_config = {};\n                decoded.tank_mode_distance_mutation_alarm_config.enable = readEnableStatus(condition_type === 0 ? 0 : 1);\n                decoded.tank_mode_distance_mutation_alarm_config.alarm_release_enable = readEnableStatus(alarm_release_enable);\n                decoded.tank_mode_distance_mutation_alarm_config.mutation = max;\n            }\n            break;\n        case 0x10:\n            decoded.reboot = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x1b:\n            decoded.distance_range = {};\n            decoded.distance_range.mode = readDistanceMode(readUInt8(bytes[offset]));\n            // skip 2 bytes (reserved)\n            decoded.distance_range.max = readUInt16LE(bytes.slice(offset + 3, offset + 5));\n            offset += 5;\n            break;\n        case 0x1c:\n            decoded.recollection_config = {};\n            decoded.recollection_config.counts = readUInt8(bytes[offset]);\n            decoded.recollection_config.interval = readUInt8(bytes[offset + 1]);\n            offset += 2;\n            break;\n        case 0x27:\n            decoded.clear_history = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x28:\n            decoded.report_status = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x2a:\n            var calibrate_type = readUInt8(bytes[offset]);\n            offset += 1;\n\n            switch (calibrate_type) {\n                case 0:\n                    decoded.radar_calibration = readYesNoStatus(1);\n                    break;\n                case 1:\n                    decoded.radar_blind_calibration = readYesNoStatus(1);\n                    break;\n            }\n            break;\n        case 0x3e:\n            decoded.tilt_distance_link = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x4a:\n            decoded.sync_time = readYesNoStatus(1);\n            offset += 1;\n            break;\n        case 0x68:\n            decoded.history_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x69:\n            decoded.retransmit_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x6a:\n            var interval_type = readUInt8(bytes[offset]);\n            switch (interval_type) {\n                case 0:\n                    decoded.retransmit_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n                    break;\n                case 1:\n                    decoded.resend_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n                    break;\n            }\n            offset += 3;\n            break;\n        case 0x8e:\n            // ignore the first byte\n            decoded.report_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            offset += 3;\n            break;\n        case 0xab:\n            decoded.distance_calibration_settings = {};\n            decoded.distance_calibration_settings.enable = readEnableStatus(readUInt8(bytes[offset]));\n            decoded.distance_calibration_settings.calibration_value = readInt16LE(bytes.slice(offset + 1, offset + 3));\n            offset += 3;\n            break;\n        case 0xbd:\n            decoded.time_zone = readTimeZone(readInt16LE(bytes.slice(offset, offset + 2)));\n            offset += 2;\n            break;\n        case 0xf2:\n            decoded.alarm_counts = readUInt16LE(bytes.slice(offset, offset + 2));\n            offset += 2;\n            break;\n        default:\n            throw new Error(\"unknown downlink response\");\n    }\n\n    return { data: decoded, offset: offset };\n}\n\n// 0xF8\nfunction handle_downlink_response_ext(code, channel_type, bytes, offset) {\n    var decoded = {};\n\n    switch (channel_type) {\n        case 0x12:\n            decoded.distance_mode = readDistanceMode(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x13:\n            decoded.blind_detection_enable = readEnableStatus(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x14:\n            decoded.signal_quality = readInt16LE(bytes.slice(offset, offset + 2));\n            offset += 2;\n            break;\n        case 0x15:\n            decoded.distance_threshold_sensitive = readInt16LE(bytes.slice(offset, offset + 2)) / 10;\n            offset += 2;\n            break;\n        case 0x16:\n            decoded.peak_sorting = readPeakSortingAlgorithm(readUInt8(bytes[offset]));\n            offset += 1;\n            break;\n        case 0x0d:\n            decoded.retransmit_config = {};\n            decoded.retransmit_config.enable = readEnableStatus(readUInt8(bytes[offset]));\n            decoded.retransmit_config.retransmit_interval = readUInt16LE(bytes.slice(offset + 1, offset + 3));\n            offset += 3;\n            break;\n        case 0x39:\n            decoded.collection_interval = readUInt16LE(bytes.slice(offset, offset + 2));\n            offset += 2;\n            break;\n        default:\n            throw new Error(\"unknown downlink response\");\n    }\n\n    if (hasResultFlag(code)) {\n        var result_value = readUInt8(bytes[offset]);\n        offset += 1;\n\n        if (result_value !== 0) {\n            var request = decoded;\n            decoded = {};\n            decoded.device_response_result = {};\n            decoded.device_response_result.channel_type = channel_type;\n            decoded.device_response_result.result = readResultStatus(result_value);\n            decoded.device_response_result.request = request;\n        }\n    }\n\n    return { data: decoded, offset: offset };\n}\n\nfunction hasResultFlag(code) {\n    return code === 0xf8;\n}\n\nfunction readResultStatus(status) {\n    var status_map = { 0: \"success\", 1: \"forbidden\", 2: \"invalid parameter\" };\n    return getValue(status_map, status);\n}\n\nfunction readProtocolVersion(bytes) {\n    var major = (bytes & 0xf0) >> 4;\n    var minor = bytes & 0x0f;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readHardwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff) >> 4;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readFirmwareVersion(bytes) {\n    var major = (bytes[0] & 0xff).toString(16);\n    var minor = (bytes[1] & 0xff).toString(16);\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readTslVersion(bytes) {\n    var major = bytes[0] & 0xff;\n    var minor = bytes[1] & 0xff;\n    return \"v\" + major + \".\" + minor;\n}\n\nfunction readSerialNumber(bytes) {\n    var temp = [];\n    for (var idx = 0; idx < bytes.length; idx++) {\n        temp.push((\"0\" + (bytes[idx] & 0xff).toString(16)).slice(-2));\n    }\n    return temp.join(\"\");\n}\n\nfunction readLoRaWANClass(type) {\n    var class_map = {\n        0: \"Class A\",\n        1: \"Class B\",\n        2: \"Class C\",\n        3: \"Class CtoB\",\n    };\n    return getValue(class_map, type);\n}\n\nfunction readResetEvent(status) {\n    var status_map = { 0: \"normal\", 1: \"reset\" };\n    return getValue(status_map, status);\n}\n\nfunction readOnOffStatus(status) {\n    var status_map = { 0: \"off\", 1: \"on\" };\n    return getValue(status_map, status);\n}\n\nfunction readEnableStatus(status) {\n    var status_map = { 0: \"disable\", 1: \"enable\" };\n    return getValue(status_map, status);\n}\n\nfunction readYesNoStatus(status) {\n    var status_map = { 0: \"no\", 1: \"yes\" };\n    return getValue(status_map, status);\n}\n\nfunction readPositionStatus(status) {\n    var status_map = { 0: \"normal\", 1: \"tilt\" };\n    return getValue(status_map, status);\n}\n\nfunction readDistanceMode(status) {\n    var status_map = { 0: \"general\", 1: \"rainwater\", 2: \"wastewater\", 3: \"tank\" };\n    return getValue(status_map, status);\n}\n\nfunction readPeakSortingAlgorithm(status) {\n    var status_map = { 0: \"closest\", 1: \"strongest\" };\n    return getValue(status_map, status);\n}\n\nfunction readTimeZone(time_zone) {\n    var timezone_map = { \"-720\": \"UTC-12\", \"-660\": \"UTC-11\", \"-600\": \"UTC-10\", \"-570\": \"UTC-9:30\", \"-540\": \"UTC-9\", \"-480\": \"UTC-8\", \"-420\": \"UTC-7\", \"-360\": \"UTC-6\", \"-300\": \"UTC-5\", \"-240\": \"UTC-4\", \"-210\": \"UTC-3:30\", \"-180\": \"UTC-3\", \"-120\": \"UTC-2\", \"-60\": \"UTC-1\", 0: \"UTC\", 60: \"UTC+1\", 120: \"UTC+2\", 180: \"UTC+3\", 210: \"UTC+3:30\", 240: \"UTC+4\", 270: \"UTC+4:30\", 300: \"UTC+5\", 330: \"UTC+5:30\", 345: \"UTC+5:45\", 360: \"UTC+6\", 390: \"UTC+6:30\", 420: \"UTC+7\", 480: \"UTC+8\", 540: \"UTC+9\", 570: \"UTC+9:30\", 600: \"UTC+10\", 630: \"UTC+10:30\", 660: \"UTC+11\", 720: \"UTC+12\", 765: \"UTC+12:45\", 780: \"UTC+13\", 840: \"UTC+14\" };\n    return getValue(timezone_map, time_zone);\n}\n\nfunction readDistanceAlarm(status) {\n    var status_map = {\n        0: \"threshold alarm release\",\n        1: \"threshold alarm\",\n        2: \"mutation alarm\",\n    };\n    return getValue(status_map, status);\n}\n\nfunction readDistanceException(status) {\n    var status_map = {\n        0: \"blind spot alarm release\",\n        1: \"blind spot alarm\",\n        2: \"no target\",\n        3: \"sensor exception\",\n    };\n    return getValue(status_map, status);\n}\n\nfunction readHistoryEvent(status) {\n    var event = [];\n\n    if (((status >>> 0) & 0x01) === 0x01) {\n        event.push(\"threshold alarm\");\n    }\n    if (((status >>> 1) & 0x01) === 0x01) {\n        event.push(\"threshold alarm release\");\n    }\n    if (((status >>> 2) & 0x01) === 0x01) {\n        event.push(\"blind spot alarm\");\n    }\n    if (((status >>> 3) & 0x01) === 0x01) {\n        event.push(\"blind spot alarm release\");\n    }\n    if (((status >>> 4) & 0x01) === 0x01) {\n        event.push(\"mutation alarm\");\n    }\n    if (((status >>> 5) & 0x01) === 0x01) {\n        event.push(\"tilt alarm\");\n    }\n\n    return event;\n}\n\nfunction readConditionType(condition) {\n    var condition_map = { 0: \"disable\", 1: \"below\", 2: \"above\", 3: \"between\", 4: \"outside\", 5: \"mutation\" };\n    return getValue(condition_map, condition);\n}\n\n/* eslint-disable */\nfunction readUInt8(bytes) {\n    return bytes & 0xff;\n}\n\nfunction readInt8(bytes) {\n    var ref = readUInt8(bytes);\n    return ref > 0x7f ? ref - 0x100 : ref;\n}\n\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}\n\nfunction readUInt32LE(bytes) {\n    var value = (bytes[3] << 24) + (bytes[2] << 16) + (bytes[1] << 8) + bytes[0];\n    return (value & 0xffffffff) >>> 0;\n}\n\nfunction readInt32LE(bytes) {\n    var ref = readUInt32LE(bytes);\n    return ref > 0x7fffffff ? ref - 0x100000000 : ref;\n}\n\nfunction getValue(map, key) {\n    if (RAW_VALUE) return key;\n\n    var value = map[key];\n    if (!value) value = \"unknown\";\n    return value;\n}\n\nif (!Object.assign) {\n    Object.defineProperty(Object, \"assign\", {\n        enumerable: false,\n        configurable: true,\n        writable: true,\n        value: function (target) {\n            \"use strict\";\n            if (target == null) {\n                throw new TypeError(\"Cannot convert first argument to object\");\n            }\n\n            var to = Object(target);\n            for (var i = 1; i < arguments.length; i++) {\n                var nextSource = arguments[i];\n                if (nextSource == null) {\n                    continue;\n                }\n                nextSource = Object(nextSource);\n\n                var keysArray = Object.keys(Object(nextSource));\n                for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {\n                    var nextKey = keysArray[nextIndex];\n                    var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);\n                    if (desc !== undefined && desc.enumerable) {\n                        // concat array\n                        if (Array.isArray(to[nextKey]) && Array.isArray(nextSource[nextKey])) {\n                            to[nextKey] = to[nextKey].concat(nextSource[nextKey]);\n                        } else {\n                            to[nextKey] = nextSource[nextKey];\n                        }\n                    }\n                }\n            }\n            return to;\n        },\n    });\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "milesight_em410_rdl_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Dashboard",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Distance"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "75px",
+                          "textWeight": "font-light",
+                          "unit": "mm",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "distance",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "75px",
+                          "textWeight": "font-light",
+                          "unit": "ºC",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 10,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Signal Strength"
+                        },
+                        "properties": {
+                          "decimalPlaces": 2,
+                          "enableExtraTextColor": false,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "extraText": "",
+                          "extraTextColor": "#1E313E",
+                          "extraTextColorConditions": [],
+                          "extraTextConditions": [],
+                          "extraTextPosition": "above-value",
+                          "extraTextSize": "20px",
+                          "extraTextWeight": "font-light",
+                          "icon": "",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "iconVerticalOffset": "0px",
+                          "link": "",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [],
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "dB",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "radar_signal_rssi",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 0,
+                          "sizeX": 4,
+                          "sizeY": 10
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Distance (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        title: {\n            text: 'Distance (mm)'\n        },\n        labels: {\n            formatter: function (val) {\n                if (val !== null && typeof val !== 'undefined')\n                    return val.toFixed(0);\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "distance",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Distance",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 10,
+                          "sizeX": 4,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature & Signal Strength (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth',\n        width: 2\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: [\n        {\n            title: {\n                text: 'Temperature (ºC)'\n            },\n            labels: {\n                formatter: function (val) {\n                    if (val !== null && typeof val !== 'undefined')\n                        return val.toFixed(1);\n                }\n            }\n        },\n        {\n            opposite: true,\n            title: {\n                text: 'Signal Strength (dB)'\n            },\n            labels: {\n                formatter: function (val) {\n                    if (val !== null && typeof val !== 'undefined')\n                        return val.toFixed(2);\n                }\n            }\n        }\n    ],\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "temperature",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          },
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "radar_signal_rssi",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Signal Strength",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 15,
+                          "sizeX": 2,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery"
+                        },
+                        "properties": {
+                          "color": "#2ebd59",
+                          "gradient": false,
+                          "max": 100,
+                          "min": 0,
+                          "size": "75px",
+                          "unit": "%"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Source 1",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "gauge"
+                      },
+                      {
+                        "layout": {
+                          "col": 2,
+                          "row": 18,
+                          "sizeX": 4,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level (24h)"
+                        },
+                        "properties": {
+                          "alignTimeSeries": false,
+                          "dataAppend": false,
+                          "options": "var options = {\n    chart: {\n        type: 'area'\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        min: 0,\n        max: 100,\n        title: {\n            text: 'Battery (%)'\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                          "realTimeUpdate": true
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {},
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "milesight_em410_rdl_data",
+                              "mapping": "battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ebd59",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "magnitude": "hour",
+                              "mode": "relative",
+                              "period": "latest",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
