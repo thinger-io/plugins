@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_em400_mud",
   "version": "1.0.0",
-  "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designedto detect small-range areas and small blind spots.",
+  "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designed to detect small-range areas and small blind spots.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot EM400-MUD",
-    "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designedto detect small-range areas and small blind spots.",
+    "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designed to detect small-range areas and small blind spots.",
     "image": "assets/em400-mud.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designedto detect small-range areas and small blind spots.",
+        "description": "EM400-MUD is a multifunctional ultrasonic distance sensor designed to detect small-range areas and small blind spots.",
         "enabled": true,
         "name": "Milesight-Iot EM400-MUD",
         "product": "milesight_iot_em400_mud",
