@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_ct303",
   "version": "1.0.0",
-  "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+  "description": "The Milesight CT303 is a self-powered LoRaWAN® Current Transformer for remote energy monitoring. It features a non-invasive 100A split-core design, delivering high-accuracy consumption data and real-time threshold alarms without requiring batteries",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot CT303",
-    "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+    "description": "The Milesight CT303 is a self-powered LoRaWAN® Current Transformer for remote energy monitoring. It features a non-invasive 100A split-core design, delivering high-accuracy consumption data and real-time threshold alarms without requiring batteries.",
     "image": "assets/ct303.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+        "description": ""The Milesight CT303 is a self-powered LoRaWAN® Current Transformer for remote energy monitoring. It features a non-invasive 100A split-core design, delivering high-accuracy consumption data and real-time threshold alarms without requiring batteries.",
         "enabled": true,
         "name": "Milesight-Iot CT303",
         "product": "milesight_iot_ct303",
@@ -67,7 +67,7 @@
             "device_autoprovisioning": {
               "config": {
                 "mode": "pattern",
-                "pattern": "ct30[35]_.*"
+                "pattern": "ct303_.*"
               },
               "enabled": true
             }
