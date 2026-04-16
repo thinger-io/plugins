@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_em400_udl",
   "version": "1.0.0",
-  "description": "EM400-UDL is a non-contact ultrasonic distancesensordesigned for outdoor applications such as monitoringwaterlevel, fill level of tanks and silos, presence of objects, orsnowlevel",
+  "description": "EM400-UDL is a non-contact ultrasonic distance sensor designed for outdoor applications such as monitoring waterlevel, fill level of tanks and silos, presence of objects, or snow level",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot EM400-UDL",
-    "description": "EM400-UDL is a non-contact ultrasonic distancesensordesigned for outdoor applications such as monitoringwaterlevel, fill level of tanks and silos, presence of objects, orsnowlevel",
+    "description": "EM400-UDL is a non-contact ultrasonic distance sensor designed for outdoor applications such as monitoring waterlevel, fill level of tanks and silos, presence of objects, or snow level",
     "image": "assets/em400-udl.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "EM400-UDL is a non-contact ultrasonic distancesensordesigned for outdoor applications such as monitoringwaterlevel, fill level of tanks and silos, presence of objects, orsnowlevel",
+        "description": "EM400-UDL is a non-contact ultrasonic distance sensor designed for outdoor applications such as monitoring waterlevel, fill level of tanks and silos, presence of objects, or snow level",
         "enabled": true,
         "name": "Milesight-Iot EM400-UDL",
         "product": "milesight_iot_em400_udl",
