@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_ct305",
   "version": "1.0.0",
-  "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+  "description": "The CT305 is a LoRaWAN® Smart Current Transformer designed for remote energy monitoring and consumption analysis. It offers multiple current options to fit various setups and supports sending threshold alarms when power usage exceeds predefined limits.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot CT305",
-    "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+    "description": "The CT305 is a LoRaWAN® Smart Current Transformer designed for remote energy monitoring and consumption analysis. It offers multiple current options to fit various setups and supports sending threshold alarms when power usage exceeds predefined limits.",
     "image": "assets/ct305.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "CT30x is a LoRaWAN® Smart Current Transformer for monitoring the energy andanalyzingconsumption remotely. CT10x provides multiple current options to suit energy monitoringandsupport sending threshold alarms",
+        "description": "The CT305 is a LoRaWAN® Smart Current Transformer designed for remote energy monitoring and consumption analysis. It offers multiple current options to fit various setups and supports sending threshold alarms when power usage exceeds predefined limits.",
         "enabled": true,
         "name": "Milesight-Iot CT305",
         "product": "milesight_iot_ct305",
