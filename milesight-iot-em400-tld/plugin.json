@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_em400_tld",
   "version": "1.0.0",
-  "description": "EM400-TLD is a distance sensor based on ToF (timeof flight), whichis mainly used for detecting the fill level and positionstatus.",
+  "description": "EM400-TLD is a distance sensor based on ToF, which is mainly used for detecting the fill level and position status.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot EM400-TLD",
-    "description": "EM400-TLD is a distance sensor based on ToF (timeof flight), whichis mainly used for detecting the fill level and positionstatus.",
+    "description": "EM400-TLD is a distance sensor based on ToF, which is mainly used for detecting the fill level and position status.",
     "image": "assets/em400-tld.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "EM400-TLD is a distance sensor based on ToF (timeof flight), whichis mainly used for detecting the fill level and positionstatus.",
+        "description": "EM400-TLD is a distance sensor based on ToF, which is mainly used for detecting the fill level and position status.",
         "enabled": true,
         "name": "Milesight-Iot EM400-TLD",
         "product": "milesight_iot_em400_tld",
