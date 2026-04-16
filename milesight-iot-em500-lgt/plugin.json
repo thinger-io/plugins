@@ -1,7 +1,7 @@
 {
   "name": "milesight_iot_em500_lgt",
   "version": "1.0.0",
-  "description": "Outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
+  "description": "EM500-LGT is an outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
   "author": "Thinger.io",
   "license": "MIT",
   "repository": {
@@ -11,7 +11,7 @@
   },
   "metadata": {
     "name": "Milesight-Iot EM500-LGT",
-    "description": "Outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
+    "description": "EM500-LGT is an outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
     "image": "assets/em500-lgt.png",
     "category": "devices",
     "vendor": "milesight-iot"
@@ -19,7 +19,7 @@
   "resources": {
     "products": [
       {
-        "description": "Outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
+        "description": "EM500-LGT is an outdoor light monitoring sensor with 10-year battery, IP67 UV-resistant waterproof housing, and NFC configuration. Ideal for smart agriculture and urban lighting applications in harsh environments.",
         "enabled": true,
         "name": "Milesight-Iot EM500-LGT",
         "product": "milesight_iot_em500_lgt",
