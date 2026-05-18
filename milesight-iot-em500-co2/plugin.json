@@ -1,649 +1,649 @@
 {
-  "name": "milesight_iot_em500_co2",
-  "version": "1.0.0",
-  "description": "Milesight EM500-CO2 measures CO2, temperature, humidity, and barometric pressure in harsh environments. Ideal for greenhouses, wine cellars, building ventilation, and fruit/vegetable storage where monitoring CO2 levels is critical.",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "milesight-iot-em500-co2"
-  },
-  "metadata": {
-    "name": "Milesight-Iot EM500-CO2",
+    "name": "milesight-iot-em500-co2",
+    "version": "1.0.0",
     "description": "Milesight EM500-CO2 measures CO2, temperature, humidity, and barometric pressure in harsh environments. Ideal for greenhouses, wine cellars, building ventilation, and fruit/vegetable storage where monitoring CO2 levels is critical.",
-    "image": "assets/em500-co2.png",
-    "category": "devices",
-    "vendor": "milesight-iot"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "Milesight EM500-CO2 measures CO2, temperature, humidity, and barometric pressure in harsh environments. Ideal for greenhouses, wine cellars, building ventilation, and fruit/vegetable storage where monitoring CO2 levels is critical.",
-        "enabled": true,
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "milesight-iot-em500-co2"
+    },
+    "metadata": {
         "name": "Milesight-Iot EM500-CO2",
-        "product": "milesight_iot_em500_co2",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
-                }
-              }
-            },
-            "uplink": {
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_function": "",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
-            }
-          },
-          "autoprovisions": {
-            "device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "em500_co2_.*"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "milesight_em500_co2_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": []
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * Milesight IoT Sensor Payload Decoder\n *\n * definition [channel-id] [channel-type] [channel-data]\n *\n * 01: battery      -> 0x01 0x75 [1byte]  Unit:%\n * 03: temperature  -> 0x03 0x67 [2bytes] Unit:°C\n * 04: humidity     -> 0x04 0x68 [1byte]  Unit:%RH\n * 05: CO2          -> 0x05 0x7D [2bytes] Unit:ppm\n * 06: Pressure     -> 0x09 0x73 [2bytes] Unit: hPa\n ------------------------------------------ EM500-CO2\n */\nfunction Decoder(bytes, port) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length;) {\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n        // BATTERY\n        if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = bytes[i];\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        }\n        // HUMIDITY\n        else if (channel_id === 0x04 && channel_type === 0x68) {\n            decoded.humidity = bytes[i] / 2;\n            i += 1;\n        }\n        // CO2\n        else if (channel_id === 0x05 && channel_type === 0x7D) {\n            decoded.co2 = readInt16LE(bytes.slice(i, i + 2));\n            i += 2;\n        }\n\n        // PRESSURE\n        else if (channel_id === 0x06 && channel_type === 0x73) {\n            decoded.pressure = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        } else {\n            break;\n        }\n    }\n    return decoded;\n}\n\n/* ******************************************\n * bytes to number\n ********************************************/\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "flows": {
-            "milesight_em500_co2_decoder": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "sink": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "split_data": false
-            }
-          },
-          "properties": {
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": [
+        "description": "Milesight EM500-CO2 measures CO2, temperature, humidity, and barometric pressure in harsh environments. Ideal for greenhouses, wine cellars, building ventilation, and fruit/vegetable storage where monitoring CO2 levels is critical.",
+        "image": "assets/em500-co2.png",
+        "category": "devices",
+        "vendor": "milesight-iot"
+    },
+    "resources": {
+        "products": [
             {
-              "property": "dashboard",
-              "value": {
-                "tabs": [
-                  {
-                    "name": "Air Quality Monitor",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "CO2"
-                        },
-                        "properties": {
-                          "decimalPlaces": 0,
-                          "enableExtraTextColor": false,
-                          "enableIconColor": false,
-                          "enableIconSize": false,
-                          "extraText": "",
-                          "extraTextColor": "#1E313E",
-                          "extraTextColorConditions": [],
-                          "extraTextConditions": [],
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "20px",
-                          "extraTextWeight": "font-light",
-                          "icon": "",
-                          "iconColor": "#1E313E",
-                          "iconColorConditions": [],
-                          "iconConditions": [],
-                          "iconGap": "8px",
-                          "iconPosition": "before-value",
-                          "iconSize": "75px",
-                          "iconVerticalOffset": "0px",
-                          "link": "",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [],
-                          "textSize": "75px",
-                          "textWeight": "font-light",
-                          "unit": "ppm",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "co2",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
-                            },
-                            "color": "#1abc9c",
-                            "name": "Source 1",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                "description": "Milesight EM500-CO2 measures CO2, temperature, humidity, and barometric pressure in harsh environments. Ideal for greenhouses, wine cellars, building ventilation, and fruit/vegetable storage where monitoring CO2 levels is critical.",
+                "enabled": true,
+                "name": "Milesight-Iot EM500-CO2",
+                "product": "milesight_iot_em500_co2",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\r\n    \"data\"    : \"{{payload.data=\"\"}}\",\r\n    \"port\"    :  {{payload.port=2}},\r\n    \"priority\":  {{payload.priority=3}},\r\n    \"confirmed\" :  {{payload.confirmed=false}},\r\n    \"uplink\"  :  {{property.uplink}} \r\n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
                             }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 5
                         },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature"
-                        },
-                        "properties": {
-                          "decimalPlaces": 2,
-                          "enableExtraTextColor": false,
-                          "enableIconColor": false,
-                          "enableIconSize": false,
-                          "extraText": "",
-                          "extraTextColor": "#1E313E",
-                          "extraTextColorConditions": [],
-                          "extraTextConditions": [],
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "20px",
-                          "extraTextWeight": "font-light",
-                          "icon": "",
-                          "iconColor": "#1E313E",
-                          "iconColorConditions": [],
-                          "iconConditions": [],
-                          "iconGap": "8px",
-                          "iconPosition": "before-value",
-                          "iconSize": "75px",
-                          "iconVerticalOffset": "0px",
-                          "link": "",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [],
-                          "textSize": "75px",
-                          "textWeight": "font-light",
-                          "unit": "ºC",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "temperature",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
-                            },
-                            "color": "#1abc9c",
-                            "name": "Source 1",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                        "uplink": {
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
                             }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Humidity"
-                        },
-                        "properties": {
-                          "decimalPlaces": 2,
-                          "enableExtraTextColor": false,
-                          "enableIconColor": false,
-                          "enableIconSize": false,
-                          "extraText": "",
-                          "extraTextColor": "#1E313E",
-                          "extraTextColorConditions": [],
-                          "extraTextConditions": [],
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "20px",
-                          "extraTextWeight": "font-light",
-                          "icon": "",
-                          "iconColor": "#1E313E",
-                          "iconColorConditions": [],
-                          "iconConditions": [],
-                          "iconGap": "8px",
-                          "iconPosition": "before-value",
-                          "iconSize": "75px",
-                          "iconVerticalOffset": "0px",
-                          "link": "",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [],
-                          "textSize": "75px",
-                          "textWeight": "font-light",
-                          "unit": "%",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "humidity",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "em500_co2_.*"
                             },
-                            "color": "#1abc9c",
-                            "name": "Source 1",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 5,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Pressure"
-                        },
-                        "properties": {
-                          "decimalPlaces": 2,
-                          "enableExtraTextColor": false,
-                          "enableIconColor": false,
-                          "enableIconSize": false,
-                          "extraText": "",
-                          "extraTextColor": "#1E313E",
-                          "extraTextColorConditions": [],
-                          "extraTextConditions": [],
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "20px",
-                          "extraTextWeight": "font-light",
-                          "icon": "",
-                          "iconColor": "#1E313E",
-                          "iconColorConditions": [],
-                          "iconConditions": [],
-                          "iconGap": "8px",
-                          "iconPosition": "before-value",
-                          "iconSize": "75px",
-                          "iconVerticalOffset": "0px",
-                          "link": "",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [],
-                          "textSize": "75px",
-                          "textWeight": "font-light",
-                          "unit": "hPa",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "pressure",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "milesight_em500_co2_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
                             },
-                            "color": "#1abc9c",
-                            "name": "Source 1",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 5,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Battery"
-                        },
-                        "properties": {
-                          "color": "#2ebd59",
-                          "gradient": false,
-                          "max": 100,
-                          "min": 0,
-                          "unit": "%"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "battery",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
                             },
-                            "color": "#1abc9c",
-                            "name": "Source 1",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "gauge"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 10,
-                          "sizeX": 4,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "CO2 Levels (24h)"
-                        },
-                        "properties": {
-                          "alignTimeSeries": false,
-                          "dataAppend": false,
-                          "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(0) + ' ppm';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    colors: ['#e67e22']\n};\n",
-                          "realTimeUpdate": true
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "co2",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * Milesight IoT Sensor Payload Decoder\n *\n * definition [channel-id] [channel-type] [channel-data]\n *\n * 01: battery      -> 0x01 0x75 [1byte]  Unit:%\n * 03: temperature  -> 0x03 0x67 [2bytes] Unit:°C\n * 04: humidity     -> 0x04 0x68 [1byte]  Unit:%RH\n * 05: CO2          -> 0x05 0x7D [2bytes] Unit:ppm\n * 06: Pressure     -> 0x09 0x73 [2bytes] Unit: hPa\n ------------------------------------------ EM500-CO2\n */\nfunction Decoder(bytes, port) {\n    var decoded = {};\n\n    for (var i = 0; i < bytes.length;) {\n        var channel_id = bytes[i++];\n        var channel_type = bytes[i++];\n        // BATTERY\n        if (channel_id === 0x01 && channel_type === 0x75) {\n            decoded.battery = bytes[i];\n            i += 1;\n        }\n        // TEMPERATURE\n        else if (channel_id === 0x03 && channel_type === 0x67) {\n            decoded.temperature = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        }\n        // HUMIDITY\n        else if (channel_id === 0x04 && channel_type === 0x68) {\n            decoded.humidity = bytes[i] / 2;\n            i += 1;\n        }\n        // CO2\n        else if (channel_id === 0x05 && channel_type === 0x7D) {\n            decoded.co2 = readInt16LE(bytes.slice(i, i + 2));\n            i += 2;\n        }\n\n        // PRESSURE\n        else if (channel_id === 0x06 && channel_type === 0x73) {\n            decoded.pressure = readInt16LE(bytes.slice(i, i + 2)) / 10;\n            i += 2;\n        } else {\n            break;\n        }\n    }\n    return decoded;\n}\n\n/* ******************************************\n * bytes to number\n ********************************************/\nfunction readUInt16LE(bytes) {\n    var value = (bytes[1] << 8) + bytes[0];\n    return value & 0xffff;\n}\n\nfunction readInt16LE(bytes) {\n    var ref = readUInt16LE(bytes);\n    return ref > 0x7fff ? ref - 0x10000 : ref;\n}",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "milesight_em500_co2_decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
                             },
-                            "color": "#e67e22",
-                            "name": "CO2",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 10,
-                          "sizeX": 2,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Battery (24h)"
-                        },
-                        "properties": {
-                          "alignTimeSeries": false,
-                          "dataAppend": false,
-                          "options": "var options = {\n    chart: {\n        type: 'line',\n    },\n    dataLabels: {\n        enabled: false\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    }\n};\n",
-                          "realTimeUpdate": true
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "battery",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "enabled": true,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
                             },
-                            "color": "#2ebd59",
-                            "name": "Battery",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 20,
-                          "sizeX": 6,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature & Humidity & Pressure (24h)"
-                        },
-                        "properties": {
-                          "alignTimeSeries": false,
-                          "dataAppend": false,
-                          "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: [\n        {\n            seriesName: 'Temperature',\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#d1311f'\n            },\n            labels: {\n                style: {\n                    colors: '#d1311f'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' °C';\n                }\n            },\n            title: {\n                text: 'Temperature (°C)',\n                style: {\n                    color: '#d1311f'\n                }\n            }\n        },\n        {\n            seriesName: 'Humidity',\n            opposite: true,\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#329fcd'\n            },\n            labels: {\n                style: {\n                    colors: '#329fcd'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' %';\n                }\n            },\n            title: {\n                text: 'Humidity (%)',\n                style: {\n                    color: '#329fcd'\n                }\n            }\n        },\n        {\n            seriesName: 'Pressure',\n            opposite: true,\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#9b59b6'\n            },\n            labels: {\n                style: {\n                    colors: '#9b59b6'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' hPa';\n                }\n            },\n            title: {\n                text: 'Pressure (hPa)',\n                style: {\n                    color: '#9b59b6'\n                }\n            }\n        }\n    ],\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
-                          "realTimeUpdate": true
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "temperature",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
                             },
-                            "color": "#d1311f",
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "humidity",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
+                            "default": {
+                                "source": "value"
                             },
-                            "color": "#329fcd",
-                            "name": "Humidity",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Air Quality Monitor",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "CO2"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "enableExtraTextColor": false,
+                                                    "enableIconColor": false,
+                                                    "enableIconSize": false,
+                                                    "extraText": "",
+                                                    "extraTextColor": "#1E313E",
+                                                    "extraTextColorConditions": [],
+                                                    "extraTextConditions": [],
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "20px",
+                                                    "extraTextWeight": "font-light",
+                                                    "icon": "",
+                                                    "iconColor": "#1E313E",
+                                                    "iconColorConditions": [],
+                                                    "iconConditions": [],
+                                                    "iconGap": "8px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "75px",
+                                                    "iconVerticalOffset": "0px",
+                                                    "link": "",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [],
+                                                    "textSize": "75px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "ppm",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "enableExtraTextColor": false,
+                                                    "enableIconColor": false,
+                                                    "enableIconSize": false,
+                                                    "extraText": "",
+                                                    "extraTextColor": "#1E313E",
+                                                    "extraTextColorConditions": [],
+                                                    "extraTextConditions": [],
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "20px",
+                                                    "extraTextWeight": "font-light",
+                                                    "icon": "",
+                                                    "iconColor": "#1E313E",
+                                                    "iconColorConditions": [],
+                                                    "iconConditions": [],
+                                                    "iconGap": "8px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "75px",
+                                                    "iconVerticalOffset": "0px",
+                                                    "link": "",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [],
+                                                    "textSize": "75px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "ºC",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "enableExtraTextColor": false,
+                                                    "enableIconColor": false,
+                                                    "enableIconSize": false,
+                                                    "extraText": "",
+                                                    "extraTextColor": "#1E313E",
+                                                    "extraTextColorConditions": [],
+                                                    "extraTextConditions": [],
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "20px",
+                                                    "extraTextWeight": "font-light",
+                                                    "icon": "",
+                                                    "iconColor": "#1E313E",
+                                                    "iconColorConditions": [],
+                                                    "iconConditions": [],
+                                                    "iconGap": "8px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "75px",
+                                                    "iconVerticalOffset": "0px",
+                                                    "link": "",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [],
+                                                    "textSize": "75px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "%",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 5,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Pressure"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "enableExtraTextColor": false,
+                                                    "enableIconColor": false,
+                                                    "enableIconSize": false,
+                                                    "extraText": "",
+                                                    "extraTextColor": "#1E313E",
+                                                    "extraTextColorConditions": [],
+                                                    "extraTextConditions": [],
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "20px",
+                                                    "extraTextWeight": "font-light",
+                                                    "icon": "",
+                                                    "iconColor": "#1E313E",
+                                                    "iconColorConditions": [],
+                                                    "iconConditions": [],
+                                                    "iconGap": "8px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "75px",
+                                                    "iconVerticalOffset": "0px",
+                                                    "link": "",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [],
+                                                    "textSize": "75px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "hPa",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "pressure",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 5,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery"
+                                                },
+                                                "properties": {
+                                                    "color": "#2ebd59",
+                                                    "gradient": false,
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "battery",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "gauge"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 4,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "CO2 Levels (24h)"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'area',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: {\n        \"labels\": {\n            \"formatter\": function (val) {\n                if ( val !== null && typeof val !== 'undefined' )\n                    return val.toFixed(0) + ' ppm';\n            }\n        }\n    },\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    },\n    colors: ['#e67e22']\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "co2",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "CO2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 10,
+                                                    "sizeX": 2,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery (24h)"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n    },\n    dataLabels: {\n        enabled: false\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    }\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "battery",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ebd59",
+                                                        "name": "Battery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 20,
+                                                    "sizeX": 6,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature & Humidity & Pressure (24h)"
+                                                },
+                                                "properties": {
+                                                    "alignTimeSeries": false,
+                                                    "dataAppend": false,
+                                                    "options": "var options = {\n    chart: {\n        type: 'line',\n        stacked: false\n    },\n    dataLabels: {\n        enabled: false\n    },\n    stroke: {\n        curve: 'smooth'\n    },\n    xaxis: {\n        type: 'datetime',\n        labels: {\n            datetimeUTC: false\n        },\n        tooltip: {\n            enabled: false\n        }\n    },\n    yaxis: [\n        {\n            seriesName: 'Temperature',\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#d1311f'\n            },\n            labels: {\n                style: {\n                    colors: '#d1311f'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' °C';\n                }\n            },\n            title: {\n                text: 'Temperature (°C)',\n                style: {\n                    color: '#d1311f'\n                }\n            }\n        },\n        {\n            seriesName: 'Humidity',\n            opposite: true,\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#329fcd'\n            },\n            labels: {\n                style: {\n                    colors: '#329fcd'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' %';\n                }\n            },\n            title: {\n                text: 'Humidity (%)',\n                style: {\n                    color: '#329fcd'\n                }\n            }\n        },\n        {\n            seriesName: 'Pressure',\n            opposite: true,\n            axisTicks: {\n                show: true\n            },\n            axisBorder: {\n                show: true,\n                color: '#9b59b6'\n            },\n            labels: {\n                style: {\n                    colors: '#9b59b6'\n                },\n                formatter: function (val) {\n                    if ( val !== null && typeof val !== 'undefined' )\n                        return val.toFixed(2) + ' hPa';\n                }\n            },\n            title: {\n                text: 'Pressure (hPa)',\n                style: {\n                    color: '#9b59b6'\n                }\n            }\n        }\n    ],\n    tooltip: {\n        x: {\n            format: 'dd/MM/yyyy HH:mm:ss'\n        }\n    }\n};\n",
+                                                    "realTimeUpdate": true
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#d1311f",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#329fcd",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "milesight_em500_co2_data",
+                                                            "mapping": "pressure",
+                                                            "tags": {
+                                                                "device": [
+                                                                    "em500_co2_device_id"
+                                                                ],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Pressure",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    }
+                                ]
                             }
-                          },
-                          {
-                            "aggregation": {},
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "milesight_em500_co2_data",
-                              "mapping": "pressure",
-                              "tags": {
-                                "device": [
-                                  "em500_co2_device_id"
-                                ],
-                                "group": []
-                              }
-                            },
-                            "color": "#9b59b6",
-                            "name": "Pressure",
-                            "source": "bucket",
-                            "timespan": {
-                              "magnitude": "hour",
-                              "mode": "relative",
-                              "period": "latest",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      }
+                        }
                     ]
-                  }
-                ]
-              }
+                }
             }
-          ]
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
