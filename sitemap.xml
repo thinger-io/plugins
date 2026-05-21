@@ -1309,6 +1309,18 @@
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-lgt/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-lgt/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-lgt/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-pp/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
@@ -1321,6 +1333,18 @@
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-pt100/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-pt100/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-em500-pt100/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ts101/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
@@ -1330,6 +1354,18 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ts101/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ts30x/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ts30x/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ts30x/plugin_file/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
@@ -1354,6 +1390,54 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs135/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs321/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs321/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs321/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs330/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs330/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs330/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs340/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs340/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs340/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs341/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs341/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs341/plugin_file/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
@@ -1393,6 +1477,18 @@
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs370/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs370/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs370/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs373/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
@@ -1402,6 +1498,18 @@
     </url>
     <url>
          <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-vs373/plugin_file/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ws101/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ws101/changelog/</loc>
+         <lastmod>2026-05-21</lastmod>
+    </url>
+    <url>
+         <loc>https://marketplace.thinger.io/plugins/devices/milesight-iot-ws101/plugin_file/</loc>
          <lastmod>2026-05-21</lastmod>
     </url>
     <url>
