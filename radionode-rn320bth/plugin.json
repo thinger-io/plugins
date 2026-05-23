@@ -1,0 +1,564 @@
+{
+    "name": "Dekist-RN320BT-M",
+    "version": "1.0.0",
+    "description": "Temperature & Humidity LoRaWAN device",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "radionode-rn320bth"
+    },
+    "metadata": {
+        "name": "Radionode- RN320-BTH",
+        "description": "Temperature & Humidity LoRaWAN device",
+        "image": "assets/radionode-RN320BTH.png"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "icons": [
+                        {
+                            "conditions": [],
+                            "icon": {
+                                "background": "#000000",
+                                "color": "#49a2ff",
+                                "source": "fas fa-box",
+                                "type": "fa"
+                            }
+                        }
+                    ]
+                },
+                "description": "Temperature & humidity LoRaWAN device",
+                "enabled": true,
+                "name": "Dekist RN320-bth",
+                "product": "Dekist_RN320BT_M",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "target": "resource_stream"
+                                }
+                            },
+                            "response": {
+                                "data": {}
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "rn320bt-autoprovision": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "rn320-bth_.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "rn320bt-data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "getDataBucket",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function getId(payload) {\r\n    return payload.deviceId;\r\n}\r\n\r\n\r\nfunction decodeHearbeatUplink(payload) {\r\n    let decoded = payload.decodedPayload;\r\n    \r\n    if (!decoded) {\r\n        decoded = decodedUplink(payload);\r\n    }\r\n    \r\n    if (decoded.head != '11') {\r\n        return null;\r\n    }\r\n    \r\n    return decoded;\r\n}\r\n\r\nfunction decodedUplink(input) {\r\n    if (input.decodedPayload !== null && input.decodedPayload !== undefined) {\r\n        return input.decodedPayload;\r\n    }\r\n    \r\n    const hexString = input.payload;\r\n    const bytes = [];\r\n    \r\n    for (let i = 0; i < hexString.length; i += 2) {\r\n        bytes.push(parseInt(hexString.substr(i, 2), 16));\r\n    }\r\n    \r\n    try {\r\n        const port = input.fPort || 88;\r\n        const decoded = Decoder(bytes, port);\r\n        return decoded;\r\n    } catch (error) {\r\n        return {\r\n            error: \"Decoding error: \" + error.message,\r\n            raw_payload: hexString,\r\n            bytes_length: bytes.length,\r\n            fPort: input.fPort || 88\r\n        };\r\n    }\r\n}\r\n\r\nfunction getDataBucket(payload) {\r\n    \r\n    if (payload.error) {\r\n        return null;\r\n    }\r\n    \r\n    if (payload.head == 11 || payload.head == 13) {\r\n        return null;\r\n    }\r\n    \r\n    return payload;\r\n}\r\n\r\n/**\r\n * DEKIST DECODER\r\n */\r\nfunction decodeUplink(input) {\r\n    const res = Decoder(input.bytes, input.fPort);\r\n    if (res.error) {\r\n      return { errors: [res.error] };\r\n    }\r\n    return { data: res };\r\n  }\r\n\r\nfunction Decoder(bytes, port) {\r\n    const readUInt8 = b => b & 0xFF;\r\n    const readUInt16LE = b => (b[1] << 8) + b[0];\r\n    const readInt16LE = b => {\r\n      const ret = readUInt16LE(b);\r\n      return (ret > 0x7ffff) ? ret - 0x10000 : ret;\r\n    }\r\n    const readUInt32LE = b => (b[3] << 24) + (b[2] << 16) + (b[1] << 8) + b[0];\r\n    const readInt32LE = b => {\r\n      const ret = readUInt32LE(b);\r\n      return (ret > 0x7FFFFFFF) ? ret - 0x100000000 : ret;\r\n    }\r\n    const readFloatLE = b => {\r\n      const buf = new ArrayBuffer(4);\r\n      const view = new DataView(buf);\r\n      for (let i = 0; i < 4; i++) view.setUint8(i, b[i]);\r\n      return view.getFloat32(0, true); // ieee754 float\r\n    };\r\n\r\n    const head = readUInt8(bytes[0]);\r\n    const model = readUInt8(bytes[1]);\r\n\r\n    if (head === 11) {\r\n      // Check-in frame\r\n      const timestamp = readUInt32LE(bytes.slice(2, 6));\r\n      const date = new Date(timestamp * 1000);\r\n      const yyyy = date.getUTCFullYear();\r\n      const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');\r\n      const dd = date.getUTCDate().toString().padStart(2, '0');\r\n      const verFormatted = parseInt(`${yyyy}${mm}${dd}`);\r\n\r\n      const interval = readUInt16LE(bytes.slice(6, 8));\r\n      const splrate = interval;\r\n      const bat = readUInt8(bytes[8]);\r\n      const millivolt = readUInt16LE(bytes.slice(9, 11));\r\n      const volt = (millivolt / 1000).toFixed(3);\r\n      const freqband = readUInt8(bytes[11]);\r\n      const subband = readUInt8(bytes[12]);\r\n\r\n      return {\r\n        head,\r\n        ver: verFormatted,\r\n        interval,\r\n        splrate,\r\n        bat,\r\n        volt,\r\n        freqband,\r\n        subband\r\n      };\r\n    }\r\n\r\n    else if (head === 12 || head === 13) {\r\n      // Sensor / Hold\r\n      const tsmode = readUInt8(bytes[2]);\r\n      const timestamp = readUInt32LE(bytes.slice(3, 7));\r\n      const splfmt = readUInt8(bytes[7]);\r\n\r\n      if (splfmt !== 2) {\r\n        return { error: \"Unsupported Sensor Data Format: \" + splfmt };\r\n      }\r\n\r\n      const raw_size = 4;\r\n      const data = bytes.slice(8);\r\n      const ch_count = data.length / raw_size;\r\n      const data_size = data.length;\r\n\r\n      let offset = 0;\r\n      let temperature = null, humidity = null;\r\n\r\n      if (ch_count < 2) {\r\n        return { error: \"Unsupported Sensor Data Size: \" + ch_count };\r\n      }\r\n\r\n      temperature = parseFloat(readFloatLE(data.slice(offset, offset + raw_size)).toFixed(2));\r\n      if (temperature <= -9999.0) temperature = null;\r\n      offset += raw_size;\r\n\r\n      humidity = parseFloat(readFloatLE(data.slice(offset, offset + raw_size)).toFixed(2));\r\n      if (humidity <= -9999.0) humidity = null;\r\n\r\n      return {\r\n        head,\r\n        model,\r\n        tsmode,\r\n        timestamp,\r\n        splfmt,\r\n        data_size,\r\n        temperature,\r\n        humidity\r\n      };\r\n\r\n    }\r\n\r\n    return { error: \"Unsupported head frame: \" + head };\r\n}\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "rn320bt-decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodedUplink",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "last_data": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "status": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeHearbeatUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        },
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "controls": {
+                                    "aggregation": {
+                                        "allowed": [
+                                            "30m",
+                                            "12h",
+                                            "1d",
+                                            "1h"
+                                        ],
+                                        "auto": true,
+                                        "period": "1m"
+                                    },
+                                    "timespan": {
+                                        "magnitude": "minute",
+                                        "mode": "relative",
+                                        "period": "latest",
+                                        "value": 30
+                                    }
+                                },
+                                "functions": "function valuetopercentage(value, ts, series){\n   value=value*100/256; // use 'shared' variable to share information between functions, or\n    // access dash placeholders, i.e., shared.placeholders['Name'];\n    return value;\n}\n\n",
+                                "name": "rn320",
+                                "placeholders": {
+                                    "sources": []
+                                },
+                                "properties": {
+                                    "template": true
+                                },
+                                "tabs": [
+                                    {
+                                        "icon": "fas fa-tachometer-alt",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Historic Humidity"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false,
+                                                    "yaxis": {
+                                                        "min": 0
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "configurable",
+                                                            "type": "mean"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320bt-data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#0000ff",
+                                                        "name": "Humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "configurable",
+                                                            "period": "latest",
+                                                            "value": 12
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Historic Temperature"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": false,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "period": "configurable",
+                                                            "type": "mean"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320bt-data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff0000",
+                                                        "name": "Historic Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "day",
+                                                            "mode": "configurable",
+                                                            "period": "latest",
+                                                            "value": 5
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 9
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Last recorded information"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto\">\r\n  <table class=\"table table-striped table-condensed\">\r\n    <thead>\r\n      <tr>\r\n        <th>Date</th>\r\n        <th>Temperature (°C)</th>\r\n        <th>Humidity (%RH)</th>\r\n      </tr>\r\n    </thead>\r\n    <tbody>\r\n      <tr ng-repeat=\"entry in value\"> \r\n        <td>{{entry.ts| date:'medium'}}</td> \r\n        <td>{{entry.temperature}}</td> \r\n        <td>{{entry.humidity}}</td>\r\n      </tr>\r\n    </tbody>\r\n  </table>\r\n</div>\r\n\r\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#ff0000",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320_data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#0000ff",
+                                                        "name": "humidity",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Humidity"
+                                                },
+                                                "properties": {
+                                                    "color": "#0000ff",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%Rh"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320bt-data",
+                                                            "mapping": "humidity",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#ff0000",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "ºC"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "rn320bt-data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Source 1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 9,
+                                                    "sizeX": 1,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery"
+                                                },
+                                                "properties": {
+                                                    "icon": "fas fa-battery-full",
+                                                    "iconColor": "#208efe",
+                                                    "iconSize": "",
+                                                    "max": 100,
+                                                    "min": 0,
+                                                    "unit": "%"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device_property": {
+                                                            "device": "rn320-bth_AC1F09FFFE0AA845",
+                                                            "mapping": "volt",
+                                                            "property": "status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "processing": {
+                                                            "input": "valuetopercentage"
+                                                        },
+                                                        "source": "device_property",
+                                                        "value": 200
+                                                    }
+                                                ],
+                                                "type": "progressbar"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 5,
+                                                    "row": 9,
+                                                    "sizeX": 1,
+                                                    "sizeY": 3
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Voltage"
+                                                },
+                                                "properties": {
+                                                    "color": "#1E313E",
+                                                    "decimal_places": 2,
+                                                    "icon": "",
+                                                    "size": "75px",
+                                                    "unit": "V",
+                                                    "unit_size": "20px",
+                                                    "weight": "font-thin"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "color": "#1abc9c",
+                                                        "device": {},
+                                                        "device_property": {
+                                                            "device": "rn320-bth_AC1F09FFFE0AA845",
+                                                            "mapping": "volt",
+                                                            "property": "status"
+                                                        },
+                                                        "name": "Source 1",
+                                                        "source": "device_property"
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
