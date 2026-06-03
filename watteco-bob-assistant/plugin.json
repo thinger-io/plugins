@@ -1,1084 +1,1086 @@
 {
-  "name": "watteco_bob_assistant",
-  "version": "1.0.0",
-  "description": "BoB Assistant is a low power LoRaWAN compatible vibration sensor for indoor and outdoor predictive maintenance industrial applications, coupled with a temperature sensor for environmental conditions, a push buttonand an RGB Led for User Interface.",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "watteco-bob-assistant"
-  },
-  "metadata": {
-    "name": "Watteco BOB-ASSISTANT",
+    "name": "watteco-bob-assistant",
+    "version": "1.0.0",
     "description": "BoB Assistant is a low power LoRaWAN compatible vibration sensor for indoor and outdoor predictive maintenance industrial applications, coupled with a temperature sensor for environmental conditions, a push buttonand an RGB Led for User Interface.",
-    "image": "assets/bob-assistant.png",
-    "category": "devices",
-    "vendor": "watteco"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "BoB Assistant is a low power LoRaWAN compatible vibration sensor for indoor and outdoor predictive maintenance industrial applications, coupled with a temperature sensor for environmental conditions, a push buttonand an RGB Led for User Interface.",
-        "enabled": true,
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "watteco-bob-assistant"
+    },
+    "metadata": {
         "name": "Watteco BOB-ASSISTANT",
-        "product": "watteco_bob_assistant",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
-                }
-              }
-            },
-            "uplink": {
-              "device_id_resolver": "getId",
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
-            }
-          },
-          "autoprovisions": {
-            "device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "bob_assistant_.*"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "bob_assistant_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": []
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction Decoder(bytes, port) {\n\n  // Decode an uplink message from a buffer\n  // (array) of bytes to an object of fields.\n  var decoded = {};\n\n  var decodedBatch = {};\n\n  var date = new Date();\n  var lDate = date.toISOString();\n    \n    \n  if (port === 1){\n    decodedBatch = !(bytes[0] & 0x01);\n\n    stdData = {};\n    tab = [];\n    header = {};\n\n    fft = [];\n\n\n    // Report Type\n    if (bytes[0] === 0x72 || bytes[0] === 0x52) {\n\n      if (bytes[6] <= 0x3b ) {  // 0x3B = 59 in decimal that corresponds to a reportperiod <= 59 min\n        reportperiod = bytes[6];\n      } \n\n      if (bytes[6] > 0x3b) {\n        reportperiod = (bytes[6]-59)*60;\n      }\n\n      operatingtime = bytes[2]*reportperiod/127;     \n      \n      header = {type: \"Report\", sensor: \"KX\"};\n\n      tab.push({label: \"BatteryPercentage\", value: bytes[17]*100/127, date: lDate});\n      tab.push({label: \"AnomalyLevel\", value: bytes[1]*100/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last6Mo\", value: bytes[24], date: lDate});\n      tab.push({label: \"NbAlarmReport\", value: bytes[4], date: lDate});\n      tab.push({label: \"OperatingTime\", value: bytes[2]*2/127, date: lDate});\n      tab.push({label: \"TotalUnknown6080\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[15]/127, date: lDate});\n      tab.push({label: \"TotalUnknown4060\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[14]/127, date: lDate});\n      tab.push({label: \"TotalUnknown2040\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[13]/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last30D\", value: bytes[23], date: lDate});\n      tab.push({label: \"VibrationLevel\", value: (bytes[8]*128+bytes[9]+bytes[10]/100)/10/121.45, date: lDate});\n      tab.push({label: \"TotalUnknown1020\", value: (operatingtime - bytes[3]*operatingtime/127), date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last6Mo\", value: bytes[26], date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last24H\", value: bytes[19], date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last24H\", value: bytes[18], date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last30D\", value: bytes[22], date: lDate}); \n      tab.push({label: \"Temperature\", value: bytes[5] - 30, date: lDate});\n      tab.push({label: \"ReportLength\", value: reportperiod, date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last30D\", value: bytes[21], date: lDate});\n      tab.push({label: \"PeakFrequencyIndex\", value: bytes[11]+1, date: lDate});\n      tab.push({label: \"TotalUnknown80100\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[16]/127, date: lDate});\n      tab.push({label: \"TotalOperatingTimeKnown\", value:bytes[3]*operatingtime/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last6Mo\", value: bytes[25], date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last24H\", value: bytes[20], date: lDate});\n    }\n\n\n    // Alarm Type\n    if (bytes[0] === 0x61) {\n      vibrationlevel = (bytes[4]*128+bytes[5]+bytes[6]/100)/10/121.45;\n\n      header = {type: \"Alarm\", sensor: \"KX\"};\n\n\n      tab.push({label: \"Temperature\", value: bytes[2]-30, date: lDate});\n      tab.push({label: \"VibrationLevel\", value: (bytes[4]*128+bytes[5]+bytes[6]/100)/10/121.45, date: lDate});\n      tab.push({label: \"AnomalyLevel\", value: bytes[1]*100/127, date:lDate });\n\n      for(i=8; i<= 39; i++) {\n        fft.push({label: \"fft\"+(i-7), value: bytes[i]*vibrationlevel/127, date: lDate});\n      }\n      decoded.fft = fft;\n    }\n        \n    \n    // Learning Type\n    if (bytes[0] === 0x6c) {\n      const FREQ_SAMPLING_ACC_LF = 800;\n      const FREQ_SAMPLING_ACC_HF = 25600;\n\n      vibrationlevel = (bytes[2]*128+bytes[3]+bytes[4]/100)/10/121.45;\n\n      header = {type: \"Learning\", sensor: \"KX\"};\n\n\n      tab.push({label : \"Temperature\", value: bytes[6]-30, date: lDate});\n      tab.push({label: \"LearningFromScratch\", value: bytes[7], date: lDate});\n      tab.push({label: \"LearningPercentage\", value: bytes[1], date: lDate});\n      tab.push({label: \"VibrationLevel\", value: vibrationlevel, date: lDate});\n      tab.push({label: \"PeakFrequencyIndex\", value: bytes[5]+1, date: lDate});\n      tab.push({label: \"PeakFrequency\", value: (bytes[5]+1)*FREQ_SAMPLING_ACC_LF/256, date: lDate});\n      \n      for(i=8; i<=39; i++ ) {\n        fft.push({label: \"fft\"+(i-7), value: bytes[i]*vibrationlevel/127, date: lDate});\n      }\n      decoded.fft = fft;  \n\n    }\n\n\n    // State Type\n    if(bytes[0] === 0x53) {\n      var state;\n\n      header = {type: \"State\", sensor: \"KX\"};\n\n\n      if (bytes[1] === 100) {\n        state = \"Sensor start\";\n      }\n      if (bytes[1] === 101) {\n        state = \"Sensor stop\";\n      }\n      if(bytes[1] === 125) {\n        state = \"Machine stop\"\n      }\n      if(bytes[1] === 126) {\n        state = \"Machine start\"\n      }\n\n      tab.push({label: \"State\", value: state, date: lDate});\n      tab.push({label: \"BatteryPercentage\", value: bytes[2]*100/127, date: lDate});\n\n    }\n                \n    decoded.data = tab;\n    decoded.header = header;\n\n    return decoded;\n  }\n}\n\n\nfunction decodeUplink(input) {\n \n  return {\n    data : Decoder(input.bytes, input.fPort),\n    warnings: [],\n    errors: []\n  };\n}",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "flows": {
-            "uplink_decoder": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "sink": {
-                "payload": "{{payload}}",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "split_data": false
-            }
-          },
-          "properties": {
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": [
+        "description": "BoB Assistant is a low power LoRaWAN compatible vibration sensor for indoor and outdoor predictive maintenance industrial applications, coupled with a temperature sensor for environmental conditions, a push buttonand an RGB Led for User Interface.",
+        "image": "assets/bob-assistant.png",
+        "category": "devices",
+        "vendor": "watteco"
+    },
+    "resources": {
+        "products": [
             {
-              "property": "dashboard",
-              "value": {
-                "tabs": [
-                  {
-                    "name": "Overview",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 4
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Battery Level"
-                        },
-                        "properties": {
-                          "decimalPlaces": 1,
-                          "extraText": "Battery",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "16px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [
-                            {
-                              "color": "#e74c3c",
-                              "comparison": "lt",
-                              "value": 20
-                            },
-                            {
-                              "color": "#f39c12",
-                              "comparison": "lt",
-                              "value": 50
-                            },
-                            {
-                              "color": "#2ecc71",
-                              "comparison": "le",
-                              "value": 100
+                "description": "BoB Assistant is a low power LoRaWAN compatible vibration sensor for indoor and outdoor predictive maintenance industrial applications, coupled with a temperature sensor for environmental conditions, a push buttonand an RGB Led for User Interface.",
+                "enabled": true,
+                "name": "Watteco BOB-ASSISTANT",
+                "product": "watteco_bob_assistant",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
                             }
-                          ],
-                          "textSize": "60px",
-                          "textWeight": "font-light",
-                          "unit": "%",
-                          "unitSize": "20px"
                         },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.BatteryPercentage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Battery",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
                             }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 4
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature"
-                        },
-                        "properties": {
-                          "decimalPlaces": 1,
-                          "extraText": "Temperature",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "16px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [
-                            {
-                              "color": "#3498db",
-                              "comparison": "lt",
-                              "value": 0
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "bob_assistant_.*"
                             },
-                            {
-                              "color": "#2ecc71",
-                              "comparison": "lt",
-                              "value": 30
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "bob_assistant_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "watteco_bob_assistant_data",
+                                "source": "resource_stream"
                             },
-                            {
-                              "color": "#f39c12",
-                              "comparison": "lt",
-                              "value": 50
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
                             },
-                            {
-                              "color": "#e74c3c",
-                              "comparison": "le",
-                              "value": 100
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction Decoder(bytes, port) {\n\n  // Decode an uplink message from a buffer\n  // (array) of bytes to an object of fields.\n  var decoded = {};\n\n  var decodedBatch = {};\n\n  var date = new Date();\n  var lDate = date.toISOString();\n    \n    \n  if (port === 1){\n    decodedBatch = !(bytes[0] & 0x01);\n\n    stdData = {};\n    tab = [];\n    header = {};\n\n    fft = [];\n\n\n    // Report Type\n    if (bytes[0] === 0x72 || bytes[0] === 0x52) {\n\n      if (bytes[6] <= 0x3b ) {  // 0x3B = 59 in decimal that corresponds to a reportperiod <= 59 min\n        reportperiod = bytes[6];\n      } \n\n      if (bytes[6] > 0x3b) {\n        reportperiod = (bytes[6]-59)*60;\n      }\n\n      operatingtime = bytes[2]*reportperiod/127;     \n      \n      header = {type: \"Report\", sensor: \"KX\"};\n\n      tab.push({label: \"BatteryPercentage\", value: bytes[17]*100/127, date: lDate});\n      tab.push({label: \"AnomalyLevel\", value: bytes[1]*100/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last6Mo\", value: bytes[24], date: lDate});\n      tab.push({label: \"NbAlarmReport\", value: bytes[4], date: lDate});\n      tab.push({label: \"OperatingTime\", value: bytes[2]*2/127, date: lDate});\n      tab.push({label: \"TotalUnknown6080\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[15]/127, date: lDate});\n      tab.push({label: \"TotalUnknown4060\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[14]/127, date: lDate});\n      tab.push({label: \"TotalUnknown2040\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[13]/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last30D\", value: bytes[23], date: lDate});\n      tab.push({label: \"VibrationLevel\", value: (bytes[8]*128+bytes[9]+bytes[10]/100)/10/121.45, date: lDate});\n      tab.push({label: \"TotalUnknown1020\", value: (operatingtime - bytes[3]*operatingtime/127), date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last6Mo\", value: bytes[26], date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last24H\", value: bytes[19], date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last24H\", value: bytes[18], date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last30D\", value: bytes[22], date: lDate}); \n      tab.push({label: \"Temperature\", value: bytes[5] - 30, date: lDate});\n      tab.push({label: \"ReportLength\", value: reportperiod, date: lDate});\n      tab.push({label: \"AnomalyLevelTo20Last30D\", value: bytes[21], date: lDate});\n      tab.push({label: \"PeakFrequencyIndex\", value: bytes[11]+1, date: lDate});\n      tab.push({label: \"TotalUnknown80100\", value: (operatingtime - bytes[3]*operatingtime/127)*bytes[16]/127, date: lDate});\n      tab.push({label: \"TotalOperatingTimeKnown\", value:bytes[3]*operatingtime/127, date: lDate});\n      tab.push({label: \"AnomalyLevelTo50Last6Mo\", value: bytes[25], date: lDate});\n      tab.push({label: \"AnomalyLevelTo80Last24H\", value: bytes[20], date: lDate});\n    }\n\n\n    // Alarm Type\n    if (bytes[0] === 0x61) {\n      vibrationlevel = (bytes[4]*128+bytes[5]+bytes[6]/100)/10/121.45;\n\n      header = {type: \"Alarm\", sensor: \"KX\"};\n\n\n      tab.push({label: \"Temperature\", value: bytes[2]-30, date: lDate});\n      tab.push({label: \"VibrationLevel\", value: (bytes[4]*128+bytes[5]+bytes[6]/100)/10/121.45, date: lDate});\n      tab.push({label: \"AnomalyLevel\", value: bytes[1]*100/127, date:lDate });\n\n      for(i=8; i<= 39; i++) {\n        fft.push({label: \"fft\"+(i-7), value: bytes[i]*vibrationlevel/127, date: lDate});\n      }\n      decoded.fft = fft;\n    }\n        \n    \n    // Learning Type\n    if (bytes[0] === 0x6c) {\n      const FREQ_SAMPLING_ACC_LF = 800;\n      const FREQ_SAMPLING_ACC_HF = 25600;\n\n      vibrationlevel = (bytes[2]*128+bytes[3]+bytes[4]/100)/10/121.45;\n\n      header = {type: \"Learning\", sensor: \"KX\"};\n\n\n      tab.push({label : \"Temperature\", value: bytes[6]-30, date: lDate});\n      tab.push({label: \"LearningFromScratch\", value: bytes[7], date: lDate});\n      tab.push({label: \"LearningPercentage\", value: bytes[1], date: lDate});\n      tab.push({label: \"VibrationLevel\", value: vibrationlevel, date: lDate});\n      tab.push({label: \"PeakFrequencyIndex\", value: bytes[5]+1, date: lDate});\n      tab.push({label: \"PeakFrequency\", value: (bytes[5]+1)*FREQ_SAMPLING_ACC_LF/256, date: lDate});\n      \n      for(i=8; i<=39; i++ ) {\n        fft.push({label: \"fft\"+(i-7), value: bytes[i]*vibrationlevel/127, date: lDate});\n      }\n      decoded.fft = fft;  \n\n    }\n\n\n    // State Type\n    if(bytes[0] === 0x53) {\n      var state;\n\n      header = {type: \"State\", sensor: \"KX\"};\n\n\n      if (bytes[1] === 100) {\n        state = \"Sensor start\";\n      }\n      if (bytes[1] === 101) {\n        state = \"Sensor stop\";\n      }\n      if(bytes[1] === 125) {\n        state = \"Machine stop\"\n      }\n      if(bytes[1] === 126) {\n        state = \"Machine start\"\n      }\n\n      tab.push({label: \"State\", value: state, date: lDate});\n      tab.push({label: \"BatteryPercentage\", value: bytes[2]*100/127, date: lDate});\n\n    }\n                \n    decoded.data = tab;\n    decoded.header = header;\n\n    return decoded;\n  }\n}\n\n\nfunction decodeUplink(input) {\n \n  return {\n    data : Decoder(input.bytes, input.fPort),\n    warnings: [],\n    errors: []\n  };\n}",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "watteco_bob_assistant_decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Battery Level"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 1,
+                                                    "extraText": "Battery",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "16px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [
+                                                        {
+                                                            "color": "#e74c3c",
+                                                            "comparison": "lt",
+                                                            "value": 20
+                                                        },
+                                                        {
+                                                            "color": "#f39c12",
+                                                            "comparison": "lt",
+                                                            "value": 50
+                                                        },
+                                                        {
+                                                            "color": "#2ecc71",
+                                                            "comparison": "le",
+                                                            "value": 100
+                                                        }
+                                                    ],
+                                                    "textSize": "60px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "%",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.BatteryPercentage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Battery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 1,
+                                                    "extraText": "Temperature",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "16px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [
+                                                        {
+                                                            "color": "#3498db",
+                                                            "comparison": "lt",
+                                                            "value": 0
+                                                        },
+                                                        {
+                                                            "color": "#2ecc71",
+                                                            "comparison": "lt",
+                                                            "value": 30
+                                                        },
+                                                        {
+                                                            "color": "#f39c12",
+                                                            "comparison": "lt",
+                                                            "value": 50
+                                                        },
+                                                        {
+                                                            "color": "#e74c3c",
+                                                            "comparison": "le",
+                                                            "value": 100
+                                                        }
+                                                    ],
+                                                    "textSize": "60px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "°C",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.Temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 4
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Vibration Level"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 2,
+                                                    "extraText": "Vibration",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "16px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [
+                                                        {
+                                                            "color": "#2ecc71",
+                                                            "comparison": "lt",
+                                                            "value": 0.5
+                                                        },
+                                                        {
+                                                            "color": "#f39c12",
+                                                            "comparison": "lt",
+                                                            "value": 1.5
+                                                        },
+                                                        {
+                                                            "color": "#e74c3c",
+                                                            "comparison": "le",
+                                                            "value": 100
+                                                        }
+                                                    ],
+                                                    "textSize": "60px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "g",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.VibrationLevel",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Vibration",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 4,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Anomaly Level"
+                                                },
+                                                "properties": {
+                                                    "borderColor": "#1E313E",
+                                                    "donut": true,
+                                                    "labelsColor": "#1E313E",
+                                                    "valuesColor": "#1E313E"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.AnomalyLevel",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Anomaly Level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 4,
+                                                    "sizeX": 3,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Device State"
+                                                },
+                                                "properties": {
+                                                    "extraText": "Current State",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "16px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textSize": "32px",
+                                                    "textWeight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.State",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "State",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 6,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Vibration Level History"
+                                                },
+                                                "properties": {
+                                                    "chart": {
+                                                        "toolbar": {
+                                                            "show": true
+                                                        },
+                                                        "type": "area",
+                                                        "zoom": {
+                                                            "enabled": true
+                                                        }
+                                                    },
+                                                    "dataLabels": {
+                                                        "enabled": false
+                                                    },
+                                                    "fill": {
+                                                        "gradient": {
+                                                            "opacityFrom": 0.7,
+                                                            "opacityTo": 0.3,
+                                                            "shadeIntensity": 1
+                                                        },
+                                                        "type": "gradient"
+                                                    },
+                                                    "stroke": {
+                                                        "curve": "smooth",
+                                                        "width": 2
+                                                    },
+                                                    "tooltip": {
+                                                        "x": {
+                                                            "format": "dd MMM yyyy HH:mm"
+                                                        }
+                                                    },
+                                                    "xaxis": {
+                                                        "labels": {
+                                                            "datetimeUTC": false
+                                                        },
+                                                        "type": "datetime"
+                                                    },
+                                                    "yaxis": {
+                                                        "title": {
+                                                            "text": "Vibration (g)"
+                                                        }
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.VibrationLevel",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "Vibration",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "hours",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 18,
+                                                    "sizeX": 6,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature History"
+                                                },
+                                                "properties": {
+                                                    "chart": {
+                                                        "toolbar": {
+                                                            "show": true
+                                                        },
+                                                        "type": "line",
+                                                        "zoom": {
+                                                            "enabled": true
+                                                        }
+                                                    },
+                                                    "dataLabels": {
+                                                        "enabled": false
+                                                    },
+                                                    "stroke": {
+                                                        "curve": "smooth",
+                                                        "width": 3
+                                                    },
+                                                    "tooltip": {
+                                                        "x": {
+                                                            "format": "dd MMM yyyy HH:mm"
+                                                        }
+                                                    },
+                                                    "xaxis": {
+                                                        "labels": {
+                                                            "datetimeUTC": false
+                                                        },
+                                                        "type": "datetime"
+                                                    },
+                                                    "yaxis": {
+                                                        "title": {
+                                                            "text": "Temperature (°C)"
+                                                        }
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.Temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "hours",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "name": "Predictive Maintenance",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 6,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Anomaly Trends (24H/30D/6M)"
+                                                },
+                                                "properties": {
+                                                    "chart": {
+                                                        "toolbar": {
+                                                            "show": true
+                                                        },
+                                                        "type": "line"
+                                                    },
+                                                    "dataLabels": {
+                                                        "enabled": false
+                                                    },
+                                                    "legend": {
+                                                        "position": "top"
+                                                    },
+                                                    "stroke": {
+                                                        "curve": "smooth",
+                                                        "width": 2
+                                                    },
+                                                    "xaxis": {
+                                                        "labels": {
+                                                            "datetimeUTC": false
+                                                        },
+                                                        "type": "datetime"
+                                                    },
+                                                    "yaxis": {
+                                                        "max": 100,
+                                                        "min": 0,
+                                                        "title": {
+                                                            "text": "Anomaly Level"
+                                                        }
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.AnomalyLevelTo20Last24H",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "Anomaly >20% (24H)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "days",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.AnomalyLevelTo50Last24H",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "Anomaly >50% (24H)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "days",
+                                                            "value": 7
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.AnomalyLevelTo80Last24H",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Anomaly >80% (24H)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "days",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 10,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Operating Time"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 1,
+                                                    "extraText": "Operating Time",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "14px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textSize": "48px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "h",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.OperatingTime",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Operating Time",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 10,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Alarm Reports"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "extraText": "Alarm Count",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "14px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#e74c3c",
+                                                    "textSize": "48px",
+                                                    "textWeight": "font-light"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.NbAlarmReport",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Alarms",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 10,
+                                                    "sizeX": 2,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Peak Frequency Index"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "extraText": "Peak Frequency",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "14px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#3498db",
+                                                    "textSize": "48px",
+                                                    "textWeight": "font-light"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.PeakFrequencyIndex",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Peak Frequency",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 15,
+                                                    "sizeX": 6,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "FFT Spectrum Analysis"
+                                                },
+                                                "properties": {
+                                                    "chart": {
+                                                        "toolbar": {
+                                                            "show": true
+                                                        },
+                                                        "type": "bar"
+                                                    },
+                                                    "dataLabels": {
+                                                        "enabled": false
+                                                    },
+                                                    "plotOptions": {
+                                                        "bar": {
+                                                            "borderRadius": 4,
+                                                            "dataLabels": {
+                                                                "position": "top"
+                                                            }
+                                                        }
+                                                    },
+                                                    "xaxis": {
+                                                        "title": {
+                                                            "text": "FFT Bin"
+                                                        },
+                                                        "type": "category"
+                                                    },
+                                                    "yaxis": {
+                                                        "title": {
+                                                            "text": "Amplitude"
+                                                        }
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "fft",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "FFT Spectrum",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "name": "Learning Status",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Learning Progress"
+                                                },
+                                                "properties": {
+                                                    "borderColor": "#1E313E",
+                                                    "donut": true,
+                                                    "labelsColor": "#1E313E",
+                                                    "valuesColor": "#1E313E"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.LearningPercentage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Learning %",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Learning Mode"
+                                                },
+                                                "properties": {
+                                                    "extraText": "From Scratch",
+                                                    "extraTextColor": "#7f8c8d",
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "16px",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textSize": "48px",
+                                                    "textWeight": "font-normal"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.LearningFromScratch",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "name": "Learning Mode",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 8,
+                                                    "sizeX": 6,
+                                                    "sizeY": 10
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Learning Progress Over Time"
+                                                },
+                                                "properties": {
+                                                    "chart": {
+                                                        "toolbar": {
+                                                            "show": true
+                                                        },
+                                                        "type": "area"
+                                                    },
+                                                    "dataLabels": {
+                                                        "enabled": false
+                                                    },
+                                                    "fill": {
+                                                        "gradient": {
+                                                            "opacityFrom": 0.7,
+                                                            "opacityTo": 0.3,
+                                                            "shadeIntensity": 1
+                                                        },
+                                                        "type": "gradient"
+                                                    },
+                                                    "stroke": {
+                                                        "curve": "smooth",
+                                                        "width": 3
+                                                    },
+                                                    "xaxis": {
+                                                        "labels": {
+                                                            "datetimeUTC": false
+                                                        },
+                                                        "type": "datetime"
+                                                    },
+                                                    "yaxis": {
+                                                        "max": 100,
+                                                        "min": 0,
+                                                        "title": {
+                                                            "text": "Learning Progress (%)"
+                                                        }
+                                                    }
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {
+                                                            "type": "value"
+                                                        },
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "bob_assistant_data",
+                                                            "mapping": "data.LearningPercentage",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "Learning %",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest",
+                                                            "period": "days",
+                                                            "value": 7
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "apex_charts"
+                                            }
+                                        ]
+                                    }
+                                ]
                             }
-                          ],
-                          "textSize": "60px",
-                          "textWeight": "font-light",
-                          "unit": "°C",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.Temperature",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 0,
-                          "sizeX": 2,
-                          "sizeY": 4
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Vibration Level"
-                        },
-                        "properties": {
-                          "decimalPlaces": 2,
-                          "extraText": "Vibration",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "16px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textColorConditions": [
-                            {
-                              "color": "#2ecc71",
-                              "comparison": "lt",
-                              "value": 0.5
-                            },
-                            {
-                              "color": "#f39c12",
-                              "comparison": "lt",
-                              "value": 1.5
-                            },
-                            {
-                              "color": "#e74c3c",
-                              "comparison": "le",
-                              "value": 100
-                            }
-                          ],
-                          "textSize": "60px",
-                          "textWeight": "font-light",
-                          "unit": "g",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.VibrationLevel",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Vibration",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 4,
-                          "sizeX": 3,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Anomaly Level"
-                        },
-                        "properties": {
-                          "borderColor": "#1E313E",
-                          "donut": true,
-                          "labelsColor": "#1E313E",
-                          "valuesColor": "#1E313E"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.AnomalyLevel",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "Anomaly Level",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 4,
-                          "sizeX": 3,
-                          "sizeY": 6
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Device State"
-                        },
-                        "properties": {
-                          "extraText": "Current State",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "16px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textSize": "32px",
-                          "textWeight": "font-normal"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.State",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "State",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 10,
-                          "sizeX": 6,
-                          "sizeY": 8
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Vibration Level History"
-                        },
-                        "properties": {
-                          "chart": {
-                            "toolbar": {
-                              "show": true
-                            },
-                            "type": "area",
-                            "zoom": {
-                              "enabled": true
-                            }
-                          },
-                          "dataLabels": {
-                            "enabled": false
-                          },
-                          "fill": {
-                            "gradient": {
-                              "opacityFrom": 0.7,
-                              "opacityTo": 0.3,
-                              "shadeIntensity": 1
-                            },
-                            "type": "gradient"
-                          },
-                          "stroke": {
-                            "curve": "smooth",
-                            "width": 2
-                          },
-                          "tooltip": {
-                            "x": {
-                              "format": "dd MMM yyyy HH:mm"
-                            }
-                          },
-                          "xaxis": {
-                            "labels": {
-                              "datetimeUTC": false
-                            },
-                            "type": "datetime"
-                          },
-                          "yaxis": {
-                            "title": {
-                              "text": "Vibration (g)"
-                            }
-                          }
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.VibrationLevel",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#9b59b6",
-                            "name": "Vibration",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "hours",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 18,
-                          "sizeX": 6,
-                          "sizeY": 8
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Temperature History"
-                        },
-                        "properties": {
-                          "chart": {
-                            "toolbar": {
-                              "show": true
-                            },
-                            "type": "line",
-                            "zoom": {
-                              "enabled": true
-                            }
-                          },
-                          "dataLabels": {
-                            "enabled": false
-                          },
-                          "stroke": {
-                            "curve": "smooth",
-                            "width": 3
-                          },
-                          "tooltip": {
-                            "x": {
-                              "format": "dd MMM yyyy HH:mm"
-                            }
-                          },
-                          "xaxis": {
-                            "labels": {
-                              "datetimeUTC": false
-                            },
-                            "type": "datetime"
-                          },
-                          "yaxis": {
-                            "title": {
-                              "text": "Temperature (°C)"
-                            }
-                          }
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.Temperature",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "Temperature",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "hours",
-                              "value": 24
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      }
+                        }
                     ]
-                  },
-                  {
-                    "name": "Predictive Maintenance",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 6,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Anomaly Trends (24H/30D/6M)"
-                        },
-                        "properties": {
-                          "chart": {
-                            "toolbar": {
-                              "show": true
-                            },
-                            "type": "line"
-                          },
-                          "dataLabels": {
-                            "enabled": false
-                          },
-                          "legend": {
-                            "position": "top"
-                          },
-                          "stroke": {
-                            "curve": "smooth",
-                            "width": 2
-                          },
-                          "xaxis": {
-                            "labels": {
-                              "datetimeUTC": false
-                            },
-                            "type": "datetime"
-                          },
-                          "yaxis": {
-                            "max": 100,
-                            "min": 0,
-                            "title": {
-                              "text": "Anomaly Level"
-                            }
-                          }
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.AnomalyLevelTo20Last24H",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#2ecc71",
-                            "name": "Anomaly >20% (24H)",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "days",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.AnomalyLevelTo50Last24H",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#f39c12",
-                            "name": "Anomaly >50% (24H)",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "days",
-                              "value": 7
-                            }
-                          },
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.AnomalyLevelTo80Last24H",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#e74c3c",
-                            "name": "Anomaly >80% (24H)",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "days",
-                              "value": 7
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 10,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Operating Time"
-                        },
-                        "properties": {
-                          "decimalPlaces": 1,
-                          "extraText": "Operating Time",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "14px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textSize": "48px",
-                          "textWeight": "font-light",
-                          "unit": "h",
-                          "unitSize": "20px"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.OperatingTime",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Operating Time",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 2,
-                          "row": 10,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Alarm Reports"
-                        },
-                        "properties": {
-                          "decimalPlaces": 0,
-                          "extraText": "Alarm Count",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "14px",
-                          "textAlign": "center",
-                          "textColor": "#e74c3c",
-                          "textSize": "48px",
-                          "textWeight": "font-light"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.NbAlarmReport",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Alarms",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 4,
-                          "row": 10,
-                          "sizeX": 2,
-                          "sizeY": 5
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Peak Frequency Index"
-                        },
-                        "properties": {
-                          "decimalPlaces": 0,
-                          "extraText": "Peak Frequency",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "14px",
-                          "textAlign": "center",
-                          "textColor": "#3498db",
-                          "textSize": "48px",
-                          "textWeight": "font-light"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.PeakFrequencyIndex",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Peak Frequency",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 15,
-                          "sizeX": 6,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "FFT Spectrum Analysis"
-                        },
-                        "properties": {
-                          "chart": {
-                            "toolbar": {
-                              "show": true
-                            },
-                            "type": "bar"
-                          },
-                          "dataLabels": {
-                            "enabled": false
-                          },
-                          "plotOptions": {
-                            "bar": {
-                              "borderRadius": 4,
-                              "dataLabels": {
-                                "position": "top"
-                              }
-                            }
-                          },
-                          "xaxis": {
-                            "title": {
-                              "text": "FFT Bin"
-                            },
-                            "type": "category"
-                          },
-                          "yaxis": {
-                            "title": {
-                              "text": "Amplitude"
-                            }
-                          }
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "fft",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#9b59b6",
-                            "name": "FFT Spectrum",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "Learning Status",
-                    "widgets": [
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 0,
-                          "sizeX": 3,
-                          "sizeY": 8
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Learning Progress"
-                        },
-                        "properties": {
-                          "borderColor": "#1E313E",
-                          "donut": true,
-                          "labelsColor": "#1E313E",
-                          "valuesColor": "#1E313E"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.LearningPercentage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#3498db",
-                            "name": "Learning %",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "donutchart"
-                      },
-                      {
-                        "layout": {
-                          "col": 3,
-                          "row": 0,
-                          "sizeX": 3,
-                          "sizeY": 8
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Learning Mode"
-                        },
-                        "properties": {
-                          "extraText": "From Scratch",
-                          "extraTextColor": "#7f8c8d",
-                          "extraTextPosition": "above-value",
-                          "extraTextSize": "16px",
-                          "textAlign": "center",
-                          "textColor": "#1E313E",
-                          "textSize": "48px",
-                          "textWeight": "font-normal"
-                        },
-                        "sources": [
-                          {
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.LearningFromScratch",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "name": "Learning Mode",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest"
-                            }
-                          }
-                        ],
-                        "type": "text"
-                      },
-                      {
-                        "layout": {
-                          "col": 0,
-                          "row": 8,
-                          "sizeX": 6,
-                          "sizeY": 10
-                        },
-                        "panel": {
-                          "color": "#ffffff",
-                          "currentColor": "#ffffff",
-                          "showOffline": {
-                            "type": "none"
-                          },
-                          "title": "Learning Progress Over Time"
-                        },
-                        "properties": {
-                          "chart": {
-                            "toolbar": {
-                              "show": true
-                            },
-                            "type": "area"
-                          },
-                          "dataLabels": {
-                            "enabled": false
-                          },
-                          "fill": {
-                            "gradient": {
-                              "opacityFrom": 0.7,
-                              "opacityTo": 0.3,
-                              "shadeIntensity": 1
-                            },
-                            "type": "gradient"
-                          },
-                          "stroke": {
-                            "curve": "smooth",
-                            "width": 3
-                          },
-                          "xaxis": {
-                            "labels": {
-                              "datetimeUTC": false
-                            },
-                            "type": "datetime"
-                          },
-                          "yaxis": {
-                            "max": 100,
-                            "min": 0,
-                            "title": {
-                              "text": "Learning Progress (%)"
-                            }
-                          }
-                        },
-                        "sources": [
-                          {
-                            "aggregation": {
-                              "type": "value"
-                            },
-                            "bucket": {
-                              "backend": "mongodb",
-                              "id": "bob_assistant_data",
-                              "mapping": "data.LearningPercentage",
-                              "tags": {
-                                "device": [],
-                                "group": []
-                              }
-                            },
-                            "color": "#3498db",
-                            "name": "Learning %",
-                            "source": "bucket",
-                            "timespan": {
-                              "mode": "latest",
-                              "period": "days",
-                              "value": 7
-                            }
-                          }
-                        ],
-                        "type": "apex_charts"
-                      }
-                    ]
-                  }
-                ]
-              }
+                }
             }
-          ]
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
