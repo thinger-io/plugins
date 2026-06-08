@@ -1,0 +1,679 @@
+{
+  "name": "sensecaps2101_temp_humid",
+  "version": "1.0.0",
+  "description": "SenseCAP 2101 air temperature & humidity sensor satisfies industrial IoT long-distance data acquisition with measuring ranges from -40°C to 85°C and 0 to 100 %RH respectively. With Bluetooth 5.0 for easy wireless configuration and firmware upgrade and a b",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sensecap-sensecaps2101-temp-humid"
+  },
+  "metadata": {
+    "name": "SENSECAPS2101-TEMP-HUMID",
+    "description": "SenseCAP 2101 air temperature & humidity sensor satisfies industrial IoT long-distance data acquisition with measuring ranges from -40°C to 85°C and 0 to 100 %RH respectively. With Bluetooth 5.0 for easy wireless configuration and firmware upgrade and a b",
+    "image": "assets/sensecaps2101.png",
+    "category": "devices",
+    "vendor": "sensecap"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "SenseCAP 2101 air temperature & humidity sensor satisfies industrial IoT long-distance data acquisition with measuring ranges from -40°C to 85°C and 0 to 100 %RH respectively. With Bluetooth 5.0 for easy wireless configuration and firmware upgrade and a b",
+        "enabled": true,
+        "name": "SENSECAPS2101-TEMP-HUMID",
+        "product": "sensecaps2101_temp_humid",
+        "profile": {
+          "api": {
+            "uplink": {
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "sensecap_s2101_.*"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "sensecap_s2101_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * SenseCAP & TTN (new v3) Converter\n *\n * @since 3.0\n * @return Object\n *      @param  Boolean     valid       Indicates whether the payload is a valid payload.\n *      @param  String      err         The reason for the payload to be invalid. 0 means valid, minus means invalid.\n *      @param  String      payload     Hexadecimal string, to show the payload.\n *      @param  Array       messages    One or more messages are parsed according to payload.\n *                              type // Enum:\n *                                   //   - \"report_telemetry\"\n *                                   //   - \"upload_battery\"\n *                                   //   - \"upload_interval\"\n *                                   //   - \"upload_version\"\n *                                   //   - \"upload_sensor_id\"\n *                                   //   - \"report_remove_sensor\"\n *                                   //   - \"unknown_message\"\n *\n *\n *\n *\n *  @sample-1\n *      var sample = Decoder([\"00\", \"00\", \"00\", \"01\", \"01\", \"00\", \"01\", \"00\", \"07\", \"00\", \"64\", \"00\", \"3C\", \"00\", \"01\", \"20\", \"01\", \"00\", \"00\", \"00\", \"00\", \"28\", \"90\"], null);\n *      {\n *        valid: true,\n *        err: 0,\n *        payload: '0000000101000100070064003C00012001000000002890',\n *        messages: [\n *           { type: 'upload_version',\n *             hardwareVersion: '1.0',\n *             softwareVersion: '1.1' },\n *           { type: 'upload_battery', battery: 100 },\n *           { type: 'upload_interval', interval: 3600 },\n *           { type: 'report_remove_sensor', channel: 1 }\n *        ]\n *      }\n * @sample-2\n *      var sample = Decoder([\"01\", \"01\", \"10\", \"98\", \"53\", \"00\", \"00\", \"01\", \"02\", \"10\", \"A8\", \"7A\", \"00\", \"00\", \"AF\", \"51\"], null);\n *      {\n *        valid: true,\n *        err: 0,\n *        payload: '01011098530000010210A87A0000AF51',\n *        messages: [\n *           { type: 'report_telemetry',\n *             measurementId: 4097,\n *             measurementValue: 21.4 },\n *           { type: 'report_telemetry',\n *             measurementId: 4098,\n *             measurementValue: 31.4 }\n *        ]\n *      }\n * @sample-3\n *      var sample = Decoder([\"01\", \"01\", \"00\", \"01\", \"01\", \"00\", \"01\", \"01\", \"02\", \"00\", \"6A\", \"01\", \"00\", \"15\", \"01\", \"03\", \"00\", \"30\", \"F1\", \"F7\", \"2C\", \"01\", \"04\", \"00\", \"09\", \"0C\", \"13\", \"14\", \"01\", \"05\", \"00\", \"7F\", \"4D\", \"00\", \"00\", \"01\", \"06\", \"00\", \"00\", \"00\", \"00\", \"00\", \"4C\", \"BE\"], null);\n *      {\n *        valid: true,\n *        err: 0,\n *        payload: '010100010100010102006A01001501030030F1F72C010400090C13140105007F4D0000010600000000004CBE',\n *        messages: [\n *            { type: 'upload_sensor_id', sensorId: '30F1F72C6A010015', channel: 1 }\n *        ]\n *      }\n */\n\n/**\n * Entry, decoder.js\n */\nfunction decodeUplink(input) {\n  var bytes = input['bytes'];\n  // init\n  var bytesString = bytes2HexString(bytes).toLocaleUpperCase();\n  var decoded = {\n    // valid\n    valid: true,\n    err: 0,\n    // bytes\n    payload: bytesString,\n    // messages array\n    messages: [],\n  };\n\n  // CRC check\n  if (!crc16Check(bytesString)) {\n    decoded['valid'] = false;\n    decoded['err'] = -1; // \"crc check fail.\"\n    return { data: decoded };\n  }\n\n  // Length Check\n  if ((bytesString.length / 2 - 2) % 7 !== 0) {\n    decoded['valid'] = false;\n    decoded['err'] = -2; // \"length check fail.\"\n    return { data: decoded };\n  }\n\n  // Cache sensor id\n  var sensorEuiLowBytes;\n  var sensorEuiHighBytes;\n\n  // Handle each frame\n  var frameArray = divideBy7Bytes(bytesString);\n  for (var forFrame = 0; forFrame < frameArray.length; forFrame++) {\n    var frame = frameArray[forFrame];\n    // Extract key parameters\n    var channel = strTo10SysNub(frame.substring(0, 2));\n    var dataID = strTo10SysNub(frame.substring(2, 6));\n    var dataValue = frame.substring(6, 14);\n    var realDataValue = isSpecialDataId(dataID) ? ttnDataSpecialFormat(dataID, dataValue) : ttnDataFormat(dataValue);\n\n    if (checkDataIdIsMeasureUpload(dataID)) {\n      // if telemetry.\n      decoded.messages.push({\n        type: 'report_telemetry',\n        measurementId: dataID,\n        measurementValue: realDataValue,\n      });\n    } else if (isSpecialDataId(dataID) || dataID === 5 || dataID === 6) {\n      // if special order, except \"report_sensor_id\".\n      switch (dataID) {\n        case 0x00:\n          // node version\n          var versionData = sensorAttrForVersion(realDataValue);\n          decoded.messages.push({\n            type: 'upload_version',\n            hardwareVersion: versionData.ver_hardware,\n            softwareVersion: versionData.ver_software,\n          });\n          break;\n        case 1:\n          // sensor version\n          break;\n        case 2:\n          // sensor eui, low bytes\n          sensorEuiLowBytes = realDataValue;\n          break;\n        case 3:\n          // sensor eui, high bytes\n          sensorEuiHighBytes = realDataValue;\n          break;\n        case 7:\n          // battery power && interval\n          decoded.messages.push(\n            {\n              type: 'upload_battery',\n              battery: realDataValue.power,\n            },\n            {\n              type: 'upload_interval',\n              interval: parseInt(realDataValue.interval) * 60,\n            }\n          );\n          break;\n        case 0x120:\n          // remove sensor\n          decoded.messages.push({\n            type: 'report_remove_sensor',\n            channel: 1,\n          });\n          break;\n        default:\n          break;\n      }\n    } else {\n      decoded.messages.push({\n        type: 'unknown_message',\n        dataID: dataID,\n        dataValue: dataValue,\n      });\n    }\n  }\n\n  // if the complete id received, as \"upload_sensor_id\"\n  if (sensorEuiHighBytes && sensorEuiLowBytes) {\n    decoded.messages.unshift({\n      type: 'upload_sensor_id',\n      channel: 1,\n      sensorId: (sensorEuiHighBytes + sensorEuiLowBytes).toUpperCase(),\n    });\n  }\n\n  // return\n  return { data: decoded };\n}\n\nfunction crc16Check(data) {\n  return true;\n}\n\n// util\nfunction bytes2HexString(arrBytes) {\n  var str = '';\n  for (var i = 0; i < arrBytes.length; i++) {\n    var tmp;\n    var num = arrBytes[i];\n    if (num < 0) {\n      tmp = (255 + num + 1).toString(16);\n    } else {\n      tmp = num.toString(16);\n    }\n    if (tmp.length === 1) {\n      tmp = '0' + tmp;\n    }\n    str += tmp;\n  }\n  return str;\n}\n\n// util\nfunction divideBy7Bytes(str) {\n  var frameArray = [];\n  for (var i = 0; i < str.length - 4; i += 14) {\n    var data = str.substring(i, i + 14);\n    frameArray.push(data);\n  }\n  return frameArray;\n}\n\n// util\nfunction littleEndianTransform(data) {\n  var dataArray = [];\n  for (var i = 0; i < data.length; i += 2) {\n    dataArray.push(data.substring(i, i + 2));\n  }\n  dataArray.reverse();\n  return dataArray;\n}\n\n// util\nfunction strTo10SysNub(str) {\n  var arr = littleEndianTransform(str);\n  return parseInt(arr.toString().replace(/,/g, ''), 16);\n}\n\n// util\nfunction checkDataIdIsMeasureUpload(dataId) {\n  return parseInt(dataId) > 4096;\n}\n\n// configurable.\nfunction isSpecialDataId(dataID) {\n  switch (dataID) {\n    case 0:\n    case 1:\n    case 2:\n    case 3:\n    case 4:\n    case 7:\n    case 0x120:\n      return true;\n    default:\n      return false;\n  }\n}\n\n// configurable\nfunction ttnDataSpecialFormat(dataId, str) {\n  var strReverse = littleEndianTransform(str);\n  if (dataId === 2 || dataId === 3) {\n    return strReverse.join('');\n  }\n\n  // handle unsigned number\n  var str2 = toBinary(strReverse);\n\n  var dataArray = [];\n  switch (dataId) {\n    case 0: // DATA_BOARD_VERSION\n    case 1: // DATA_SENSOR_VERSION\n      // Using point segmentation\n      for (var k = 0; k < str2.length; k += 16) {\n        var tmp146 = str2.substring(k, k + 16);\n        tmp146 = (parseInt(tmp146.substring(0, 8), 2) || 0) + '.' + (parseInt(tmp146.substring(8, 16), 2) || 0);\n        dataArray.push(tmp146);\n      }\n      return dataArray.join(',');\n    case 4:\n      for (var i = 0; i < str2.length; i += 8) {\n        var item = parseInt(str2.substring(i, i + 8), 2);\n        if (item < 10) {\n          item = '0' + item.toString();\n        } else {\n          item = item.toString();\n        }\n        dataArray.push(item);\n      }\n      return dataArray.join('');\n    case 7:\n      // battery && interval\n      return {\n        interval: parseInt(str2.substr(0, 16), 2),\n        power: parseInt(str2.substr(-16, 16), 2),\n      };\n  }\n}\n\n// util\nfunction ttnDataFormat(str) {\n  var strReverse = littleEndianTransform(str);\n  var str2 = toBinary(strReverse);\n  if (str2.substring(0, 1) === '1') {\n    var arr = str2.split('');\n    var reverseArr = [];\n    for (var forArr = 0; forArr < arr.length; forArr++) {\n      var item = arr[forArr];\n      if (parseInt(item) === 1) {\n        reverseArr.push(0);\n      } else {\n        reverseArr.push(1);\n      }\n    }\n    str2 = parseInt(reverseArr.join(''), 2) + 1;\n    return parseFloat('-' + str2 / 1000);\n  }\n  return parseInt(str2, 2) / 1000;\n}\n\n// util\nfunction sensorAttrForVersion(dataValue) {\n  var dataValueSplitArray = dataValue.split(',');\n  return {\n    ver_hardware: dataValueSplitArray[0],\n    ver_software: dataValueSplitArray[1],\n  };\n}\n\n// util\nfunction toBinary(arr) {\n  var binaryData = [];\n  for (var forArr = 0; forArr < arr.length; forArr++) {\n    var item = arr[forArr];\n    var data = parseInt(item, 16).toString(2);\n    var dataLength = data.length;\n    if (data.length !== 8) {\n      for (var i = 0; i < 8 - dataLength; i++) {\n        data = '0' + data;\n      }\n    }\n    binaryData.push(data);\n  }\n  return binaryData.toString().replace(/,/g, '');\n}\n\n// Samples\n// var sample = Decoder([\"00\", \"00\", \"00\", \"01\", \"01\", \"00\", \"01\", \"00\", \"07\", \"00\", \"64\", \"00\", \"3C\", \"00\", \"01\", \"20\", \"01\", \"00\", \"00\", \"00\", \"00\", \"28\", \"90\"], null);\n// var sample = Decoder([\"01\", \"01\", \"10\", \"98\", \"53\", \"00\", \"00\", \"01\", \"02\", \"10\", \"A8\", \"7A\", \"00\", \"00\", \"AF\", \"51\"], null);\n// var sample = Decoder([\"01\", \"01\", \"00\", \"01\", \"01\", \"00\", \"01\", \"01\", \"02\", \"00\", \"6A\", \"01\", \"00\", \"15\", \"01\", \"03\", \"00\", \"30\", \"F1\", \"F7\", \"2C\", \"01\", \"04\", \"00\", \"09\", \"0C\", \"13\", \"14\", \"01\", \"05\", \"00\", \"7F\", \"4D\", \"00\", \"00\", \"01\", \"06\", \"00\", \"00\", \"00\", \"00\", \"00\", \"4C\", \"BE\"], null);\n// console.log(sample);\n",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "sensecap_s2101_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "icon": "fas fa-thermometer-half",
+                          "iconColor": "#e74c3c",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "75px",
+                          "textWeight": "font-light",
+                          "unit": "°C",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 5
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity"
+                        },
+                        "properties": {
+                          "decimalPlaces": 1,
+                          "icon": "fas fa-tint",
+                          "iconColor": "#3498db",
+                          "iconPosition": "before-value",
+                          "iconSize": "75px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "75px",
+                          "textWeight": "font-light",
+                          "unit": "%RH",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[1].measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "icon": "fas fa-battery-three-quarters",
+                          "iconColor": "#2ecc71",
+                          "iconPosition": "before-value",
+                          "iconSize": "60px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "%",
+                          "unitSize": "18px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].battery",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 5,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Upload Interval"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "icon": "fas fa-clock",
+                          "iconColor": "#9b59b6",
+                          "iconPosition": "before-value",
+                          "iconSize": "60px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "60px",
+                          "textWeight": "font-light",
+                          "unit": "s",
+                          "unitSize": "18px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].interval",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Interval",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 9,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Temperature History"
+                        },
+                        "properties": {
+                          "chart": {
+                            "animations": {
+                              "enabled": true
+                            },
+                            "toolbar": {
+                              "show": true
+                            },
+                            "type": "area",
+                            "zoom": {
+                              "enabled": true
+                            }
+                          },
+                          "dataLabels": {
+                            "enabled": false
+                          },
+                          "fill": {
+                            "gradient": {
+                              "opacityFrom": 0.7,
+                              "opacityTo": 0.3,
+                              "shadeIntensity": 1
+                            },
+                            "type": "gradient"
+                          },
+                          "legend": {
+                            "position": "top",
+                            "show": true
+                          },
+                          "stroke": {
+                            "curve": "smooth",
+                            "width": 2
+                          },
+                          "tooltip": {
+                            "x": {
+                              "format": "dd MMM yyyy HH:mm"
+                            }
+                          },
+                          "xaxis": {
+                            "type": "datetime"
+                          },
+                          "yaxis": {
+                            "max": 85,
+                            "min": -40,
+                            "title": {
+                              "text": "Temperature (°C)"
+                            }
+                          }
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": {
+                                "unit": "minutes",
+                                "value": 5
+                              },
+                              "type": "mean"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "Temperature",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest",
+                              "unit": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 21,
+                          "sizeX": 6,
+                          "sizeY": 12
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Humidity History"
+                        },
+                        "properties": {
+                          "chart": {
+                            "animations": {
+                              "enabled": true
+                            },
+                            "toolbar": {
+                              "show": true
+                            },
+                            "type": "area",
+                            "zoom": {
+                              "enabled": true
+                            }
+                          },
+                          "dataLabels": {
+                            "enabled": false
+                          },
+                          "fill": {
+                            "gradient": {
+                              "opacityFrom": 0.7,
+                              "opacityTo": 0.3,
+                              "shadeIntensity": 1
+                            },
+                            "type": "gradient"
+                          },
+                          "legend": {
+                            "position": "top",
+                            "show": true
+                          },
+                          "stroke": {
+                            "curve": "smooth",
+                            "width": 2
+                          },
+                          "tooltip": {
+                            "x": {
+                              "format": "dd MMM yyyy HH:mm"
+                            }
+                          },
+                          "xaxis": {
+                            "type": "datetime"
+                          },
+                          "yaxis": {
+                            "max": 100,
+                            "min": 0,
+                            "title": {
+                              "text": "Humidity (%RH)"
+                            }
+                          }
+                        },
+                        "sources": [
+                          {
+                            "aggregation": {
+                              "period": {
+                                "unit": "minutes",
+                                "value": 5
+                              },
+                              "type": "mean"
+                            },
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[1].measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Humidity",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest",
+                              "unit": "hours",
+                              "value": 24
+                            }
+                          }
+                        ],
+                        "type": "apex_charts"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Device Info",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Hardware Version"
+                        },
+                        "properties": {
+                          "icon": "fas fa-microchip",
+                          "iconColor": "#34495e",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].hardwareVersion",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#34495e",
+                            "name": "HW Version",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 3,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Software Version"
+                        },
+                        "properties": {
+                          "icon": "fas fa-code",
+                          "iconColor": "#16a085",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "40px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].softwareVersion",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#16a085",
+                            "name": "SW Version",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 4,
+                          "sizeX": 6,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Sensor ID"
+                        },
+                        "properties": {
+                          "icon": "fas fa-fingerprint",
+                          "iconColor": "#e67e22",
+                          "iconPosition": "above-value",
+                          "iconSize": "50px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "30px",
+                          "textWeight": "font-light"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecap_s2101_data",
+                              "mapping": "messages[0].sensorId",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e67e22",
+                            "name": "Sensor ID",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Specifications"
+                        },
+                        "properties": {
+                          "source": "code",
+                          "template": "<div style=\"padding: 20px; font-family: Arial, sans-serif;\">\n  <h3 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">SenseCAP S2101 Specifications</h3>\n  <div style=\"margin-top: 15px;\">\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #e74c3c;\">Temperature Range:</strong> -40°C to 85°C\n    </div>\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #3498db;\">Humidity Range:</strong> 0 to 100 %RH\n    </div>\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #2ecc71;\">Connectivity:</strong> LoRaWAN® (Helium Compatible)\n    </div>\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #9b59b6;\">Configuration:</strong> Bluetooth 5.0\n    </div>\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #f39c12;\">Power:</strong> Replaceable Battery\n    </div>\n    <div style=\"padding: 10px; margin: 5px 0; background-color: #ecf0f1; border-radius: 5px;\">\n      <strong style=\"color: #34495e;\">Application:</strong> Industrial IoT Long-Distance Data Acquisition\n    </div>\n  </div>\n</div>"
+                        },
+                        "sources": [],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
