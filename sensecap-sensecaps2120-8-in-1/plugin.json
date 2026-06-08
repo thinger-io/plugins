@@ -1,0 +1,134 @@
+{
+  "name": "sensecap_sensecaps2120_8_in_1",
+  "version": "1.0.0",
+  "description": "SenseCAP LoRaWAN® S2120 Weather Station provides you with hyperlocal weather at your fingertips. It supports multi-scenario applications like backyard, garden, agriculture, meteorology, urban environmental monitoring, and so on. It enables low maintenance",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sensecap-sensecaps2120-8-in-1"
+  },
+  "metadata": {
+    "name": "Sensecap SENSECAPS2120-8-IN-1",
+    "description": "SenseCAP LoRaWAN® S2120 Weather Station provides you with hyperlocal weather at your fingertips. It supports multi-scenario applications like backyard, garden, agriculture, meteorology, urban environmental monitoring, and so on. It enables low maintenance",
+    "image": "assets/sensecaps2120.png",
+    "category": "devices",
+    "vendor": "sensecap"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "SenseCAP LoRaWAN® S2120 Weather Station provides you with hyperlocal weather at your fingertips. It supports multi-scenario applications like backyard, garden, agriculture, meteorology, urban environmental monitoring, and so on. It enables low maintenance",
+        "enabled": true,
+        "name": "Sensecap SENSECAPS2120-8-IN-1",
+        "product": "sensecap_sensecaps2120_8_in_1",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=1}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "s2120_[0-9A-Fa-f]{16}"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "sensecap_s2120_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n/**\n * Entry, decoder.js\n */\n function decodeUplink (input, port) {\n  // data split\n\n  var bytes = input['bytes']\n  // init\n  bytes = bytes2HexString(bytes)\n    .toLocaleUpperCase()\n\n  let result = {\n    'err': 0, 'payload': bytes, 'valid': true, messages: []\n  }\n  let splitArray = dataSplit(bytes)\n  // data decoder\n  let decoderArray = []\n  for (let i = 0; i < splitArray.length; i++) {\n    let item = splitArray[i]\n    let dataId = item.dataId\n    let dataValue = item.dataValue\n    let messages = dataIdAndDataValueJudge(dataId, dataValue)\n    decoderArray.push(...messages)\n  }\n  result.messages = decoderArray\n  return { data: result }\n}\n\n/**\n * data splits\n * @param bytes\n * @returns {*[]}\n */\nfunction dataSplit (bytes) {\n  let frameArray = []\n\n  for (let i = 0; i < bytes.length; i++) {\n    let remainingValue = bytes\n    let dataId = remainingValue.substring(0, 2)\n    let dataValue\n    let dataObj = {}\n    switch (dataId) {\n      case '01' :\n      case '20' :\n      case '21' :\n      case '30' :\n      case '31' :\n      case '33' :\n      case '40' :\n      case '41' :\n      case '42' :\n      case '43' :\n      case '44' :\n      case '45' :\n        dataValue = remainingValue.substring(2, 22)\n        bytes = remainingValue.substring(22)\n        dataObj = {\n          'dataId': dataId, 'dataValue': dataValue\n        }\n        break\n      case '02':\n        dataValue = remainingValue.substring(2, 18)\n        bytes = remainingValue.substring(18)\n        dataObj = {\n          'dataId': '02', 'dataValue': dataValue\n        }\n        break\n      case '03' :\n      case '06':\n        dataValue = remainingValue.substring(2, 4)\n        bytes = remainingValue.substring(4)\n        dataObj = {\n          'dataId': dataId, 'dataValue': dataValue\n        }\n        break\n      case '05' :\n      case '34':\n        dataValue = bytes.substring(2, 10)\n        bytes = remainingValue.substring(10)\n        dataObj = {\n          'dataId': dataId, 'dataValue': dataValue\n        }\n        break\n      case '04':\n      case '10':\n      case '32':\n      case '35':\n      case '36':\n      case '37':\n      case '38':\n      case '39':\n        dataValue = bytes.substring(2, 20)\n        bytes = remainingValue.substring(20)\n        dataObj = {\n          'dataId': dataId, 'dataValue': dataValue\n        }\n        break\n      default:\n        dataValue = '9'\n        break\n    }\n    if (dataValue.length < 2) {\n      break\n    }\n    frameArray.push(dataObj)\n  }\n  return frameArray\n}\n\nfunction dataIdAndDataValueJudge (dataId, dataValue) {\n  let messages = []\n  switch (dataId) {\n    case '01':\n      let temperature = dataValue.substring(0, 4)\n      let humidity = dataValue.substring(4, 6)\n      let illumination = dataValue.substring(6, 14)\n      let uv = dataValue.substring(14, 16)\n      let windSpeed = dataValue.substring(16, 20)\n      messages = [{\n        measurementValue: loraWANV2DataFormat(temperature, 10), measurementId: '4097', type: 'Air Temperature'\n      }, {\n        measurementValue: loraWANV2DataFormat(humidity), measurementId: '4098', type: 'Air Humidity'\n      }, {\n        measurementValue: loraWANV2DataFormat(illumination), measurementId: '4099', type: 'Light Intensity'\n      }, {\n        measurementValue: loraWANV2DataFormat(uv, 10), measurementId: '4190', type: 'UV Index'\n      }, {\n        measurementValue: loraWANV2DataFormat(windSpeed, 10), measurementId: '4105', type: 'Wind Speed'\n      }]\n      break\n    case '02':\n      let windDirection = dataValue.substring(0, 4)\n      let rainfall = dataValue.substring(4, 12)\n      let airPressure = dataValue.substring(12, 16)\n      messages = [{\n        measurementValue: loraWANV2DataFormat(windDirection), measurementId: '4104', type: 'Wind Direction Sensor'\n      }, {\n        measurementValue: loraWANV2DataFormat(rainfall, 1000), measurementId: '4113', type: 'Rain Gauge'\n      }, {\n\n        measurementValue: loraWANV2DataFormat(airPressure, 0.1), measurementId: '4101', type: 'Barometric Pressure'\n      }]\n      break\n    case '03':\n      let Electricity = dataValue\n      messages = [{\n        'Battery(%)': loraWANV2DataFormat(Electricity)\n      }]\n      break\n    case '04':\n      let electricityWhether = dataValue.substring(0, 2)\n      let hwv = dataValue.substring(2, 6)\n      let bdv = dataValue.substring(6, 10)\n      let sensorAcquisitionInterval = dataValue.substring(10, 14)\n      let gpsAcquisitionInterval = dataValue.substring(14, 18)\n      messages = [{\n        'Battery(%)': loraWANV2DataFormat(electricityWhether),\n        'Hardware Version': `${loraWANV2DataFormat(hwv.substring(0, 2))}.${loraWANV2DataFormat(hwv.substring(2, 4))}`,\n        'Firmware Version': `${loraWANV2DataFormat(bdv.substring(0, 2))}.${loraWANV2DataFormat(bdv.substring(2, 4))}`,\n        'measureInterval': parseInt(loraWANV2DataFormat(sensorAcquisitionInterval)) * 60,\n        'gpsInterval': parseInt(loraWANV2DataFormat(gpsAcquisitionInterval)) * 60\n      }]\n      break\n    case '05':\n      let sensorAcquisitionIntervalFive = dataValue.substring(0, 4)\n      let gpsAcquisitionIntervalFive = dataValue.substring(4, 8)\n      messages = [{\n        'measureInterval': parseInt(loraWANV2DataFormat(sensorAcquisitionIntervalFive)) * 60,\n        'gpsInterval': parseInt(loraWANV2DataFormat(gpsAcquisitionIntervalFive)) * 60\n      }]\n      break\n    case '06':\n      let errorCode = dataValue\n      let descZh\n      switch (errorCode) {\n        case '00':\n          descZh = 'CCL_SENSOR_ERROR_NONE'\n          break\n        case '01':\n          descZh = 'CCL_SENSOR_NOT_FOUND'\n          break\n        case '02':\n          descZh = 'CCL_SENSOR_WAKEUP_ERROR'\n          break\n        case '03':\n          descZh = 'CCL_SENSOR_NOT_RESPONSE'\n          break\n        case '04':\n          descZh = 'CCL_SENSOR_DATA_EMPTY'\n          break\n        case '05':\n          descZh = 'CCL_SENSOR_DATA_HEAD_ERROR'\n          break\n        case '06':\n          descZh = 'CCL_SENSOR_DATA_CRC_ERROR'\n          break\n        case '07':\n          descZh = 'CCL_SENSOR_DATA_B1_NO_VALID'\n          break\n        case '08':\n          descZh = 'CCL_SENSOR_DATA_B2_NO_VALID'\n          break\n        case '09':\n          descZh = 'CCL_SENSOR_RANDOM_NOT_MATCH'\n          break\n        case '0A':\n          descZh = 'CCL_SENSOR_PUBKEY_SIGN_VERIFY_FAILED'\n          break\n        case '0B':\n          descZh = 'CCL_SENSOR_DATA_SIGN_VERIFY_FAILED'\n          break\n        case '0C':\n          descZh = 'CCL_SENSOR_DATA_VALUE_HI'\n          break\n        case '0D':\n          descZh = 'CCL_SENSOR_DATA_VALUE_LOW'\n          break\n        case '0E':\n          descZh = 'CCL_SENSOR_DATA_VALUE_MISSED'\n          break\n        case '0F':\n          descZh = 'CCL_SENSOR_ARG_INVAILD'\n          break\n        case '10':\n          descZh = 'CCL_SENSOR_RS485_MASTER_BUSY'\n          break\n        case '11':\n          descZh = 'CCL_SENSOR_RS485_REV_DATA_ERROR'\n          break\n        case '12':\n          descZh = 'CCL_SENSOR_RS485_REG_MISSED'\n          break\n        case '13':\n          descZh = 'CCL_SENSOR_RS485_FUN_EXE_ERROR'\n          break\n        case '14':\n          descZh = 'CCL_SENSOR_RS485_WRITE_STRATEGY_ERROR'\n          break\n        case '15':\n          descZh = 'CCL_SENSOR_CONFIG_ERROR'\n          break\n        case 'FF':\n          descZh = 'CCL_SENSOR_DATA_ERROR_UNKONW'\n          break\n        default:\n          descZh = 'CC_OTHER_FAILED'\n          break\n      }\n      messages = [{\n        measurementId: '4101', type: 'sensor_error_event', errCode: errorCode, descZh\n      }]\n      break\n    case '10':\n      let statusValue = dataValue.substring(0, 2)\n      let { status, type } = loraWANV2BitDataFormat(statusValue)\n      let sensecapId = dataValue.substring(2)\n      messages = [{\n        status: status, channelType: type, sensorEui: sensecapId\n      }]\n      break\n    default:\n      break\n  }\n  return messages\n}\n\n/**\n *\n * data formatting\n * @param str\n * @param divisor\n * @returns {string|number}\n */\nfunction loraWANV2DataFormat (str, divisor = 1) {\n  let strReverse = bigEndianTransform(str)\n  let str2 = toBinary(strReverse)\n  if (str2.substring(0, 1) === '1') {\n    let arr = str2.split('')\n    let reverseArr = arr.map((item) => {\n      if (parseInt(item) === 1) {\n        return 0\n      } else {\n        return 1\n      }\n    })\n    str2 = parseInt(reverseArr.join(''), 2) + 1\n    return '-' + str2 / divisor\n  }\n  return parseInt(str2, 2) / divisor\n}\n\n/**\n * Handling big-endian data formats\n * @param data\n * @returns {*[]}\n */\nfunction bigEndianTransform (data) {\n  let dataArray = []\n  for (let i = 0; i < data.length; i += 2) {\n    dataArray.push(data.substring(i, i + 2))\n  }\n  // array of hex\n  return dataArray\n}\n\n/**\n * Convert to an 8-digit binary number with 0s in front of the number\n * @param arr\n * @returns {string}\n */\nfunction toBinary (arr) {\n  let binaryData = arr.map((item) => {\n    let data = parseInt(item, 16)\n      .toString(2)\n    let dataLength = data.length\n    if (data.length !== 8) {\n      for (let i = 0; i < 8 - dataLength; i++) {\n        data = `0` + data\n      }\n    }\n    return data\n  })\n  let ret = binaryData.toString()\n    .replace(/,/g, '')\n  return ret\n}\n\n/**\n * sensor\n * @param str\n * @returns {{channel: number, type: number, status: number}}\n */\nfunction loraWANV2BitDataFormat (str) {\n  let strReverse = bigEndianTransform(str)\n  let str2 = toBinary(strReverse)\n  let channel = parseInt(str2.substring(0, 4), 2)\n  let status = parseInt(str2.substring(4, 5), 2)\n  let type = parseInt(str2.substring(5), 2)\n  return { channel, status, type }\n}\n\n/**\n * channel info\n * @param str\n * @returns {{channelTwo: number, channelOne: number}}\n */\nfunction loraWANV2ChannelBitFormat (str) {\n  let strReverse = bigEndianTransform(str)\n  let str2 = toBinary(strReverse)\n  let one = parseInt(str2.substring(0, 4), 2)\n  let two = parseInt(str2.substring(4, 8), 2)\n  let resultInfo = {\n    one: one, two: two\n  }\n  return resultInfo\n}\n\n/**\n * data log status bit\n * @param str\n * @returns {{total: number, level: number, isTH: number}}\n */\nfunction loraWANV2DataLogBitFormat (str) {\n  let strReverse = bigEndianTransform(str)\n  let str2 = toBinary(strReverse)\n  let isTH = parseInt(str2.substring(0, 1), 2)\n  let total = parseInt(str2.substring(1, 5), 2)\n  let left = parseInt(str2.substring(5), 2)\n  let resultInfo = {\n    isTH: isTH, total: total, left: left\n  }\n  return resultInfo\n}\n\nfunction bytes2HexString (arrBytes) {\n  var str = ''\n  for (var i = 0; i < arrBytes.length; i++) {\n    var tmp\n    var num = arrBytes[i]\n    if (num < 0) {\n      tmp = (255 + num + 1).toString(16)\n    } else {\n      tmp = num.toString(16)\n    }\n    if (tmp.length === 1) {\n      tmp = '0' + tmp\n    }\n    str += tmp\n  }\n  return str\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "sensecap_s2120_uplink_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
