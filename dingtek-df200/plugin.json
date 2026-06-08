@@ -1,0 +1,125 @@
+{
+  "name": "dingtek_df200",
+  "version": "1.0.0",
+  "description": "The CNDingtek df200 is soap dispenser level sensor, which detect the liquid level in the dispenser.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "dingtek-df200"
+  },
+  "metadata": {
+    "name": "Dingtek DF200",
+    "description": "The CNDingtek df200 is soap dispenser level sensor, which detect the liquid level in the dispenser.",
+    "image": "assets/df200.png",
+    "category": "devices",
+    "vendor": "dingtek"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "The CNDingtek df200 is soap dispenser level sensor, which detect the liquid level in the dispenser.",
+        "enabled": true,
+        "name": "Dingtek DF200",
+        "product": "dingtek_df200",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=3}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              }
+            }
+          },
+          "buckets": {
+            "dingtek_df200_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n    switch (input.bytes.length) {\n        case 15:\n            return {\n                // Decoded data\n                data: {\n                    level: (input.bytes[9]),\n                    alarmLevel: Boolean(input.bytes[10] & 0x0f),\n                    alarmBattery: Boolean(input.bytes[7] & 0x0f),\n                    temperature: input.bytes[8],\n                    volt: ((input.bytes[5] << 8) + input.bytes[6]) / 100,\n                    frameCounter: (input.bytes[11] << 8) + input.bytes[12],\n                },\n            };\n        case 13:\n            return {\n                // Decoded data\n                data: {\n                    firmware: input.bytes[5] + \".\" + input.bytes[6],\n                    uploadInterval: input.bytes[7],\n                    detectInterval: input.bytes[8],\n                    batteryThreshold: input.bytes[9],\n                    levelThreshold: input.bytes[10],\n                },\n            };\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\n// Encode downlink function.\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 255 || uploadInterval < 1) {\n            return {\n                errors: ['upload interval range 1-255 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.detectInterval != null && !isNaN(input.data.detectInterval)) {\n        var detectInterval = input.data.detectInterval;\n        var detectInterval_high = detectInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var detectInterval_low = detectInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (detectInterval > 255 || detectInterval < 1) {\n            return {\n                errors: ['detection interval range 1-255 minutes.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x38, detectInterval_high, detectInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.levelThreshold != null && !isNaN(input.data.levelThreshold)) {\n        var levelThreshold = input.data.levelThreshold;\n        var levelThreshold_high = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var levelThreshold_low = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (levelThreshold!=25 && levelThreshold !=50 && levelThreshold !=75 && levelThreshold !=100) {\n            return {\n                errors: ['level alarm threshold range 25/50/75/100.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x32, levelThreshold_high, levelThreshold_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.batteryThreshold != null && !isNaN(input.data.batteryThreshold)) {\n        var batteryThreshold = input.data.batteryThreshold;\n        var batteryThreshold_high = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var batteryThreshold_low = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (batteryThreshold>99 || batteryThreshold<5) {\n            return {\n                errors: ['battery alarm threshold range 5-99.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x35,batteryThreshold_high, batteryThreshold_low, 0x38, 0x31],\n            };\n        }\n    }    \n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 2:\n            return {\n                data: {\n                    levelThreshold: value,\n                },\n            };\n        case 5:\n            return {\n                data: {\n                    batteryThreshold: value,\n                },\n            };\n        case 8:\n            return {\n                data: {\n                    detectInterval: value,\n                },\n            };\n\n        case 9:\n            switch (value) {\n                case 0x00:\n                    return {\n                        data: {\n                            calibration: 0,\n                        },\n                    };\n                case 0x01:\n                    return {\n                        data: {\n                            calibration: 1,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "dingtek_df200_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": []
+        }
+      }
+    ]
+  }
+}
