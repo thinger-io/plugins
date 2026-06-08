@@ -58,6 +58,15 @@
                             }
                         }
                     },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "vaqao_plus"
+                            },
+                            "enabled": true
+                        }
+                    },
                     "buckets": {
                         "vaqao_plus_data": {
                             "backend": "mongodb",
