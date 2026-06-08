@@ -1,7 +1,7 @@
 {
     "name": "sensecap-sensecap-pressure",
     "version": "1.0.0",
-    "description": "Seeed Studio SenseCAP Wireless Barometric Pressure Sensor measures atmospheric pressure with high precision, stability, and EMC robustness, featuring an industry-grade enclosure and custom battery for reliable outdoor use.",
+    "description": "Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade durability.Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade",
     "author": "Thinger.io",
     "license": "MIT",
     "repository": {
@@ -11,8 +11,8 @@
     },
     "metadata": {
         "name": "Sensecap SENSECAP-PRESSURE",
-        "description": "Seeed Studio SenseCAP Wireless Barometric Pressure Sensor measures atmospheric pressure with high precision, stability, and EMC robustness, featuring an industry-grade enclosure and custom battery for reliable outdoor use.",
-          "image": "assets/sensecap-pressure.png",
+        "description": "Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade durability.Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade",
+         "image": "assets/sensecap-pressure.png",
         "category": "devices",
         "vendor": "sensecap"
     },
@@ -22,7 +22,7 @@
                 "config": {
                     "icons": []
                 },
-                "description": "Seeed Studio SenseCAP Wireless Barometric Pressure Sensor measures atmospheric pressure with high precision, stability, and EMC robustness, featuring an industry-grade enclosure and custom battery for reliable outdoor use.",
+                "description": "Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade durability.Seeed Studio SenseCAP wireless sensor measures atmospheric pressure with high precision and industrial-grade",
                 "enabled": true,
                 "name": "Sensecap SENSECAP-PRESSURE",
                 "product": "sensecap_sensecap_pressure",
@@ -764,4 +764,3 @@
         ]
     }
 }
-
