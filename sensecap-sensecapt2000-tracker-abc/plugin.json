@@ -1,0 +1,884 @@
+{
+  "name": "sensecapt2000_tracker_abc",
+  "version": "1.0.0",
+  "description": "SenseCAP T2000 A/B/C is an industrial‑grade LoRaWAN tracker with GNSS, Bluetooth and Wi‑Fi positioning, long battery life and IP67 protection, ideal for reliable asset tracking.",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "sensecap-sensecapt2000-tracker-abc"
+  },
+  "metadata": {
+    "name": "SENSECAPT2000-TRACKER-ABC",
+    "description": "SenseCAP T2000 A/B/C is an industrial‑grade LoRaWAN tracker with GNSS, Bluetooth and Wi‑Fi positioning, long battery life and IP67 protection, ideal for reliable asset tracking.",
+    "image": "assets/sensecapt2000-tracker-ab.png",
+    "category": "devices",
+    "vendor": "sensecap"
+  },
+  "resources": {
+    "products": [
+      {
+        "description": "SenseCAP T2000 A/B/C is an industrial‑grade LoRaWAN tracker with GNSS, Bluetooth and Wi‑Fi positioning, long battery life and IP67 protection, ideal for reliable asset tracking.",
+        "enabled": true,
+        "name": "SENSECAPT2000-TRACKER-ABC",
+        "product": "sensecapt2000_tracker_abc",
+        "profile": {
+          "api": {
+            "downlink": {
+              "enabled": true,
+              "handle_connectivity": false,
+              "request": {
+                "data": {
+                  "path": "/downlink",
+                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=85}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                  "payload_function": "",
+                  "payload_type": "",
+                  "plugin": "{{property.uplink.source}}",
+                  "target": "plugin_endpoint"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            },
+            "uplink": {
+              "device_id_resolver": "getId",
+              "enabled": true,
+              "handle_connectivity": true,
+              "request": {
+                "data": {
+                  "payload": "{{payload}}",
+                  "payload_function": "",
+                  "payload_type": "source_payload",
+                  "resource_stream": "uplink",
+                  "target": "resource_stream"
+                }
+              },
+              "response": {
+                "data": {
+                  "source": "request_response"
+                }
+              }
+            }
+          },
+          "autoprovisions": {
+            "device_autoprovisioning": {
+              "config": {
+                "mode": "pattern",
+                "pattern": "t2000_[0-9A-Fa-f]{16}"
+              },
+              "enabled": true
+            }
+          },
+          "buckets": {
+            "sensecapt2000_tracker_data": {
+              "backend": "mongodb",
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "source": "resource_stream"
+              },
+              "enabled": true,
+              "retention": {
+                "period": 3,
+                "unit": "months"
+              },
+              "tags": []
+            }
+          },
+          "code": {
+            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nfunction decodeUplink (input) {\n    const bytes = input['bytes']\n    const bytesString = bytes2HexString(bytes)\n    const originMessage = bytesString.toLocaleUpperCase()\n    const decoded = {\n        valid: true,\n        err: 0,\n        payload: bytesString,\n        messages: []\n    }\n    let measurement = messageAnalyzed(originMessage)\n    if (measurement.length === 0) {\n        decoded.valid = false\n        return { data: decoded }\n    }\n\n    for (let message of measurement) {\n        if (message.length === 0) {\n            continue\n        }\n        let elements = []\n        for (let element of message) {\n            if (element.errorCode) {\n                decoded.err = element.errorCode\n                decoded.errMessage = element.error\n            } else {\n                elements.push(element)\n            }\n        }\n        if (elements.length > 0) {\n            decoded.messages.push(elements)\n        }\n    }\n    return { data: decoded }\n}\n\nfunction messageAnalyzed (messageValue) {\n    try {\n        let frames = unpack(messageValue)\n        let measurementResultArray = []\n        for (let i = 0; i < frames.length; i++) {\n            let item = frames[i]\n            let dataId = item.dataId\n            let dataValue = item.dataValue\n            let measurementArray = deserialize(dataId, dataValue)\n            measurementResultArray.push(measurementArray)\n        }\n        return measurementResultArray\n    } catch (e) {\n        return e.toString()\n    }\n}\n\nfunction unpack (messageValue) {\n    let frameArray = []\n    const FIXED_LENGTH_PACKAGES = {\n        '27': 92, '28': 60, '29': 24, '2A': 12, '2B': 46, '2E': 34, '31': 30, '32': 18\n    }\n    const DYNAMIC_LENGTH_PACKAGES = {\n        '2C': {minLen: 32, scanCountPos: [30, 32], baseLen: 23, itemLen: 7},\n        '2D': {minLen: 32, scanCountPos: [30, 32], baseLen: 23, itemLen: 7},\n        '2F': {minLen: 20, scanCountPos: [18, 20], baseLen: 17, itemLen: 7},\n        '30': {minLen: 20, scanCountPos: [18, 20], baseLen: 17, itemLen: 7}\n    }\n    \n    for (let i = 0; i < messageValue.length; i++) {\n        let remainMessage = messageValue\n        let dataId = remainMessage.substring(0, 2).toUpperCase()\n        let dataValue\n        let dataObj = {}\n        \n        if (dataId === '0C') {\n            dataValue = ''\n            messageValue = remainMessage.substring(2)\n            dataObj = {'dataId': dataId, 'dataValue': ''}\n        } else if (dataId === '0D') {\n            dataValue = remainMessage.substring(2, 10)\n            messageValue = remainMessage.substring(10)\n            dataObj = {'dataId': dataId, 'dataValue': dataValue}\n        } else if (FIXED_LENGTH_PACKAGES[dataId]) {\n            let packageLen = FIXED_LENGTH_PACKAGES[dataId]\n            if (remainMessage.length < packageLen) {\n                return frameArray\n            }\n            dataValue = remainMessage.substring(2, packageLen)\n            messageValue = remainMessage.substring(packageLen)\n            dataObj = {'dataId': dataId, 'dataValue': dataValue}\n        } else if (DYNAMIC_LENGTH_PACKAGES[dataId]) {\n            let config = DYNAMIC_LENGTH_PACKAGES[dataId]\n            if (remainMessage.length < config.minLen) {\n                return frameArray\n            }\n            let scanCount = parseInt(remainMessage.substring(config.scanCountPos[0], config.scanCountPos[1]), 16)\n            let packageLen = (config.baseLen + (scanCount - 1) * config.itemLen) * 2\n            if (remainMessage.length < packageLen) {\n                return frameArray\n            }\n            dataValue = remainMessage.substring(2, packageLen)\n            messageValue = remainMessage.substring(packageLen)\n            dataObj = {'dataId': dataId, 'dataValue': dataValue}\n        } else {\n            return frameArray\n        }\n        \n        if (dataValue.length < 2 && dataObj.dataId !== '0C') {\n            break\n        }\n        frameArray.push(dataObj)\n    }\n    return frameArray\n}\n\nfunction deserialize (dataId, dataValue) {\n    let measurementArray = []\n    let eventList = []\n    let timestamp = 0\n    let value = null\n    let motionId = 0\n    let scanMax = 0\n    let interval = 0\n    let workMode = 0\n    let heartbeatInterval = 0\n    let periodicInterval = 0\n    let eventInterval = 0\n    switch (dataId) {\n        case '0C':\n            measurementArray.push({type: \"timeSync\"})\n            break\n        case '0D':\n            let errorCode = getInt(dataValue)\n            let error = ''\n            switch (errorCode) {\n                case 1:\n                    error = 'FAILED TO OBTAIN THE UTC TIMESTAMP'\n                    break\n                case 2:\n                    error = 'ALMANAC TOO OLD'\n                    break\n                case 3:\n                    error = 'DOPPLER ERROR'\n                    break\n            }\n            measurementArray.push({errorCode, error})\n            break\n        case '27':\n            measurementArray.push(...getUpT2000(dataValue))\n            break\n        case '28':\n            interval = 0\n            workMode = getInt(dataValue.substring(0, 2))\n            heartbeatInterval = getMinsByMin(dataValue.substring(4, 8))\n            periodicInterval = getMinsByMin(dataValue.substring(8, 12))\n            eventInterval = getMinsByMin(dataValue.substring(12, 16))\n            switch (workMode) {\n                case 0:\n                    interval = heartbeatInterval\n                    break\n                case 1:\n                    interval = periodicInterval\n                    break\n                case 2:\n                    interval = eventInterval\n                    break\n            }\n            measurementArray = [\n                {\n                    measurementId: '3940', measurementValue: workMode\n                }, {\n                    measurementId: '3965', measurementValue: getPositioningStrategy(dataValue.substring(2, 4))\n                }, {\n                    measurementId: '3942', measurementValue: heartbeatInterval\n                }, {\n                    measurementId: '3943', measurementValue: periodicInterval\n                }, {\n                    measurementId: '3944', measurementValue: eventInterval\n                }, {\n                    measurementId: '3974', measurementValue: getInt(dataValue.substring(16, 18))\n                }, {\n                    measurementId: '3976', measurementValue: getInt(dataValue.substring(18, 20))\n                }, {\n                    measurementId: '3977', measurementValue: getInt(dataValue.substring(20, 22))\n                }, {\n                    measurementId: '3900', measurementValue: interval\n                }, {\n                    measurementId: '3978', measurementValue: getInt(dataValue.substring(22, 24))\n                }, {\n                    measurementId: '3979', measurementValue: dataValue.substring(26, 26 + getInt(dataValue.substring(24, 26)) * 2)\n                }\n            ]\n            // measurementArray.push(measurement)\n            break\n        case '29':\n            measurementArray.push({\n                measurementId: '3946', measurementValue: getInt(dataValue.substring(0, 2))\n            })\n            measurementArray.push({\n                measurementId: '3947', measurementValue: getSensorValue(dataValue.substring(2, 6), 1)\n            })\n            measurementArray.push({\n                measurementId: '3948', measurementValue: getMinsByMin(dataValue.substring(6, 10))\n            })\n            measurementArray.push({\n                measurementId: '3949', measurementValue: getInt(dataValue.substring(10, 12))\n            })\n            measurementArray.push({\n                measurementId: '3950', measurementValue: getMinsByMin(dataValue.substring(12, 16))\n            })\n            measurementArray.push({\n                measurementId: '3951', measurementValue: getInt(dataValue.substring(16, 18))\n            })\n            measurementArray.push({\n                measurementId: '3952', measurementValue: getInt(dataValue.substring(18, 22))\n            })\n            break\n        case '2A':\n            measurementArray.push({\n                measurementId: '3000', measurementValue: getBattery(dataValue.substring(0, 2))\n            })\n            measurementArray.push({\n                measurementId: '3940', measurementValue: getWorkingMode(dataValue.substring(2, 4))\n            })\n            measurementArray.push({\n                measurementId: '3965', measurementValue: getPositioningStrategy(dataValue.substring(4, 6))\n            })\n            measurementArray.push({\n                measurementId: '3974', measurementValue: getInt(dataValue.substring(6, 8))\n            })\n            measurementArray.push({\n                measurementId: '3976', measurementValue: getInt(dataValue.substring(8, 10))\n            })\n            break\n        case '2B':\n            eventList = getEventStatus(dataValue.substring(0, 4))\n            motionId = getMotionId(dataValue.substring(4, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            parseAccelerometerData(dataValue, 14, timestamp, motionId, measurementArray)\n            parseLocationData(dataValue, 26, timestamp, motionId, measurementArray)\n            parseBatteryData(dataValue, 42, timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n        case '2C':\n        case '2D':\n            eventList = getEventStatus(dataValue.substring(0, 4))\n            motionId = getMotionId(dataValue.substring(4, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            parseAccelerometerData(dataValue, 14, timestamp, motionId, measurementArray)\n            parseBatteryData(dataValue, 26, timestamp, motionId, measurementArray)\n            scanMax = getInt(dataValue.substring(28, 30))\n            parseScanData(scanMax, dataValue, 30, dataId === '2C' ? '5001' : '5002', timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n        case '2E':\n            eventList = getEventStatus(dataValue.substring(0, 4))\n            motionId = getMotionId(dataValue.substring(4, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            parseLocationData(dataValue, 14, timestamp, motionId, measurementArray)\n            parseBatteryData(dataValue, 30, timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n        case '2F':\n        case '30':\n            eventList = getEventStatus(dataValue.substring(0, 4))\n            motionId = getMotionId(dataValue.substring(4, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            parseBatteryData(dataValue, 14, timestamp, motionId, measurementArray)\n            scanMax = getInt(dataValue.substring(16, 18))\n            parseScanData(scanMax, dataValue, 18, dataId === '2F' ? '5001' : '5002', timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n        case '31':\n            eventList = getEventStatus(dataValue.substring(2, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            measurementArray.push({\n                measurementId: '3576',\n                timestamp,\n                motionId,\n                measurementValue: getPositingStatus(dataValue.substring(0, 2))\n            })\n            parseAccelerometerData(dataValue, 14, timestamp, motionId, measurementArray)\n            parseBatteryData(dataValue, 26, timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n        case '32':\n            eventList = getEventStatus(dataValue.substring(2, 6))\n            timestamp = getUTCTimestamp(dataValue.substring(6, 14))\n            measurementArray.push({\n                measurementId: '3576',\n                timestamp,\n                motionId,\n                measurementValue: getPositingStatus(dataValue.substring(0, 2))\n            })\n            parseBatteryData(dataValue, 14, timestamp, motionId, measurementArray)\n            parseEventData(eventList, timestamp, motionId, measurementArray)\n            break\n    }\n    if (measurementArray.length > 0) {\n        for (let frag of measurementArray) {\n            if (frag.measurementId) {\n                frag.type = getTypeByMeasurementId(frag.measurementId)\n            }\n        }\n    }\n    return measurementArray\n}\n\nfunction parseAccelerometerData (dataValue, startPos, timestamp, motionId, measurementArray) {\n    const accelerometerIds = ['4210', '4211', '4212']\n    for (let i = 0; i < 3; i++) {\n        let value = getSignSensorValue(dataValue.substring(startPos + i * 4, startPos + (i + 1) * 4), 1)\n        if (value !== null) {\n            measurementArray.push({\n                measurementId: accelerometerIds[i],\n                timestamp,\n                motionId,\n                measurementValue: value\n            })\n        }\n    }\n}\n\nfunction parseBatteryData (dataValue, pos, timestamp, motionId, measurementArray) {\n    measurementArray.push({\n        measurementId: '3000',\n        timestamp,\n        motionId,\n        measurementValue: '' + getBattery(dataValue.substring(pos, pos + 2))\n    })\n}\n\nfunction parseEventData (eventList, timestamp, motionId, measurementArray) {\n    if (eventList && eventList.length > 0) {\n        measurementArray.push({\n            measurementId: '4200',\n            timestamp,\n            motionId,\n            measurementValue: eventList\n        })\n    }\n}\n\nfunction parseLocationData (dataValue, startPos, timestamp, motionId, measurementArray) {\n    measurementArray.push({\n        measurementId: '4197',\n        timestamp,\n        motionId,\n        measurementValue: '' + getSensorValue(dataValue.substring(startPos, startPos + 8), 1000000)\n    })\n    measurementArray.push({\n        measurementId: '4198',\n        timestamp,\n        motionId,\n        measurementValue: '' + getSensorValue(dataValue.substring(startPos + 8, startPos + 16), 1000000)\n    })\n}\n\nfunction parseScanData (scanMax, dataValue, startPos, measurementId, timestamp, motionId, measurementArray) {\n    if (scanMax && scanMax > 0) {\n        measurementArray.push({\n            measurementId,\n            timestamp,\n            motionId,\n            measurementValue: getMacAndRssiObj(dataValue.substring(startPos))\n        })\n    }\n}\n\nfunction getTypeByMeasurementId (measurementId) {\n    const TYPE_MAP = {\n        '3000': 'Battery',\n        '3502': 'Firmware Version',\n        '3001': 'Hardware Version',\n        '3940': 'Work Mode',\n        '3965': 'Positioning Strategy',\n        '3942': 'Heartbeat Interval',\n        '3943': 'Periodic Interval',\n        '3944': 'Event Interval',\n        '3974': '3X Sensor Enable',\n        '3976': 'Anti-Theft',\n        '3977': 'GNSS Scan Timeout',\n        '3900': 'Uplink Interval',\n        '3978': 'BLE Scan Timeout',\n        '3979': 'UUID Filter',\n        '3946': 'Motion Enable',\n        '3947': 'Any Motion Threshold',\n        '3948': 'Motion Start Interval',\n        '3949': 'Static Enable',\n        '3950': 'Device Static Timeout',\n        '3951': 'Shock Enable',\n        '3952': 'Shock Threshold',\n        '4210': 'AccelerometerX',\n        '4211': 'AccelerometerY',\n        '4212': 'AccelerometerZ',\n        '4197': 'Longitude',\n        '4198': 'Latitude',\n        '4200': 'Event Status',\n        '5001': 'Wi-Fi Scan',\n        '5002': 'BLE Scan',\n        '3576': 'Positioning Status'\n    }\n    return TYPE_MAP[measurementId] || ''\n}\n\nfunction getMotionId (str) {\n    return getInt(str)\n}\n\nfunction getPositingStatus (str) {\n    let status = getInt(str)\n    const STATUS_MAP = {\n        0: \"locate successful.\",\n        1: \"The GNSS scan timed out.\",\n        2: \"The Wi-Fi scan timed out.\",\n        3: \"The Wi-Fi + GNSS scan timed out.\",\n        4: \"The GNSS + Wi-Fi scan timed out.\",\n        5: \"The Bluetooth scan timed out.\",\n        6: \"The Bluetooth + Wi-Fi scan timed out.\",\n        7: \"The Bluetooth + GNSS scan timed out.\",\n        8: \"The Bluetooth + Wi-Fi + GNSS scan timed out.\",\n        9: \"Location Server failed to parse the GNSS location.\",\n        10: \"Location Server failed to parse the Wi-Fi location.\",\n        11: \"Location Server failed to parse the Bluetooth location.\",\n        12: \"Failed to parse location due to the poor accuracy.\",\n        13: \"Time synchronization failed.\",\n        14: \"Failed due to the old Almanac.\",\n        15: \"The GNSS +Bluetooth scan timed out.\"\n    }\n    if (STATUS_MAP[status] !== undefined) {\n        return {id: status, statusName: STATUS_MAP[status]}\n    }\n    return getInt(str)\n}\n\nfunction getUpT2000 (messageValue) {\n    let interval = 0\n    let workMode = getInt(messageValue.substring(10, 12))\n    let heartbeatInterval = getMinsByMin(messageValue.substring(14, 18))\n    let periodicInterval = getMinsByMin(messageValue.substring(18, 22))\n    let eventInterval = getMinsByMin(messageValue.substring(22, 26))\n    switch (workMode) {\n        case 0:\n            interval = heartbeatInterval\n            break\n        case 1:\n            interval = periodicInterval\n            break\n        case 2:\n            interval = eventInterval\n            break\n    }\n    let data = [\n        {\n            measurementId: '3000', measurementValue: getBattery(messageValue.substring(0, 2))\n        }, {\n            measurementId: '3502', measurementValue: getSoftVersion(messageValue.substring(2, 6))\n        }, {\n            measurementId: '3001', measurementValue: getHardVersion(messageValue.substring(6, 10))\n        }, {\n            measurementId: '3940', measurementValue: workMode\n        }, {\n            measurementId: '3965', measurementValue: getPositioningStrategy(messageValue.substring(12, 14))\n        }, {\n            measurementId: '3942', measurementValue: heartbeatInterval\n        }, {\n            measurementId: '3943', measurementValue: periodicInterval\n        }, {\n            measurementId: '3944', measurementValue: eventInterval\n        }, {\n            measurementId: '3974', measurementValue: getInt(messageValue.substring(26, 28))\n        }, {\n            measurementId: '3976', measurementValue: getInt(messageValue.substring(28, 30))\n        }, {\n            measurementId: '3977', measurementValue: getInt(messageValue.substring(30, 32))\n        }, {\n            measurementId: '3900', measurementValue: interval\n        }, {\n            measurementId: '3978', measurementValue: getInt(messageValue.substring(54, 56))\n        }, {\n            measurementId: '3979', measurementValue: messageValue.substring(58, 58 + getInt(messageValue.substring(56, 58)) * 2)\n        }\n    ]\n    let motionSetting = getMotionSetting(messageValue.substring(32, 42))\n    let staticsSetting = getStaticSetting(messageValue.substring(42, 48))\n    let shockSetting = getShockSetting(messageValue.substring(48, 54))\n    data = [...data, ...motionSetting, ...staticsSetting, ...shockSetting]\n    return data\n}\n\nfunction getMotionSetting (str) {\n    return [\n        {measurementId: '3946', measurementValue: getInt(str.substring(0, 2))},\n        {measurementId: '3947', measurementValue: getSensorValue(str.substring(2, 6), 1)},\n        {measurementId: '3948', measurementValue: getMinsByMin(str.substring(6, 10))},\n    ]\n}\n\nfunction getStaticSetting (str) {\n    return [\n        {measurementId: '3949', measurementValue: getInt(str.substring(0, 2))},\n        {measurementId: '3950', measurementValue: getMinsByMin(str.substring(2, 6))}\n    ]\n}\n\nfunction getShockSetting (str) {\n    return [\n        {measurementId: '3951', measurementValue: getInt(str.substring(0, 2))},\n        {measurementId: '3952', measurementValue: getInt(str.substring(2, 6))}\n    ]\n}\n\nfunction getBattery (batteryStr) {\n    return loraWANV2DataFormat(batteryStr)\n}\nfunction getSoftVersion (softVersion) {\n    return `${loraWANV2DataFormat(softVersion.substring(0, 2))}.${loraWANV2DataFormat(softVersion.substring(2, 4))}`\n}\nfunction getHardVersion (hardVersion) {\n    return `${loraWANV2DataFormat(hardVersion.substring(0, 2))}.${loraWANV2DataFormat(hardVersion.substring(2, 4))}`\n}\n\nfunction getMinsByMin (str) {\n    return getInt(str)\n}\n\nfunction getSensorValue (str, dig) {\n    if (str === '8000') {\n        return null\n    } else {\n        return loraWANV2DataFormat(str, dig)\n    }\n}\n\nfunction isNull (str) {\n    if (str.substring(0, 1) !== '8') {\n        return false\n    }\n    for (let i = 1; i < str.length; i++) {\n        if (str.substring(i, i + 1) !== '0') {\n            return false\n        }\n    }\n    return true\n}\n\nfunction getSignSensorValue (str, dig = 1) {\n    if (isNull(str)) {\n        return null\n    }\n    return loraWANV2DataFormat(str, dig)\n}\n\nfunction bytes2HexString (arrBytes) {\n    var str = ''\n    for (var i = 0; i < arrBytes.length; i++) {\n        var tmp\n        var num = arrBytes[i]\n        if (num < 0) {\n            tmp = (255 + num + 1).toString(16)\n        } else {\n            tmp = num.toString(16)\n        }\n        if (tmp.length === 1) {\n            tmp = '0' + tmp\n        }\n        str += tmp\n    }\n    return str\n}\nfunction loraWANV2DataFormat (str, divisor = 1) {\n    let strReverse = bigEndianTransform(str)\n    let str2 = toBinary(strReverse)\n    if (str2.substring(0, 1) === '1') {\n        let arr = str2.split('')\n        let reverseArr = arr.map((item) => {\n            if (parseInt(item) === 1) {\n                return 0\n            } else {\n                return 1\n            }\n        })\n        str2 = parseInt(reverseArr.join(''), 2) + 1\n        return parseFloat('-' + str2 / divisor)\n    }\n    return parseInt(str2, 2) / divisor\n}\n\nfunction bigEndianTransform (data) {\n    let dataArray = []\n    for (let i = 0; i < data.length; i += 2) {\n        dataArray.push(data.substring(i, i + 2))\n    }\n    return dataArray\n}\n\nfunction toBinary (arr) {\n    let binaryData = arr.map((item) => {\n        let data = parseInt(item, 16)\n            .toString(2)\n        let dataLength = data.length\n        if (data.length !== 8) {\n            for (let i = 0; i < 8 - dataLength; i++) {\n                data = `0` + data\n            }\n        }\n        return data\n    })\n    return binaryData.toString().replace(/,/g, '')\n}\n\nfunction getMacAndRssiObj (pair) {\n    let pairs = []\n    if (pair.length % 14 === 0) {\n        for (let i = 0; i < pair.length; i += 14) {\n            let mac = getMacAddress(pair.substring(i, i + 12))\n            if (mac) {\n                let rssi = getInt8RSSI(pair.substring(i + 12, i + 14))\n                pairs.push({mac: mac, rssi: rssi})\n            } else {\n                continue\n            }\n        }\n    }\n    return pairs\n}\n\nfunction getMacAddress (str) {\n    if (str.toLowerCase() === 'ffffffffffff') {\n        return null\n    }\n    let macArr = []\n    for (let i = 1; i < str.length; i++) {\n        if (i % 2 === 1) {\n            macArr.push(str.substring(i - 1, i + 1))\n        }\n    }\n    let mac = ''\n    for (let i = 0; i < macArr.length; i++) {\n        mac = mac + macArr[i]\n        if (i < macArr.length - 1) {\n            mac = mac + ':'\n        }\n    }\n    return mac\n}\n\nfunction getInt8RSSI (str) {\n    return loraWANV2DataFormat(str)\n}\n\nfunction getInt (str) {\n    return parseInt(str, 16)\n}\n\nfunction getEventStatus (str) {\n    let bitStr = getByteArray(str)\n    let bitArr = []\n    for (let i = 0; i < bitStr.length; i++) {\n        bitArr[i] = bitStr.substring(i, i + 1)\n    }\n    bitArr = bitArr.reverse()\n    const EVENT_MAP = {\n        0: {id: 1, eventName: \"Start moving event.\"},\n        1: {id: 2, eventName: \"End movement event.\"},\n        2: {id: 3, eventName: \"Motionless event.\"},\n        3: {id: 4, eventName: \"Shock event.\"},\n        4: {id: 5, eventName: \"Temperature event.\"},\n        5: {id: 6, eventName: \"Light event.\"},\n        6: {id: 7, eventName: \"SOS event.\"},\n        7: {id: 8, eventName: \"Press once event.\"},\n        8: {id: 9, eventName: \"disassembled event\"}\n    }\n    let event = []\n    for (let i = 0; i < bitArr.length; i++) {\n        if (bitArr[i] === '1' && EVENT_MAP[i]) {\n            event.push(EVENT_MAP[i])\n        }\n    }\n    return event\n}\n\nfunction getByteArray (str) {\n    let bytes = []\n    for (let i = 0; i < str.length; i += 2) {\n        bytes.push(str.substring(i, i + 2))\n    }\n    return toBinary(bytes)\n}\n\nfunction getWorkingMode (workingMode) {\n    return getInt(workingMode)\n}\n\nfunction getPositioningStrategy (strategy) {\n    return getInt(strategy)\n}\n\nfunction getUTCTimestamp(str){\n    return parseInt(loraWANV2PositiveDataFormat(str)) * 1000\n}\n\nfunction loraWANV2PositiveDataFormat (str, divisor = 1) {\n    let strReverse = bigEndianTransform(str)\n    let str2 = toBinary(strReverse)\n    return parseInt(str2, 2) / divisor\n}",
+            "environment": "javascript",
+            "storage": "",
+            "version": "1.0"
+          },
+          "flows": {
+            "sensecapt2000_uplink_decoder": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "decodeThingerUplink",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "enabled": true,
+              "sink": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource_stream": "uplink_decoded",
+                "target": "resource_stream"
+              },
+              "split_data": false
+            }
+          },
+          "properties": {
+            "uplink": {
+              "data": {
+                "payload": "{{payload}}",
+                "payload_function": "",
+                "payload_type": "source_payload",
+                "resource": "uplink",
+                "source": "resource",
+                "update": "events"
+              },
+              "default": {
+                "source": "value"
+              },
+              "enabled": true
+            }
+          }
+        },
+        "_resources": {
+          "properties": [
+            {
+              "property": "dashboard",
+              "value": {
+                "tabs": [
+                  {
+                    "name": "Overview",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 9,
+                          "sizeY": 14
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Asset Location (GNSS)"
+                        },
+                        "properties": {
+                          "centerLat": 40.4168,
+                          "centerLng": -3.7038,
+                          "mapType": "roadmap",
+                          "zoom": 13
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "device",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "GPS Position",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "map"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 0,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery Level"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "enableIconColor": false,
+                          "enableIconSize": false,
+                          "icon": "fas fa-battery-half",
+                          "iconColor": "#1E313E",
+                          "iconColorConditions": [],
+                          "iconGap": "8px",
+                          "iconPosition": "before-value",
+                          "iconSize": "30px",
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textColorConditions": [
+                            {
+                              "color": "#e74c3c",
+                              "max": 20,
+                              "min": 0
+                            },
+                            {
+                              "color": "#f39c12",
+                              "max": 50,
+                              "min": 20
+                            },
+                            {
+                              "color": "#2ecc71",
+                              "max": 100,
+                              "min": 50
+                            }
+                          ],
+                          "textSize": "65px",
+                          "textWeight": "font-light",
+                          "unit": "%",
+                          "unitSize": "20px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages.0.0.measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Battery",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 4,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Work Mode"
+                        },
+                        "properties": {
+                          "decimalPlaces": 0,
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "50px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "16px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "Work Mode",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      },
+                      {
+                        "layout": {
+                          "col": 9,
+                          "row": 8,
+                          "sizeX": 3,
+                          "sizeY": 4
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Positioning Status"
+                        },
+                        "properties": {
+                          "textAlign": "center",
+                          "textColor": "#1E313E",
+                          "textSize": "30px",
+                          "textWeight": "font-light",
+                          "unit": "",
+                          "unitSize": "14px"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "valid",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#9b59b6",
+                            "name": "Positioning Status",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Telemetry",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Battery History"
+                        },
+                        "properties": {
+                          "chartType": "spline",
+                          "connectNulls": false,
+                          "legend": true,
+                          "yAxis": [
+                            {
+                              "label": "Battery (%)",
+                              "max": 100,
+                              "min": 0
+                            }
+                          ]
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages.0.0.measurementValue",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#2ecc71",
+                            "name": "Battery (%)",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "relative",
+                              "unit": "days",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 6,
+                          "row": 0,
+                          "sizeX": 6,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Accelerometer (X / Y / Z)"
+                        },
+                        "properties": {
+                          "chartType": "spline",
+                          "connectNulls": false,
+                          "legend": true,
+                          "yAxis": [
+                            {
+                              "label": "Acceleration (mg)"
+                            }
+                          ]
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#e74c3c",
+                            "name": "AccelerometerX",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "relative",
+                              "unit": "days",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#3498db",
+                            "name": "AccelerometerY",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "relative",
+                              "unit": "days",
+                              "value": 7
+                            }
+                          },
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "messages",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#f39c12",
+                            "name": "AccelerometerZ",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "relative",
+                              "unit": "days",
+                              "value": 7
+                            }
+                          }
+                        ],
+                        "type": "chart"
+                      },
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 8,
+                          "sizeX": 4,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Event Status"
+                        },
+                        "type": "group_widget",
+                        "widgets": [
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 0,
+                              "sizeX": 3,
+                              "sizeY": 9
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Event Legend"
+                            },
+                            "properties": {
+                              "source": "code",
+                              "template": "<div style=\"font-family:Arial,sans-serif; padding:10px;\">\n  <div style=\"display:flex;align-items:center;margin-bottom:6px;\"><span style=\"width:14px;height:14px;background:#3498db;border-radius:50%;display:inline-block;margin-right:8px;\"></span>Start Moving</div>\n  <div style=\"display:flex;align-items:center;margin-bottom:6px;\"><span style=\"width:14px;height:14px;background:#2ecc71;border-radius:50%;display:inline-block;margin-right:8px;\"></span>End Movement</div>\n  <div style=\"display:flex;align-items:center;margin-bottom:6px;\"><span style=\"width:14px;height:14px;background:#95a5a6;border-radius:50%;display:inline-block;margin-right:8px;\"></span>Motionless</div>\n  <div style=\"display:flex;align-items:center;margin-bottom:6px;\"><span style=\"width:14px;height:14px;background:#e74c3c;border-radius:50%;display:inline-block;margin-right:8px;\"></span>Shock</div>\n  <div style=\"display:flex;align-items:center;margin-bottom:6px;\"><span style=\"width:14px;height:14px;background:#f39c12;border-radius:50%;display:inline-block;margin-right:8px;\"></span>SOS</div>\n  <div style=\"display:flex;align-items:center;\"><span style=\"width:14px;height:14px;background:#9b59b6;border-radius:50%;display:inline-block;margin-right:8px;\"></span>Press / Disassembly</div>\n</div>"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "device",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#1abc9c",
+                                "name": "Legend",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "html_time"
+                          },
+                          {
+                            "layout": {
+                              "col": 3,
+                              "row": 0,
+                              "sizeX": 3,
+                              "sizeY": 9
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Motion State"
+                            },
+                            "properties": {
+                              "color": "#95a5a6",
+                              "colors": [
+                                {
+                                  "blink": false,
+                                  "color": "#95a5a6",
+                                  "max": 0,
+                                  "min": 0
+                                },
+                                {
+                                  "blink": true,
+                                  "color": "#3498db",
+                                  "max": 1,
+                                  "min": 1
+                                },
+                                {
+                                  "blink": false,
+                                  "color": "#2ecc71",
+                                  "max": 2,
+                                  "min": 2
+                                }
+                              ],
+                              "size": "120px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "messages",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#3498db",
+                                "name": "Motion ID",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "led"
+                          }
+                        ]
+                      },
+                      {
+                        "layout": {
+                          "col": 4,
+                          "row": 8,
+                          "sizeX": 4,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Positioning Info"
+                        },
+                        "type": "group_widget",
+                        "widgets": [
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 0,
+                              "sizeX": 6,
+                              "sizeY": 4
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Longitude"
+                            },
+                            "properties": {
+                              "decimalPlaces": 6,
+                              "textAlign": "center",
+                              "textColor": "#1E313E",
+                              "textSize": "45px",
+                              "textWeight": "font-light",
+                              "unit": "°",
+                              "unitSize": "16px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "messages",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#1abc9c",
+                                "name": "Longitude",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "text"
+                          },
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 4,
+                              "sizeX": 6,
+                              "sizeY": 4
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Latitude"
+                            },
+                            "properties": {
+                              "decimalPlaces": 6,
+                              "textAlign": "center",
+                              "textColor": "#1E313E",
+                              "textSize": "45px",
+                              "textWeight": "font-light",
+                              "unit": "°",
+                              "unitSize": "16px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "messages",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#e67e22",
+                                "name": "Latitude",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "text"
+                          }
+                        ]
+                      },
+                      {
+                        "layout": {
+                          "col": 8,
+                          "row": 8,
+                          "sizeX": 4,
+                          "sizeY": 8
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Device Configuration"
+                        },
+                        "type": "group_widget",
+                        "widgets": [
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 0,
+                              "sizeX": 6,
+                              "sizeY": 4
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Uplink Interval"
+                            },
+                            "properties": {
+                              "decimalPlaces": 0,
+                              "textAlign": "center",
+                              "textColor": "#1E313E",
+                              "textSize": "45px",
+                              "textWeight": "font-light",
+                              "unit": "min",
+                              "unitSize": "16px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "messages",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#8e44ad",
+                                "name": "Uplink Interval",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "text"
+                          },
+                          {
+                            "layout": {
+                              "col": 0,
+                              "row": 4,
+                              "sizeX": 6,
+                              "sizeY": 4
+                            },
+                            "panel": {
+                              "color": "#ffffff",
+                              "currentColor": "#ffffff",
+                              "showOffline": {
+                                "type": "none"
+                              },
+                              "title": "Firmware Version"
+                            },
+                            "properties": {
+                              "textAlign": "center",
+                              "textColor": "#1E313E",
+                              "textSize": "40px",
+                              "textWeight": "font-light",
+                              "unit": "",
+                              "unitSize": "16px"
+                            },
+                            "sources": [
+                              {
+                                "bucket": {
+                                  "backend": "mongodb",
+                                  "id": "sensecapt2000_tracker_data",
+                                  "mapping": "messages",
+                                  "tags": {
+                                    "device": [],
+                                    "group": []
+                                  }
+                                },
+                                "color": "#34495e",
+                                "name": "Firmware Version",
+                                "source": "bucket",
+                                "timespan": {
+                                  "mode": "latest"
+                                }
+                              }
+                            ],
+                            "type": "text"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Raw Uplink",
+                    "widgets": [
+                      {
+                        "layout": {
+                          "col": 0,
+                          "row": 0,
+                          "sizeX": 12,
+                          "sizeY": 16
+                        },
+                        "panel": {
+                          "color": "#ffffff",
+                          "currentColor": "#ffffff",
+                          "showFullscreen": true,
+                          "showOffline": {
+                            "type": "none"
+                          },
+                          "title": "Last Decoded Uplink Payload"
+                        },
+                        "properties": {
+                          "source": "bucket",
+                          "template": "<pre style=\"font-family:monospace;font-size:13px;white-space:pre-wrap;word-break:break-all;\">{{payload | json}}</pre>"
+                        },
+                        "sources": [
+                          {
+                            "bucket": {
+                              "backend": "mongodb",
+                              "id": "sensecapt2000_tracker_data",
+                              "mapping": "device",
+                              "tags": {
+                                "device": [],
+                                "group": []
+                              }
+                            },
+                            "color": "#1abc9c",
+                            "name": "Raw Payload",
+                            "source": "bucket",
+                            "timespan": {
+                              "mode": "latest"
+                            }
+                          }
+                        ],
+                        "type": "html_time"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
