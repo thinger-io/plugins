@@ -1,20 +1,18 @@
 {
-    "name": "dingtek-df702",
+    "name": "dingtek-df703",
     "version": "1.0.0",
-    "description": "CNDingtek DF702 is a LoRaWAN® waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
+    "description": "CNDingtek DF703 is a LoRaWAN® ultrasonic waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
     "author": "Thinger.io",
     "license": "MIT",
     "repository": {
         "type": "git",
         "url": "https://github.com/thinger-io/plugins.git",
-        "directory": "dingtek-df702"
+        "directory": "dingtek-df703"
     },
     "metadata": {
-        "name": "Dingtek DF702",
-        "description": "CNDingtek DF702 is a LoRaWAN® waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
-    "image": "assets/df703.png",
-    "category": "devices",
-    "vendor": "dingtek"
+        "name": "Dingtek DF703",
+        "description": "CNDingtek DF703 is a LoRaWAN® ultrasonic waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
+        "image": ""
     },
     "resources": {
         "products": [
@@ -22,10 +20,10 @@
                 "config": {
                     "icons": []
                 },
-                "description": "CNDingtek DF702 is a LoRaWAN® waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
+                "description": "CNDingtek DF703 is a LoRaWAN® ultrasonic waste bin sensor that monitors fill level, fire, and movement, alerting authorities when bins need to be emptied.",
                 "enabled": true,
-                "name": "Dingtek DF702",
-                "product": "dingtek_df702",
+                "name": "Dingtek DF703",
+                "product": "dingtek_df703",
                 "profile": {
                     "api": {
                         "downlink": {
@@ -58,16 +56,16 @@
                         }
                     },
                     "autoprovisions": {
-                        "device_autoprovisioning": {
+                        "dingtek_df703": {
                             "config": {
                                 "mode": "pattern",
-                                "pattern": "df702_.*"
+                                "pattern": "dingtek_df703_.*"
                             },
                             "enabled": true
                         }
                     },
                     "buckets": {
-                        "dingtek_df702_data": {
+                        "dingtek_df703_data": {
                             "backend": "mongodb",
                             "data": {
                                 "payload": "{{payload}}",
@@ -85,13 +83,13 @@
                         }
                     },
                     "code": {
-                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar units = [' ℃', ' hours', ' minutes', ' mm', ' °', ' cm'];\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n  var sign = num & 0x80000000 ? -1 : 1;\n  var exponent = ((num >> 23) & 0xff) - 127;\n  var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n  return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n  if (input.fPort != 3) {\n    return {\n      errors: ['unknown FPort'],\n    };\n  }\n\n  switch (input.bytes.length) {\n    case 17:\n      return {\n        // Decoded data\n        data: {\n          level: (input.bytes[5] << 8) + input.bytes[6] + units[3],\n          full: Boolean(input.bytes[11] >> 4),\n          fire: Boolean(input.bytes[11] & 0x0f),\n          tilt: Boolean(input.bytes[12] >> 4),\n          battery: Boolean(input.bytes[12] & 0x0f),\n          angle: (input.bytes[9] & (0x0f === 0x00) ? input.bytes[10] : 0 - input.bytes[10]) + units[4],\n          temperature: input.bytes[8] + units[0],\n        },\n      };\n    case 25:\n      //(input.bytes[11]<<24)+(input.bytes[10]<<16)+(input.bytes[9]<<8)+input.bytes[8];\n      //var gps_long = float(0x42E903CD);\n      //console.log(gps_long);\n      var data_type = input.bytes[3];\n      if (data_type === 0x03) {\n        return {\n          // Decoded parameter\n          data: {\n            periodic_interval: input.bytes[7] + units[1],\n            detection_interval: input.bytes[8] + units[2],\n            full_alarm_threshold: input.bytes[9] + units[5],\n            fire_alarm_threshold: input.bytes[10] + units[0],\n            tilt_alarm_threshold: input.bytes[11] + units[4],\n            tilt_enable: Boolean(input.bytes[12]),\n            ultrasonic_range: (input.bytes[13] === 0x00 ? 2000 : 5000) + units[3],\n          },\n        };\n      } else {\n        return {\n          // Decoded data\n          data: {\n            level: (input.bytes[5] << 8) + input.bytes[6] + units[3],\n            longitude: hex2float((input.bytes[11] << 24) + (input.bytes[10] << 16) + (input.bytes[9] << 8) + input.bytes[8]).toFixed(6),\n            latitude: hex2float((input.bytes[15] << 24) + (input.bytes[14] << 16) + (input.bytes[13] << 8) + input.bytes[12]).toFixed(6),\n            full: Boolean(input.bytes[19] >> 4),\n            fire: Boolean(input.bytes[19] & 0x0f),\n            tilt: Boolean(input.bytes[20] >> 4),\n            battery: Boolean(input.bytes[20] & 0x0f),\n            angle: (input.bytes[17] & (0x0f === 0x00) ? input.bytes[18] : 0 - input.bytes[18]) + units[4],\n            temperature: input.bytes[16] + units[0],\n          },\n        };\n      }\n    default:\n      return {\n        errors: ['wrong length'],\n      };\n  }\n}\n\nfunction encodeDownlink(input) {\n  if (input.data.periodic_interval != null && !isNaN(input.data.periodic_interval)) {\n    var periodic_interval = input.data.periodic_interval;\n    var periodic_interval_high = periodic_interval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n    var periodic_interval_low = periodic_interval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n    if (periodic_interval > 168 || periodic_interval < 1) {\n      return {\n        errors: ['periodic interval range 1-168 hours.'],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, periodic_interval_high, periodic_interval_low, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.detection_interval != null && !isNaN(input.data.detection_interval)) {\n    var detection_interval = input.data.detection_interval;\n    var detection_interval_high = detection_interval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n    var detection_interval_low = detection_interval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n    if (detection_interval > 60 || detection_interval < 1) {\n      return {\n        errors: ['detection interval range 1-60 minutes.'],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x38, detection_interval_high, detection_interval_low, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.full_alarm_threshold != null && !isNaN(input.data.full_alarm_threshold)) {\n    var full_alarm_threshold = input.data.full_alarm_threshold;\n    var full_alarm_threshold_high = full_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n    var full_alarm_threshold_low = full_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n    if (full_alarm_threshold > 255 || full_alarm_threshold < 15) {\n      return {\n        errors: ['full alarm threshold range 15-255 cm.'],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x32, full_alarm_threshold_high, full_alarm_threshold_low, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.fire_alarm_threshold != null && !isNaN(input.data.fire_alarm_threshold)) {\n    var fire_alarm_threshold = input.data.fire_alarm_threshold;\n    var fire_alarm_threshold_high = fire_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n    var fire_alarm_threshold_low = fire_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n    if (fire_alarm_threshold > 255 || fire_alarm_threshold < 0) {\n      return {\n        errors: ['fire alarm threshold range 0-255 ℃.'],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x33, fire_alarm_threshold_high, fire_alarm_threshold_low, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.tilt_alarm_threshold != null && !isNaN(input.data.tilt_alarm_threshold)) {\n    var tilt_alarm_threshold = input.data.tilt_alarm_threshold;\n    var tilt_alarm_threshold_high = tilt_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n    var tilt_alarm_threshold_low = tilt_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n    if (tilt_alarm_threshold > 90 || tilt_alarm_threshold < 15) {\n      return {\n        errors: ['tilt alarm threshold range 15-90 °.'],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x34, tilt_alarm_threshold_high, tilt_alarm_threshold_low, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.tilt_enable != null && input.data.tilt_enable === !!input.data.tilt_enable) {\n    var tilt_enable = input.data.tilt_enable;\n    if (tilt_enable === true) {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x41, 0x38, 0x31],\n      };\n    } else {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x39, 0x38, 0x31],\n      };\n    }\n  }\n  if (input.data.ultrasonic_range != null && !isNaN(input.data.ultrasonic_range)) {\n    var ultrasonic_range = input.data.ultrasonic_range;\n    if (ultrasonic_range === 2 || ultrasonic_range === 5) {\n      return {\n        // LoRaWAN FPort used for the downlink message\n        fPort: 3,\n        // Encoded bytes\n        bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, ultrasonic_range === 2 ? 0x30 : 0x31, ultrasonic_range === 2 ? 0x37 : 0x33, 0x38, 0x31],\n      };\n    } else {\n      return {\n        errors: ['ultrasonic range 2 or 5 meters.'],\n      };\n    }\n  }\n  return {\n    errors: ['invalid downlink parameter.'],\n  };\n}\n\nfunction decodeDownlink(input) {\n  var input_length = input.bytes.length;\n  if (input.fPort != 3) {\n    return {\n      errors: ['invalid FPort.'],\n    };\n  }\n\n  if (\n    input_length < 12 ||\n    input.bytes[0] != 0x38 ||\n    input.bytes[1] != 0x30 ||\n    input.bytes[2] != 0x30 ||\n    input.bytes[3] != 0x32 ||\n    input.bytes[4] != 0x39 ||\n    input.bytes[5] != 0x39 ||\n    input.bytes[6] != 0x39 ||\n    input.bytes[7] != 0x39 ||\n    input.bytes[input_length - 2] != 0x38 ||\n    input.bytes[input_length - 1] != 0x31\n  ) {\n    return {\n      errors: ['invalid format.'],\n    };\n  }\n  var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n  var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n  switch (option) {\n    case 1:\n      return {\n        data: {\n          periodic_interval: value,\n        },\n      };\n    case 8:\n      return {\n        data: {\n          detection_interval: value,\n        },\n      };\n    case 2:\n      return {\n        data: {\n          full_alarm_threshold: value,\n        },\n      };\n    case 3:\n      return {\n        data: {\n          fire_alarm_threshold: value,\n        },\n      };\n    case 4:\n      return {\n        data: {\n          tilt_alarm_threshold: value,\n        },\n      };\n    case 9:\n      switch (value) {\n        case 0x07:\n          return {\n            data: {\n              ultrasonic_range: 2,\n            },\n          };\n        case 0x13:\n          return {\n            data: {\n              ultrasonic_range: 5,\n            },\n          };\n        case 0x09:\n          return {\n            data: {\n              tilt_enable: false,\n            },\n          };\n        case 0x0a:\n          return {\n            data: {\n              tilt_enable: true,\n            },\n          };\n        default:\n          return {\n            errors: ['invalid parameter value.'],\n          };\n      }\n    default:\n      return {\n        errors: ['invalid parameter key.'],\n      };\n  }\n}\n",
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\nvar units = [' ℃', ' hours', ' minutes', ' mm', ' °', ' cm'];\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n\n    switch (input.bytes.length) {\n        case 17:\n            return {\n                // Decoded data\n                data: {\n                    level: (input.bytes[5] << 8) + input.bytes[6],\n                    alarmLevel: Boolean(input.bytes[11] >> 4),\n                    alarmFire: Boolean(input.bytes[11] & 0x0f),\n                    alarmFall: Boolean(input.bytes[12] >> 4),\n                    alarmBattery: Boolean(input.bytes[12] & 0x0f),\n                    angle: (input.bytes[9] & (0x0f === 0x00) ? input.bytes[10] : 0 - input.bytes[10]),\n                    temperature: input.bytes[8],\n                    frameCounter: (input.bytes[13] << 8) + input.bytes[14],\n                },\n            };\n\n        case 25:\n            var data_type = input.bytes[3];\n            if (data_type === 0x03) {\n                return {\n                    // Decoded parameter\n                    data: {\n                        firmware: input.bytes[5] + \".\" + input.bytes[6],\n                        uploadInterval: input.bytes[7],\n                        detectInterval: input.bytes[8],                        \n                        levelThreshold: input.bytes[9],\n                        fireThreshold: input.bytes[10],\n                        fallThreshold: input.bytes[11],\n                        fallEnable: Boolean(input.bytes[12]),\n                        workMode:input.bytes[14],\n                    },\n                };\n            } else {\n                return {\n                    // Decoded data\n                    data: {\n                        level: (input.bytes[5] << 8) + input.bytes[6],\n                        longitude: hex2float((input.bytes[11] << 24) + (input.bytes[10] << 16) + (input.bytes[9] << 8) + input.bytes[8]).toFixed(6),\n                        latitude: hex2float((input.bytes[15] << 24) + (input.bytes[14] << 16) + (input.bytes[13] << 8) + input.bytes[12]).toFixed(6),\n                        alarmLevel: Boolean(input.bytes[19] >> 4),\n                        alarmFire: Boolean(input.bytes[19] & 0x0f),\n                        alarmFall: Boolean(input.bytes[20] >> 4),\n                        alarmBattery: Boolean(input.bytes[20] & 0x0f),\n                        angle: (input.bytes[17] & (0x0f === 0x00) ? input.bytes[18] : 0 - input.bytes[18]),\n                        temperature: input.bytes[16],\n                        frameCounter: (input.bytes[21] << 8) + input.bytes[22],\n                    },\n                };\n            }\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 168 || uploadInterval < 1) {\n            return {\n                errors: ['periodic upload interval range 1-168 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.detectInterval != null && !isNaN(input.data.detectInterval)) {\n        var detection_interval = input.data.detectInterval;\n        var detection_interval_high = detection_interval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var detection_interval_low = detection_interval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (detection_interval > 60 || detection_interval < 1) {\n            return {\n                errors: ['cyclic detection interval range 1-60 minutes.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x38, detection_interval_high, detection_interval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.levelThreshold != null && !isNaN(input.data.levelThreshold)) {\n        var full_alarm_threshold = input.data.levelThreshold;\n        var full_alarm_threshold_high = full_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var full_alarm_threshold_low = full_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (full_alarm_threshold > 255 || full_alarm_threshold < 15) {\n            return {\n                errors: ['full alarm threshold range 15-255 cm.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x32, full_alarm_threshold_high, full_alarm_threshold_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.fireThreshold != null && !isNaN(input.data.fireThreshold)) {\n        var fireThreshold = input.data.fireThreshold;\n        var fireThreshold_high = fireThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var fireThreshold_low = fireThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (fireThreshold > 255 || fireThreshold < 1) {\n            return {\n                errors: ['fire alarm threshold range 1-255 cellus degree.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x33, fireThreshold_high, fireThreshold_low, 0x38, 0x31],\n            };\n        }\n    }\n\n    if (input.data.fallThreshold != null && !isNaN(input.data.fallThreshold)) {\n        var tilt_alarm_threshold = input.data.fallThreshold;\n        var tilt_alarm_threshold_high = tilt_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var tilt_alarm_threshold_low = tilt_alarm_threshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (tilt_alarm_threshold > 90 || tilt_alarm_threshold < 15) {\n            return {\n                errors: ['fall alarm threshold range 15-90 °.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x34, tilt_alarm_threshold_high, tilt_alarm_threshold_low, 0x38, 0x31],\n            };\n        }\n    }\n    \n    if (input.data.fallEnable != null && input.data.fallEnable === !!input.data.fallEnable) {\n        var tilt_enable = input.data.fallEnable;\n        if (tilt_enable === true) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x41, 0x38, 0x31],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x39, 0x38, 0x31],\n            };\n        }\n    }\n\n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 8:\n            return {\n                data: {\n                    detectInterval: value,\n                },\n            };\n        case 2:\n            return {\n                data: {\n                    levelThreshold: value,\n                },\n            };\n        case 3:\n            return {\n                data: {\n                    fireThreshold: value,\n                },\n            };\n        case 4:\n            return {\n                data: {\n                    fallThreshold: value,\n                },\n            };\n        case 9:\n            switch (value) {\n                case 0x00:\n                    return {\n                        data: {\n                            gpsEnable: false,\n                        },\n                    };\n                case 0x01:\n                    return {\n                        data: {\n                            gpsEnable: true,\n                        },\n                    };\n                case 0x03:\n                    return {\n                        data: {\n                            activeMode: ABP,\n                        },\n                    };\n                case 0x04:\n                    return {\n                        data: {\n                            activeMode: OTAA,\n                        },\n                    };\n                case 0x05:\n                    return {\n                        data: {\n                            workMode: 0,\n                        },\n                    };\n                case 0x06:\n                    return {\n                        data: {\n                            workMode: 1,\n                        },\n                    };\n                case 0x0E:\n                    return {\n                        data: {\n                            workMode: 2,\n                        },\n                    };\n                case 0x09:\n                    return {\n                        data: {\n                            fallEnable: false,\n                        },\n                    };\n                case 0x0a:\n                    return {\n                        data: {\n                            fallEnable: true,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}\n",
                         "environment": "javascript",
                         "storage": "",
                         "version": "1.0"
                     },
                     "flows": {
-                        "dingtek_df702_decoder": {
+                        "dingtek_df703_decoder": {
                             "data": {
                                 "payload": "{{payload}}",
                                 "payload_function": "decodeThingerUplink",
@@ -183,7 +181,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "level",
                                                             "tags": {
                                                                 "device": [],
@@ -202,10 +200,10 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 3,
-                                                    "row": 0,
+                                                    "col": 0,
+                                                    "row": 19,
                                                     "sizeX": 3,
-                                                    "sizeY": 5
+                                                    "sizeY": 6
                                                 },
                                                 "panel": {
                                                     "color": "#ffffff",
@@ -246,7 +244,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "temperature",
                                                             "tags": {
                                                                 "device": [],
@@ -265,10 +263,10 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 6,
-                                                    "row": 0,
+                                                    "col": 3,
+                                                    "row": 19,
                                                     "sizeX": 3,
-                                                    "sizeY": 5
+                                                    "sizeY": 6
                                                 },
                                                 "panel": {
                                                     "color": "#ffffff",
@@ -309,7 +307,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "angle",
                                                             "tags": {
                                                                 "device": [],
@@ -318,6 +316,69 @@
                                                         },
                                                         "color": "#9b59b6",
                                                         "name": "Tilt Angle",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "text"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 3,
+                                                    "row": 0,
+                                                    "sizeX": 3,
+                                                    "sizeY": 5
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Frame Counter"
+                                                },
+                                                "properties": {
+                                                    "decimalPlaces": 0,
+                                                    "enableExtraTextColor": false,
+                                                    "enableIconColor": false,
+                                                    "enableIconSize": false,
+                                                    "extraText": "",
+                                                    "extraTextColor": "#1E313E",
+                                                    "extraTextColorConditions": [],
+                                                    "extraTextConditions": [],
+                                                    "extraTextPosition": "above-value",
+                                                    "extraTextSize": "14px",
+                                                    "extraTextWeight": "font-light",
+                                                    "icon": "fas fa-hashtag",
+                                                    "iconColor": "#1E313E",
+                                                    "iconColorConditions": [],
+                                                    "iconGap": "8px",
+                                                    "iconPosition": "before-value",
+                                                    "iconSize": "40px",
+                                                    "link": "",
+                                                    "textAlign": "center",
+                                                    "textColor": "#1E313E",
+                                                    "textColorConditions": [],
+                                                    "textSize": "65px",
+                                                    "textWeight": "font-light",
+                                                    "unit": "",
+                                                    "unitSize": "20px"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df703_data",
+                                                            "mapping": "frameCounter",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#7f8c8d",
+                                                        "name": "Frame Counter",
                                                         "source": "bucket",
                                                         "timespan": {
                                                             "mode": "latest"
@@ -339,7 +400,7 @@
                                                     "showOffline": {
                                                         "type": "none"
                                                     },
-                                                    "title": "Bin Full Alarm"
+                                                    "title": "Level Alarm"
                                                 },
                                                 "type": "group_widget",
                                                 "widgets": [
@@ -360,13 +421,13 @@
                                                         },
                                                         "properties": {
                                                             "source": "code",
-                                                            "template": "<div style=\"width:180px; margin:15px auto; font-family:Arial, sans-serif;\">\n  <div style=\"padding:8px; background-color:#2ecc71; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">Not Full</div>\n  <div style=\"padding:8px; background-color:#e74c3c; color:#fff; text-align:center; border-radius:5px;\">Full</div>\n</div>"
+                                                            "template": "<div style=\"width:180px; margin:15px auto; font-family:Arial, sans-serif;\">\n  <div style=\"padding:8px; background-color:#2ecc71; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">Not Full</div>\n  <div style=\"padding:8px; background-color:#e74c3c; color:#fff; text-align:center; border-radius:5px;\">Full!</div>\n</div>"
                                                         },
                                                         "sources": [
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
+                                                                    "id": "dingtek_df703_data",
                                                                     "mapping": "device",
                                                                     "tags": {
                                                                         "device": [],
@@ -397,7 +458,7 @@
                                                             "showOffline": {
                                                                 "type": "none"
                                                             },
-                                                            "title": "Full"
+                                                            "title": "Level Alarm"
                                                         },
                                                         "properties": {
                                                             "color": "#2ecc71",
@@ -421,15 +482,15 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
-                                                                    "mapping": "full",
+                                                                    "id": "dingtek_df703_data",
+                                                                    "mapping": "alarmLevel",
                                                                     "tags": {
                                                                         "device": [],
                                                                         "group": []
                                                                     }
                                                                 },
                                                                 "color": "#1abc9c",
-                                                                "name": "Full",
+                                                                "name": "Level Alarm",
                                                                 "source": "bucket",
                                                                 "timespan": {
                                                                     "mode": "latest"
@@ -443,7 +504,7 @@
                                             {
                                                 "layout": {
                                                     "col": 3,
-                                                    "row": 5,
+                                                    "row": 12,
                                                     "sizeX": 3,
                                                     "sizeY": 7
                                                 },
@@ -480,7 +541,7 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
+                                                                    "id": "dingtek_df703_data",
                                                                     "mapping": "device",
                                                                     "tags": {
                                                                         "device": [],
@@ -511,7 +572,7 @@
                                                             "showOffline": {
                                                                 "type": "none"
                                                             },
-                                                            "title": "Fire"
+                                                            "title": "Fire Alarm"
                                                         },
                                                         "properties": {
                                                             "color": "#2ecc71",
@@ -535,15 +596,15 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
-                                                                    "mapping": "fire",
+                                                                    "id": "dingtek_df703_data",
+                                                                    "mapping": "alarmFire",
                                                                     "tags": {
                                                                         "device": [],
                                                                         "group": []
                                                                     }
                                                                 },
                                                                 "color": "#e74c3c",
-                                                                "name": "Fire",
+                                                                "name": "Fire Alarm",
                                                                 "source": "bucket",
                                                                 "timespan": {
                                                                     "mode": "latest"
@@ -556,7 +617,7 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 6,
+                                                    "col": 3,
                                                     "row": 5,
                                                     "sizeX": 3,
                                                     "sizeY": 7
@@ -567,7 +628,7 @@
                                                     "showOffline": {
                                                         "type": "none"
                                                     },
-                                                    "title": "Tilt Alarm"
+                                                    "title": "Fall Alarm"
                                                 },
                                                 "type": "group_widget",
                                                 "widgets": [
@@ -576,7 +637,7 @@
                                                             "col": 0,
                                                             "row": 0,
                                                             "sizeX": 3,
-                                                            "sizeY": 9
+                                                            "sizeY": 10
                                                         },
                                                         "panel": {
                                                             "color": "#ffffff",
@@ -588,13 +649,13 @@
                                                         },
                                                         "properties": {
                                                             "source": "code",
-                                                            "template": "<div style=\"width:180px; margin:15px auto; font-family:Arial, sans-serif;\">\n  <div style=\"padding:8px; background-color:#2ecc71; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">Upright</div>\n  <div style=\"padding:8px; background-color:#f39c12; color:#fff; text-align:center; border-radius:5px;\">Tilted!</div>\n</div>"
+                                                            "template": "<div style=\"width:180px; margin:15px auto; font-family:Arial, sans-serif;\">\n  <div style=\"padding:8px; background-color:#2ecc71; color:#fff; text-align:center; margin-bottom:5px; border-radius:5px;\">Upright</div>\n  <div style=\"padding:8px; background-color:#f39c12; color:#fff; text-align:center; border-radius:5px;\">Fallen!</div>\n</div>"
                                                         },
                                                         "sources": [
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
+                                                                    "id": "dingtek_df703_data",
                                                                     "mapping": "device",
                                                                     "tags": {
                                                                         "device": [],
@@ -625,7 +686,7 @@
                                                             "showOffline": {
                                                                 "type": "none"
                                                             },
-                                                            "title": "Tilt"
+                                                            "title": "Fall Alarm"
                                                         },
                                                         "properties": {
                                                             "color": "#2ecc71",
@@ -649,15 +710,15 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
-                                                                    "mapping": "tilt",
+                                                                    "id": "dingtek_df703_data",
+                                                                    "mapping": "alarmFall",
                                                                     "tags": {
                                                                         "device": [],
                                                                         "group": []
                                                                     }
                                                                 },
                                                                 "color": "#f39c12",
-                                                                "name": "Tilt",
+                                                                "name": "Fall Alarm",
                                                                 "source": "bucket",
                                                                 "timespan": {
                                                                     "mode": "latest"
@@ -670,10 +731,10 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 9,
-                                                    "row": 0,
+                                                    "col": 0,
+                                                    "row": 12,
                                                     "sizeX": 3,
-                                                    "sizeY": 12
+                                                    "sizeY": 7
                                                 },
                                                 "panel": {
                                                     "color": "#ffffff",
@@ -690,7 +751,7 @@
                                                             "col": 0,
                                                             "row": 0,
                                                             "sizeX": 3,
-                                                            "sizeY": 5
+                                                            "sizeY": 9
                                                         },
                                                         "panel": {
                                                             "color": "#ffffff",
@@ -708,7 +769,7 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
+                                                                    "id": "dingtek_df703_data",
                                                                     "mapping": "device",
                                                                     "tags": {
                                                                         "device": [],
@@ -727,10 +788,10 @@
                                                     },
                                                     {
                                                         "layout": {
-                                                            "col": 0,
-                                                            "row": 5,
-                                                            "sizeX": 6,
-                                                            "sizeY": 7
+                                                            "col": 3,
+                                                            "row": 0,
+                                                            "sizeX": 3,
+                                                            "sizeY": 9
                                                         },
                                                         "panel": {
                                                             "color": "#ffffff",
@@ -763,8 +824,8 @@
                                                             {
                                                                 "bucket": {
                                                                     "backend": "mongodb",
-                                                                    "id": "dingtek_df702_data",
-                                                                    "mapping": "battery",
+                                                                    "id": "dingtek_df703_data",
+                                                                    "mapping": "alarmBattery",
                                                                     "tags": {
                                                                         "device": [],
                                                                         "group": []
@@ -817,7 +878,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "level",
                                                             "tags": {
                                                                 "device": [],
@@ -866,7 +927,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "temperature",
                                                             "tags": {
                                                                 "device": [],
@@ -915,7 +976,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": "angle",
                                                             "tags": {
                                                                 "device": [],
@@ -967,7 +1028,7 @@
                                                     {
                                                         "bucket": {
                                                             "backend": "mongodb",
-                                                            "id": "dingtek_df702_data",
+                                                            "id": "dingtek_df703_data",
                                                             "mapping": {
                                                                 "latitude": "lat",
                                                                 "longitude": "lng"
