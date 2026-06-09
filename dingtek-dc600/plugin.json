@@ -1,134 +1,631 @@
 {
-  "name": "dingtek_dc600",
-  "version": "1.0.0",
-  "description": "The CNDingtek dc600 is water leakage sensor with up to 4 channels.",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "dingtek-dc600"
-  },
-  "metadata": {
-    "name": "Dingtek DC600",
+    "name": "dingtek-dc600",
+    "version": "1.0.0",
     "description": "The CNDingtek dc600 is water leakage sensor with up to 4 channels.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "dingtek-dc600"
+    },
+    "metadata": {
+        "name": "Dingtek DC600",
+        "description": "The CNDingtek dc600 is water leakage sensor with up to 4 channels.",
     "image": "assets/dc600.png",
     "category": "devices",
     "vendor": "dingtek"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "The CNDingtek dc600 is water leakage sensor with up to 4 channels.",
-        "enabled": true,
-        "name": "Dingtek DC600",
-        "product": "dingtek_dc600",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=3}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "icons": []
+                },
+                "description": "The CNDingtek dc600 is water leakage sensor with up to 4 channels.",
+                "enabled": true,
+                "name": "Dingtek DC600",
+                "product": "dingtek_dc600",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=3}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "dc600_.*"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "dingtek_dc600_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n    switch (input.bytes.length) {\n        case 17:\n            if (input.bytes[3] != 0x03) {\n                return {\n                    // Decoded data\n                    data: {\n                        monitorStatus: !Boolean(input.bytes[11] & 0x01),\n                        alarmChannel1: !Boolean(input.bytes[12] & 0x10),\n                        alarmChannel2: !Boolean(input.bytes[12] & 0x20),\n                        alarmChannel3: !Boolean(input.bytes[12] & 0x40),\n                        alarmChannel4: !Boolean(input.bytes[12] & 0x80),\n                        alarmBattery: Boolean(input.bytes[12] & 0x0f),\n                        temperature: input.bytes[8],\n                        frameCounter: (input.bytes[13] << 8) + input.bytes[14],\n                    },\n                };\n            } else {\n                return {\n                    // Decoded data\n                    data: {\n                        firmware: input.bytes[5] + \".\" + input.bytes[6],\n                        uploadInterval: input.bytes[7],\n                        batteryThreshold: input.bytes[11],\n                        monitorStatus: !Boolean(input.bytes[12] & 0x01),\n                    },\n                };\n            }\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\n// Encode downlink function.\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 168 || uploadInterval < 1) {\n            return {\n                errors: ['upload interval range 1-168 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.batteryThreshold != null && !isNaN(input.data.batteryThreshold)) {\n        var batteryThreshold = input.data.batteryThreshold;\n        var batteryThreshold_high = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var batteryThreshold_low = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (batteryThreshold > 99 || batteryThreshold < 5) {\n            return {\n                errors: ['Battery alarm threshold range 5-99.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x35, batteryThreshold_high, batteryThreshold_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.monitorStatus != null && !isNaN(input.data.monitorStatus)) {\n        var monitorStatus = input.data.monitorStatus;\n        if (monitorStatus == 0) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x41, 0x38, 0x31],\n            };\n        } else if (monitorStatus == 1){\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x39, 0x38, 0x31],\n            };\n        }else{\n            return {\n                errors: ['Monitor status range 0-1.'],\n            };\n        }\n    }\n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 5:\n            return {\n                data: {\n                    batteryThreshold: value,\n                },\n            };\n        case 9:\n            switch (value) {\n                case 0x09:\n                    return {\n                        data: {\n                            monitorStatus: 1,\n                        },\n                    };\n                case 0x0A:\n                    return {\n                        data: {\n                            monitorStatus: 1,\n                        },\n                    };\n                case 0x0D:\n                    return {\n                        data: {\n                            reset: 1,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "dingtek_dc600_decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 4,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Leak Detection - Channels Status"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;font-family:sans-serif;\">\n  <div style=\"display:flex;gap:16px;flex-wrap:wrap;justify-content:center;\">\n    <div style=\"text-align:center;padding:14px 22px;border-radius:12px;background:{{ (value && value[0] && value[0].alarmChannel1) ? '#e74c3c' : '#2ecc71' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:32px;\">{{ (value && value[0] && value[0].alarmChannel1) ? '💧' : '✅' }}</div>\n      <div style=\"font-weight:bold;font-size:15px;margin-top:4px;\">Channel 1</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].alarmChannel1) ? 'LEAK DETECTED' : 'No Leak' }}</div>\n    </div>\n    <div style=\"text-align:center;padding:14px 22px;border-radius:12px;background:{{ (value && value[0] && value[0].alarmChannel2) ? '#e74c3c' : '#2ecc71' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:32px;\">{{ (value && value[0] && value[0].alarmChannel2) ? '💧' : '✅' }}</div>\n      <div style=\"font-weight:bold;font-size:15px;margin-top:4px;\">Channel 2</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].alarmChannel2) ? 'LEAK DETECTED' : 'No Leak' }}</div>\n    </div>\n    <div style=\"text-align:center;padding:14px 22px;border-radius:12px;background:{{ (value && value[0] && value[0].alarmChannel3) ? '#e74c3c' : '#2ecc71' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:32px;\">{{ (value && value[0] && value[0].alarmChannel3) ? '💧' : '✅' }}</div>\n      <div style=\"font-weight:bold;font-size:15px;margin-top:4px;\">Channel 3</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].alarmChannel3) ? 'LEAK DETECTED' : 'No Leak' }}</div>\n    </div>\n    <div style=\"text-align:center;padding:14px 22px;border-radius:12px;background:{{ (value && value[0] && value[0].alarmChannel4) ? '#e74c3c' : '#2ecc71' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:32px;\">{{ (value && value[0] && value[0].alarmChannel4) ? '💧' : '✅' }}</div>\n      <div style=\"font-weight:bold;font-size:15px;margin-top:4px;\">Channel 4</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].alarmChannel4) ? 'LEAK DETECTED' : 'No Leak' }}</div>\n    </div>\n  </div>\n  <div style=\"color:#7f8c8d;font-size:11px;\">Last update: {{ (value && value[0] && value[0].ts) | date:'medium' }}</div>\n</div>\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel1",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "alarmChannel1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "alarmChannel2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "alarmChannel3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel4",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "alarmChannel4",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#95a5a6",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Device Status"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px;font-family:sans-serif;\">\n  <div style=\"display:flex;gap:16px;flex-wrap:wrap;justify-content:center;\">\n    <div style=\"text-align:center;padding:14px 20px;border-radius:12px;background:{{ (value && value[0] && value[0].monitorStatus) ? '#2ecc71' : '#e74c3c' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:30px;\">{{ (value && value[0] && value[0].monitorStatus) ? '🟢' : '🔴' }}</div>\n      <div style=\"font-weight:bold;font-size:14px;margin-top:4px;\">Monitor</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].monitorStatus) ? 'Active' : 'Inactive' }}</div>\n    </div>\n    <div style=\"text-align:center;padding:14px 20px;border-radius:12px;background:{{ (value && value[0] && value[0].alarmBattery) ? '#e67e22' : '#2ecc71' }};color:#fff;min-width:110px;\">\n      <div style=\"font-size:30px;\">{{ (value && value[0] && value[0].alarmBattery) ? '🪫' : '🔋' }}</div>\n      <div style=\"font-weight:bold;font-size:14px;margin-top:4px;\">Battery</div>\n      <div style=\"font-size:12px;margin-top:2px;\">{{ (value && value[0] && value[0].alarmBattery) ? 'Low' : 'OK' }}</div>\n    </div>\n  </div>\n  <div style=\"color:#7f8c8d;font-size:11px;\">Last update: {{ (value && value[0] && value[0].ts) | date:'medium' }}</div>\n</div>\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "monitorStatus",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "monitorStatus",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmBattery",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "alarmBattery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#95a5a6",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 1,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 60,
+                                                    "min": -20,
+                                                    "unit": "°C"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 1,
+                                                    "row": 6,
+                                                    "sizeX": 5,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature History"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature (°C)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 12,
+                                                    "sizeX": 6,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Last 24h Records"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%;height:100%;overflow-y:auto;\">\n  <table class=\"table table-striped table-condensed\" style=\"font-size:12px;\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Temp (°C)</th>\n        <th>Ch1 Leak</th>\n        <th>Ch2 Leak</th>\n        <th>Ch3 Leak</th>\n        <th>Ch4 Leak</th>\n        <th>Monitor</th>\n        <th>Battery</th>\n        <th>Frame #</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'dd/MM/yy HH:mm' }}</td>\n        <td><span style=\"color:#e74c3c;\">{{ entry.temperature !== undefined ? entry.temperature : '—' }}</span></td>\n        <td><span style=\"color:{{ entry.alarmChannel1 ? '#e74c3c' : '#2ecc71' }};font-weight:bold;\">{{ entry.alarmChannel1 ? '💧 LEAK' : '✅ OK' }}</span></td>\n        <td><span style=\"color:{{ entry.alarmChannel2 ? '#e74c3c' : '#2ecc71' }};font-weight:bold;\">{{ entry.alarmChannel2 ? '💧 LEAK' : '✅ OK' }}</span></td>\n        <td><span style=\"color:{{ entry.alarmChannel3 ? '#e74c3c' : '#2ecc71' }};font-weight:bold;\">{{ entry.alarmChannel3 ? '💧 LEAK' : '✅ OK' }}</span></td>\n        <td><span style=\"color:{{ entry.alarmChannel4 ? '#e74c3c' : '#2ecc71' }};font-weight:bold;\">{{ entry.alarmChannel4 ? '💧 LEAK' : '✅ OK' }}</span></td>\n        <td><span style=\"color:{{ entry.monitorStatus ? '#2ecc71' : '#e74c3c' }};font-weight:bold;\">{{ entry.monitorStatus ? '🟢 ON' : '🔴 OFF' }}</span></td>\n        <td><span style=\"color:{{ entry.alarmBattery ? '#e67e22' : '#2ecc71' }};font-weight:bold;\">{{ entry.alarmBattery ? '🪫 Low' : '🔋 OK' }}</span></td>\n        <td>{{ entry.frameCounter !== undefined ? entry.frameCounter : '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>\n"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "ts",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#95a5a6",
+                                                        "name": "ts",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel1",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "alarmChannel1",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel2",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e67e22",
+                                                        "name": "alarmChannel2",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel3",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#9b59b6",
+                                                        "name": "alarmChannel3",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmChannel4",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "alarmChannel4",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "monitorStatus",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#2ecc71",
+                                                        "name": "monitorStatus",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "alarmBattery",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "alarmBattery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "aggregation": {},
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_dc600_data",
+                                                            "mapping": "frameCounter",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "frameCounter",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
-              }
-            },
-            "uplink": {
-              "device_id_resolver": "getId",
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_function": "",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
             }
-          },
-          "autoprovisions": {
-            "device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "dc600_.*"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "dingtek_dc600_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "source": "resource_stream"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": []
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n    switch (input.bytes.length) {\n        case 17:\n            if (input.bytes[3] != 0x03) {\n                return {\n                    // Decoded data\n                    data: {\n                        monitorStatus: !Boolean(input.bytes[11] & 0x01),\n                        alarmChannel1: !Boolean(input.bytes[12] & 0x10),\n                        alarmChannel2: !Boolean(input.bytes[12] & 0x20),\n                        alarmChannel3: !Boolean(input.bytes[12] & 0x40),\n                        alarmChannel4: !Boolean(input.bytes[12] & 0x80),\n                        alarmBattery: Boolean(input.bytes[12] & 0x0f),\n                        temperature: input.bytes[8],\n                        frameCounter: (input.bytes[13] << 8) + input.bytes[14],\n                    },\n                };\n            } else {\n                return {\n                    // Decoded data\n                    data: {\n                        firmware: input.bytes[5] + \".\" + input.bytes[6],\n                        uploadInterval: input.bytes[7],\n                        batteryThreshold: input.bytes[11],\n                        monitorStatus: !Boolean(input.bytes[12] & 0x01),\n                    },\n                };\n            }\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\n// Encode downlink function.\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 168 || uploadInterval < 1) {\n            return {\n                errors: ['upload interval range 1-168 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.batteryThreshold != null && !isNaN(input.data.batteryThreshold)) {\n        var batteryThreshold = input.data.batteryThreshold;\n        var batteryThreshold_high = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var batteryThreshold_low = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (batteryThreshold > 99 || batteryThreshold < 5) {\n            return {\n                errors: ['Battery alarm threshold range 5-99.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x35, batteryThreshold_high, batteryThreshold_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.monitorStatus != null && !isNaN(input.data.monitorStatus)) {\n        var monitorStatus = input.data.monitorStatus;\n        if (monitorStatus == 0) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x41, 0x38, 0x31],\n            };\n        } else if (monitorStatus == 1){\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x39, 0x38, 0x31],\n            };\n        }else{\n            return {\n                errors: ['Monitor status range 0-1.'],\n            };\n        }\n    }\n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 5:\n            return {\n                data: {\n                    batteryThreshold: value,\n                },\n            };\n        case 9:\n            switch (value) {\n                case 0x09:\n                    return {\n                        data: {\n                            monitorStatus: 1,\n                        },\n                    };\n                case 0x0A:\n                    return {\n                        data: {\n                            monitorStatus: 1,\n                        },\n                    };\n                case 0x0D:\n                    return {\n                        data: {\n                            reset: 1,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "flows": {
-            "dingtek_dc600_decoder": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "sink": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "split_data": false
-            }
-          },
-          "properties": {
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": []
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
