@@ -1,134 +1,530 @@
 {
-  "name": "dingtek_df555",
-  "version": "1.0.0",
-  "description": "The CNDingtek df555 is an ultrasonic level for kinds tank, which is installed on top of the tank.",
-  "author": "Thinger.io",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/thinger-io/plugins.git",
-    "directory": "dingtek-df555"
-  },
-  "metadata": {
-    "name": "Dingtek DF555",
+    "name": "dingtek-df555",
+    "version": "1.0.0",
     "description": "The CNDingtek df555 is an ultrasonic level for kinds tank, which is installed on top of the tank.",
+    "author": "Thinger.io",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thinger-io/plugins.git",
+        "directory": "dingtek-df555"
+    },
+    "metadata": {
+        "name": "Dingtek DF555",
+        "description": "The CNDingtek df555 is an ultrasonic level for kinds tank, which is installed on top of the tank.",
     "image": "assets/df555.png",
     "category": "devices",
     "vendor": "dingtek"
-  },
-  "resources": {
-    "products": [
-      {
-        "description": "The CNDingtek df555 is an ultrasonic level for kinds tank, which is installed on top of the tank.",
-        "enabled": true,
-        "name": "Dingtek DF555",
-        "product": "dingtek_df555",
-        "profile": {
-          "api": {
-            "downlink": {
-              "enabled": true,
-              "handle_connectivity": false,
-              "request": {
-                "data": {
-                  "path": "/downlink",
-                  "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=3}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
-                  "payload_function": "",
-                  "payload_type": "",
-                  "plugin": "{{property.uplink.source}}",
-                  "target": "plugin_endpoint"
+    },
+    "resources": {
+        "products": [
+            {
+                "config": {
+                    "icons": []
+                },
+                "description": "The CNDingtek df555 is an ultrasonic level for kinds tank, which is installed on top of the tank.",
+                "enabled": true,
+                "name": "Dingtek DF555",
+                "product": "dingtek_df555",
+                "profile": {
+                    "api": {
+                        "downlink": {
+                            "enabled": true,
+                            "handle_connectivity": false,
+                            "request": {
+                                "data": {
+                                    "path": "/downlink",
+                                    "payload": "{\n    \"data\"    : \"{{payload.data=\"\"}}\",\n    \"port\"    :  {{payload.port=3}},\n    \"priority\":  {{payload.priority=3}},\n    \"confirmed\" :  {{payload.confirmed=false}},\n    \"uplink\"  :  {{property.uplink}} \n}",
+                                    "payload_function": "",
+                                    "payload_type": "",
+                                    "plugin": "{{property.uplink.source}}",
+                                    "target": "plugin_endpoint"
+                                }
+                            }
+                        },
+                        "uplink": {
+                            "device_id_resolver": "getId",
+                            "enabled": true,
+                            "handle_connectivity": true,
+                            "request": {
+                                "data": {
+                                    "payload": "{{payload}}",
+                                    "payload_function": "",
+                                    "payload_type": "source_payload",
+                                    "resource_stream": "uplink",
+                                    "target": "resource_stream"
+                                }
+                            }
+                        }
+                    },
+                    "autoprovisions": {
+                        "device_autoprovisioning": {
+                            "config": {
+                                "mode": "pattern",
+                                "pattern": "df555_[0-9A-Fa-f]{16}"
+                            },
+                            "enabled": true
+                        }
+                    },
+                    "buckets": {
+                        "dingtek_df555_data": {
+                            "backend": "mongodb",
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "source": "resource_stream"
+                            },
+                            "enabled": true,
+                            "retention": {
+                                "period": 3,
+                                "unit": "months"
+                            },
+                            "tags": []
+                        }
+                    },
+                    "code": {
+                        "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n    switch (input.bytes.length) {\n        case 17:\n            if (input.bytes[3] != 0x03) {\n                return {\n                    // Decoded data\n                    data: {\n                        level: (input.bytes[5] << 8) + input.bytes[6],\n                        alarmLevel: Boolean(input.bytes[11] >> 4),\n                        alarmBattery: Boolean(input.bytes[12] & 0x0f),\n                        temperature: input.bytes[8],\n                        frameCounter: (input.bytes[13] << 8) + input.bytes[14],\n                    },\n                };\n            } else {\n                return {\n                    // Decoded data\n                    data: {\n                        firmware: input.bytes[5] + \".\" + input.bytes[6],\n                        uploadInterval: input.bytes[7],\n                        detectInterval: input.bytes[8],\n                        levelThreshold: input.bytes[9],                        \n                        workMode: input.bytes[14],\n                    },\n                };\n            }\n\n        case 25:\n            return {\n                // Decoded data\n                data: {\n                    level: (input.bytes[5] << 8) + input.bytes[6],\n                    alarmLevel: Boolean(input.bytes[19] >> 4),\n                    alarmBattery: Boolean(input.bytes[20] & 0x0f),\n                    longitude: hex2float((input.bytes[11] << 24) + (input.bytes[10] << 16) + (input.bytes[9] << 8) + input.bytes[8]).toFixed(6),\n                    latitude: hex2float((input.bytes[15] << 24) + (input.bytes[14] << 16) + (input.bytes[13] << 8) + input.bytes[12]).toFixed(6),\n                    temperature: input.bytes[16],\n                    frameCounter: (input.bytes[21] << 8) + input.bytes[22],\n                },\n            };\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\n// Encode downlink function.\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 255 || uploadInterval < 1) {\n            return {\n                errors: ['upload interval range 1-255 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.detectInterval != null && !isNaN(input.data.detectInterval)) {\n        var detectInterval = input.data.detectInterval;\n        var detectInterval_high = detectInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var detectInterval_low = detectInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (detectInterval > 255 || detectInterval < 1) {\n            return {\n                errors: ['detection interval range 1-255 minutes.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x38, detectInterval_high, detectInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.levelThreshold != null && !isNaN(input.data.levelThreshold)) {\n        var levelThreshold = input.data.levelThreshold;\n        var levelThreshold_high = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var levelThreshold_low = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (levelThreshold > 255 || levelThreshold < 15) {\n            return {\n                errors: ['Level alarm threshold range 15-255.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x32, levelThreshold_high, levelThreshold_low, 0x38, 0x31],\n            };\n        }\n    }    \n    if (input.data.batteryThreshold != null && !isNaN(input.data.batteryThreshold)) {\n        var batteryThreshold = input.data.batteryThreshold;\n        var batteryThreshold_high = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var batteryThreshold_low = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (batteryThreshold > 99 || batteryThreshold < 5) {\n            return {\n                errors: ['Battery alarm threshold range 5-99.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x35, batteryThreshold_high, batteryThreshold_low, 0x38, 0x31],\n            };\n        }\n    }    \n    if (input.data.gpsEnable != null && !isNaN(input.data.gpsEnable)) {\n        var gpsEnable = input.data.gpsEnable;\n        if (gpsEnable == true || gpsEnable == 1) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x31, 0x38, 0x31],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x30, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.workMode != null && !isNaN(input.data.workMode)) {\n        var workMode = input.data.workMode;\n        if (workMode === 0) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x35, 0x38, 0x31],\n            };\n        } else if (workMode === 1) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x36, 0x38, 0x31],\n            };\n        } else if (workMode === 2) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x45, 0x38, 0x31],\n            };\n        }else{\n            return {\n                errors: ['Work mode range 0-2.'],\n            }\n        }\n    }\n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 8:\n            return {\n                data: {\n                    detectInterval: value,\n                },\n            };\n        case 2:\n            return {\n                data: {\n                    levelThreshold: value,\n                },\n            };        \n        case 5:\n            return {\n                data: {\n                    batteryThreshold: value,\n                },\n            };\n        case 9:\n            switch (value) {\n                case 0x00:\n                    return {\n                        data: {\n                            gpsEnable: 0,\n                        },\n                    };\n                case 0x01:\n                    return {\n                        data: {\n                            gpsEnable: 1,\n                        },\n                    };\n                case 0x02:\n                    return {\n                        data: {\n                            reset: 1,\n                        },\n                    };\n                case 0x05:\n                    return {\n                        data: {\n                            workMode: 0,\n                        },\n                    };\n                case 0x06:\n                    return {\n                        data: {\n                            workMode: 1,\n                        },\n                    };                \n                case 0x0E:\n                    return {\n                        data: {\n                            workMode: 2,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}\n\n",
+                        "environment": "javascript",
+                        "storage": "",
+                        "version": "1.0"
+                    },
+                    "flows": {
+                        "dingtek_df555_decoder": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "decodeThingerUplink",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "enabled": true,
+                            "sink": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource_stream": "uplink_decoded",
+                                "target": "resource_stream"
+                            },
+                            "split_data": false
+                        }
+                    },
+                    "properties": {
+                        "uplink": {
+                            "data": {
+                                "payload": "{{payload}}",
+                                "payload_function": "",
+                                "payload_type": "source_payload",
+                                "resource": "uplink",
+                                "source": "resource",
+                                "update": "events"
+                            },
+                            "default": {
+                                "source": "value"
+                            },
+                            "enabled": true
+                        }
+                    }
+                },
+                "_resources": {
+                    "properties": [
+                        {
+                            "property": "dashboard",
+                            "value": {
+                                "tabs": [
+                                    {
+                                        "name": "Overview",
+                                        "widgets": [
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Tank Level"
+                                                },
+                                                "properties": {
+                                                    "color": "#1abc9c",
+                                                    "max": 5000,
+                                                    "min": 0,
+                                                    "unit": "mm"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 2,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Temperature"
+                                                },
+                                                "properties": {
+                                                    "color": "#e74c3c",
+                                                    "max": 80,
+                                                    "min": -20,
+                                                    "unit": "ºC"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "mode": "latest"
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "donutchart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 0,
+                                                    "sizeX": 2,
+                                                    "sizeY": 6
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Alarm Status"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"padding:10px; font-size:14px;\">\n  <div ng-repeat=\"entry in value | limitTo:1\" style=\"display:flex; flex-direction:column; gap:12px;\">\n    <div style=\"display:flex; align-items:center; gap:10px;\">\n      <span style=\"font-weight:bold;\">Level Alarm:</span>\n      <span ng-if=\"entry.alarmLevel\" style=\"color:#e74c3c; font-weight:bold;\">⚠ ACTIVE</span>\n      <span ng-if=\"!entry.alarmLevel\" style=\"color:#2ecc71; font-weight:bold;\">✔ OK</span>\n    </div>\n    <div style=\"display:flex; align-items:center; gap:10px;\">\n      <span style=\"font-weight:bold;\">Battery Alarm:</span>\n      <span ng-if=\"entry.alarmBattery\" style=\"color:#e74c3c; font-weight:bold;\">⚠ LOW BATTERY</span>\n      <span ng-if=\"!entry.alarmBattery\" style=\"color:#2ecc71; font-weight:bold;\">✔ OK</span>\n    </div>\n    <div style=\"display:flex; align-items:center; gap:10px;\">\n      <span style=\"font-weight:bold;\">Frame Counter:</span>\n      <span>{{ entry.frameCounter }}</span>\n    </div>\n    <div style=\"display:flex; align-items:center; gap:10px;\">\n      <span style=\"font-weight:bold;\">Last Update:</span>\n      <span>{{ entry.ts | date:'medium' }}</span>\n    </div>\n  </div>\n</div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "alarmLevel",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "alarmLevel",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "alarmBattery",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "alarmBattery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "frameCounter",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "frameCounter",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 6,
+                                                    "sizeX": 4,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Historic Tank Level"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": true,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "Level (mm)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 4,
+                                                    "row": 6,
+                                                    "sizeX": 2,
+                                                    "sizeY": 8
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Historic Temperature"
+                                                },
+                                                "properties": {
+                                                    "axis": true,
+                                                    "fill": false,
+                                                    "legend": true,
+                                                    "multiple_axes": false
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "Temperature (ºC)",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "chart"
+                                            },
+                                            {
+                                                "layout": {
+                                                    "col": 0,
+                                                    "row": 14,
+                                                    "sizeX": 6,
+                                                    "sizeY": 7
+                                                },
+                                                "panel": {
+                                                    "color": "#ffffff",
+                                                    "currentColor": "#ffffff",
+                                                    "showOffline": {
+                                                        "type": "none"
+                                                    },
+                                                    "title": "Last Readings"
+                                                },
+                                                "properties": {
+                                                    "source": "code",
+                                                    "template": "<div style=\"width:100%; height:100%; overflow-y:auto;\">\n  <table class=\"table table-striped table-condensed\">\n    <thead>\n      <tr>\n        <th>Date</th>\n        <th>Level (mm)</th>\n        <th>Temperature (ºC)</th>\n        <th>Level Alarm</th>\n        <th>Battery Alarm</th>\n        <th>Frame Counter</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr ng-repeat=\"entry in value\">\n        <td>{{ entry.ts | date:'medium' }}</td>\n        <td>{{ entry.level !== undefined ? entry.level : '—' }}</td>\n        <td>{{ entry.temperature !== undefined ? entry.temperature : '—' }}</td>\n        <td ng-style=\"{color: entry.alarmLevel ? '#e74c3c' : '#2ecc71'}\">{{ entry.alarmLevel ? '⚠ YES' : '✔ NO' }}</td>\n        <td ng-style=\"{color: entry.alarmBattery ? '#e74c3c' : '#2ecc71'}\">{{ entry.alarmBattery ? '⚠ YES' : '✔ OK' }}</td>\n        <td>{{ entry.frameCounter !== undefined ? entry.frameCounter : '—' }}</td>\n      </tr>\n    </tbody>\n  </table>\n</div>"
+                                                },
+                                                "sources": [
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "level",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#1abc9c",
+                                                        "name": "level",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "temperature",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "temperature",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "alarmLevel",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#e74c3c",
+                                                        "name": "alarmLevel",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "alarmBattery",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#f39c12",
+                                                        "name": "alarmBattery",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    },
+                                                    {
+                                                        "bucket": {
+                                                            "backend": "mongodb",
+                                                            "id": "dingtek_df555_data",
+                                                            "mapping": "frameCounter",
+                                                            "tags": {
+                                                                "device": [],
+                                                                "group": []
+                                                            }
+                                                        },
+                                                        "color": "#3498db",
+                                                        "name": "frameCounter",
+                                                        "source": "bucket",
+                                                        "timespan": {
+                                                            "magnitude": "hour",
+                                                            "mode": "relative",
+                                                            "period": "latest",
+                                                            "value": 24
+                                                        }
+                                                    }
+                                                ],
+                                                "type": "html_time"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
-              }
-            },
-            "uplink": {
-              "device_id_resolver": "getId",
-              "enabled": true,
-              "handle_connectivity": true,
-              "request": {
-                "data": {
-                  "payload": "{{payload}}",
-                  "payload_function": "",
-                  "payload_type": "source_payload",
-                  "resource_stream": "uplink",
-                  "target": "resource_stream"
-                }
-              }
             }
-          },
-          "autoprovisions": {
-            "device_autoprovisioning": {
-              "config": {
-                "mode": "pattern",
-                "pattern": "df555_[0-9A-Fa-f]{16}"
-              },
-              "enabled": true
-            }
-          },
-          "buckets": {
-            "dingtek_df555_data": {
-              "backend": "mongodb",
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "source": "resource_stream"
-              },
-              "enabled": true,
-              "retention": {
-                "period": 3,
-                "unit": "months"
-              },
-              "tags": []
-            }
-          },
-          "code": {
-            "code": "function decodeThingerUplink(thingerData) {\n    // 0. If data has already been decoded, we will return it\n    if (thingerData.decodedPayload) return thingerData.decodedPayload;\n    \n    // 1. Extract and Validate Input\n    // We need 'payload' (hex string) and 'fPort' (integer)\n    const hexPayload = thingerData.payload || \"\";\n    const port = thingerData.fPort || 1;\n\n    // 2. Convert Hex String to Byte Array\n    const bytes = [];\n    for (let i = 0; i < hexPayload.length; i += 2) {\n        bytes.push(parseInt(hexPayload.substr(i, 2), 16));\n    }\n\n    // 3. Dynamic Function Detection and Execution\n    \n    // CASE A: (The Things Stack v3)\n    if (typeof decodeUplink === 'function') {\n        try {\n            const input = {\n                bytes: bytes,\n                fPort: port\n            };\n            var result = decodeUplink(input);\n            \n            if (result.data) return result.data;\n\n            return result; \n        } catch (e) {\n            console.error(\"Error inside decodeUplink:\", e);\n            throw e;\n        }\n    }\n\n    // CASE B: Legacy TTN (v2)\n    else if (typeof Decoder === 'function') {\n        try {\n            return Decoder(bytes, port);\n        } catch (e) {\n            console.error(\"Error inside Decoder:\", e);\n            throw e;\n        }\n    }\n\n    // CASE C: No decoder found\n    else {\n        throw new Error(\"No compatible TTN decoder function (decodeUplink or Decoder) found in scope.\");\n    }\n}\n\n\n// TTN decoder\n//IEEE754 hex to float convert\nfunction hex2float(num) {\n    var sign = num & 0x80000000 ? -1 : 1;\n    var exponent = ((num >> 23) & 0xff) - 127;\n    var mantissa = 1 + (num & 0x7fffff) / 0x7fffff;\n    return sign * mantissa * Math.pow(2, exponent);\n}\n\nfunction decodeUplink(input) {\n    if (input.fPort != 3) {\n        return {\n            errors: ['unknown FPort'],\n        };\n    }\n    switch (input.bytes.length) {\n        case 17:\n            if (input.bytes[3] != 0x03) {\n                return {\n                    // Decoded data\n                    data: {\n                        level: (input.bytes[5] << 8) + input.bytes[6],\n                        alarmLevel: Boolean(input.bytes[11] >> 4),\n                        alarmBattery: Boolean(input.bytes[12] & 0x0f),\n                        temperature: input.bytes[8],\n                        frameCounter: (input.bytes[13] << 8) + input.bytes[14],\n                    },\n                };\n            } else {\n                return {\n                    // Decoded data\n                    data: {\n                        firmware: input.bytes[5] + \".\" + input.bytes[6],\n                        uploadInterval: input.bytes[7],\n                        detectInterval: input.bytes[8],\n                        levelThreshold: input.bytes[9],                        \n                        workMode: input.bytes[14],\n                    },\n                };\n            }\n\n        case 25:\n            return {\n                // Decoded data\n                data: {\n                    level: (input.bytes[5] << 8) + input.bytes[6],\n                    alarmLevel: Boolean(input.bytes[19] >> 4),\n                    alarmBattery: Boolean(input.bytes[20] & 0x0f),\n                    longitude: hex2float((input.bytes[11] << 24) + (input.bytes[10] << 16) + (input.bytes[9] << 8) + input.bytes[8]).toFixed(6),\n                    latitude: hex2float((input.bytes[15] << 24) + (input.bytes[14] << 16) + (input.bytes[13] << 8) + input.bytes[12]).toFixed(6),\n                    temperature: input.bytes[16],\n                    frameCounter: (input.bytes[21] << 8) + input.bytes[22],\n                },\n            };\n        default:\n            return {\n                errors: ['wrong length'],\n            };\n    }\n}\n\n// Encode downlink function.\n//\n// Input is an object with the following fields:\n// - data = Object representing the payload that must be encoded.\n// - variables = Object containing the configured device variables.\n//\n// Output must be an object with the following fields:\n// - bytes = Byte array containing the downlink payload.\nfunction encodeDownlink(input) {\n    if (input.data.uploadInterval != null && !isNaN(input.data.uploadInterval)) {\n        var uploadInterval = input.data.uploadInterval;\n        var uploadInterval_high = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var uploadInterval_low = uploadInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (uploadInterval > 255 || uploadInterval < 1) {\n            return {\n                errors: ['upload interval range 1-255 hours.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x31, uploadInterval_high, uploadInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.detectInterval != null && !isNaN(input.data.detectInterval)) {\n        var detectInterval = input.data.detectInterval;\n        var detectInterval_high = detectInterval.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var detectInterval_low = detectInterval.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (detectInterval > 255 || detectInterval < 1) {\n            return {\n                errors: ['detection interval range 1-255 minutes.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x38, detectInterval_high, detectInterval_low, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.levelThreshold != null && !isNaN(input.data.levelThreshold)) {\n        var levelThreshold = input.data.levelThreshold;\n        var levelThreshold_high = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var levelThreshold_low = levelThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (levelThreshold > 255 || levelThreshold < 15) {\n            return {\n                errors: ['Level alarm threshold range 15-255.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x32, levelThreshold_high, levelThreshold_low, 0x38, 0x31],\n            };\n        }\n    }    \n    if (input.data.batteryThreshold != null && !isNaN(input.data.batteryThreshold)) {\n        var batteryThreshold = input.data.batteryThreshold;\n        var batteryThreshold_high = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[0].charCodeAt(0);\n        var batteryThreshold_low = batteryThreshold.toString(16).padStart(2, '0').toUpperCase()[1].charCodeAt(0);\n        if (batteryThreshold > 99 || batteryThreshold < 5) {\n            return {\n                errors: ['Battery alarm threshold range 5-99.'],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x35, batteryThreshold_high, batteryThreshold_low, 0x38, 0x31],\n            };\n        }\n    }    \n    if (input.data.gpsEnable != null && !isNaN(input.data.gpsEnable)) {\n        var gpsEnable = input.data.gpsEnable;\n        if (gpsEnable == true || gpsEnable == 1) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x31, 0x38, 0x31],\n            };\n        } else {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x30, 0x38, 0x31],\n            };\n        }\n    }\n    if (input.data.workMode != null && !isNaN(input.data.workMode)) {\n        var workMode = input.data.workMode;\n        if (workMode === 0) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x35, 0x38, 0x31],\n            };\n        } else if (workMode === 1) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x36, 0x38, 0x31],\n            };\n        } else if (workMode === 2) {\n            return {\n                // LoRaWAN FPort used for the downlink message\n                fPort: 3,\n                // Encoded bytes\n                bytes: [0x38, 0x30, 0x30, 0x32, 0x39, 0x39, 0x39, 0x39, 0x30, 0x39, 0x30, 0x45, 0x38, 0x31],\n            };\n        }else{\n            return {\n                errors: ['Work mode range 0-2.'],\n            }\n        }\n    }\n    return {\n        errors: ['invalid downlink parameter.'],\n    };\n}\n\nfunction decodeDownlink(input) {\n    var input_length = input.bytes.length;\n    if (input.fPort != 3) {\n        return {\n            errors: ['invalid FPort.'],\n        };\n    }\n\n    if (\n        input_length < 12 ||\n        input.bytes[0] != 0x38 ||\n        input.bytes[1] != 0x30 ||\n        input.bytes[2] != 0x30 ||\n        input.bytes[3] != 0x32 ||\n        input.bytes[4] != 0x39 ||\n        input.bytes[5] != 0x39 ||\n        input.bytes[6] != 0x39 ||\n        input.bytes[7] != 0x39 ||\n        input.bytes[input_length - 2] != 0x38 ||\n        input.bytes[input_length - 1] != 0x31\n    ) {\n        return {\n            errors: ['invalid format.'],\n        };\n    }\n    var option = parseInt(String.fromCharCode(input.bytes[8]) + String.fromCharCode(input.bytes[9]), 16);\n    var value = parseInt(String.fromCharCode(input.bytes[10]) + String.fromCharCode(input.bytes[11]), 16);\n    switch (option) {\n        case 1:\n            return {\n                data: {\n                    uploadInterval: value,\n                },\n            };\n        case 8:\n            return {\n                data: {\n                    detectInterval: value,\n                },\n            };\n        case 2:\n            return {\n                data: {\n                    levelThreshold: value,\n                },\n            };        \n        case 5:\n            return {\n                data: {\n                    batteryThreshold: value,\n                },\n            };\n        case 9:\n            switch (value) {\n                case 0x00:\n                    return {\n                        data: {\n                            gpsEnable: 0,\n                        },\n                    };\n                case 0x01:\n                    return {\n                        data: {\n                            gpsEnable: 1,\n                        },\n                    };\n                case 0x02:\n                    return {\n                        data: {\n                            reset: 1,\n                        },\n                    };\n                case 0x05:\n                    return {\n                        data: {\n                            workMode: 0,\n                        },\n                    };\n                case 0x06:\n                    return {\n                        data: {\n                            workMode: 1,\n                        },\n                    };                \n                case 0x0E:\n                    return {\n                        data: {\n                            workMode: 2,\n                        },\n                    };\n                default:\n                    return {\n                        errors: ['invalid parameter value.'],\n                    };\n            }\n        default:\n            return {\n                errors: ['invalid parameter key.'],\n            };\n    }\n}\n\n",
-            "environment": "javascript",
-            "storage": "",
-            "version": "1.0"
-          },
-          "flows": {
-            "dingtek_df555_decoder": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "decodeThingerUplink",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "enabled": true,
-              "sink": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource_stream": "uplink_decoded",
-                "target": "resource_stream"
-              },
-              "split_data": false
-            }
-          },
-          "properties": {
-            "uplink": {
-              "data": {
-                "payload": "{{payload}}",
-                "payload_function": "",
-                "payload_type": "source_payload",
-                "resource": "uplink",
-                "source": "resource",
-                "update": "events"
-              },
-              "default": {
-                "source": "value"
-              },
-              "enabled": true
-            }
-          }
-        },
-        "_resources": {
-          "properties": []
-        }
-      }
-    ]
-  }
+        ]
+    }
 }
