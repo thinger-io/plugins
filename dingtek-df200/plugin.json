@@ -12,9 +12,9 @@
     "metadata": {
         "name": "Dingtek DF200",
         "description": "The CNDingtek df200 is soap dispenser level sensor, which detect the liquid level in the dispenser.",
-       "image": "assets/df200.png",
-        "category": "devices",
-        "vendor": "dingtek"
+      "image": "assets/df200.png",
+    "category": "devices",
+    "vendor": "dingtek"
     },
     "resources": {
         "products": [
@@ -199,8 +199,8 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 3,
-                                                    "row": 0,
+                                                    "col": 0,
+                                                    "row": 19,
                                                     "sizeX": 3,
                                                     "sizeY": 5
                                                 },
@@ -262,8 +262,8 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 6,
-                                                    "row": 0,
+                                                    "col": 3,
+                                                    "row": 19,
                                                     "sizeX": 3,
                                                     "sizeY": 5
                                                 },
@@ -325,7 +325,7 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 9,
+                                                    "col": 3,
                                                     "row": 0,
                                                     "sizeX": 3,
                                                     "sizeY": 5
@@ -389,7 +389,7 @@
                                             {
                                                 "layout": {
                                                     "col": 0,
-                                                    "row": 5,
+                                                    "row": 12,
                                                     "sizeX": 6,
                                                     "sizeY": 7
                                                 },
@@ -502,7 +502,7 @@
                                             },
                                             {
                                                 "layout": {
-                                                    "col": 6,
+                                                    "col": 0,
                                                     "row": 5,
                                                     "sizeX": 6,
                                                     "sizeY": 7
