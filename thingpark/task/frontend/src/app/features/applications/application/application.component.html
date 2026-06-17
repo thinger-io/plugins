@@ -1,19 +1,19 @@
 
 <form nz-form [formGroup]="applicationForm" (ngSubmit)="onSubmit()">
 
-  <!-- Routing Profile ID (LrnInfos) -->
+  <!-- Application Server ID (AS_ID) -->
   <nz-form-item>
     <nz-form-label
       [nzSpan]="8"
       [nzXs]="26"
       nzFor="applicationId"
-      nzTooltipTitle="The ThingPark routing profile name (LrnInfos). Must match the routing profile configured in ThingPark Enterprise that sends uplinks to this plugin."
+      nzTooltipTitle="The AS_ID of your ThingPark Application Server (e.g. TWA_100082957.695171.AS). Found in your ThingPark console under Application Servers. This value is sent by ThingPark in the AS_ID query parameter of every uplink."
       nzRequired
     >
-      Routing Profile ID
+      Application Server ID
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
-      <input nz-input formControlName="applicationId" name="applicationId" type="text" id="applicationId" placeholder="e.g. my-routing-profile" />
+      <input nz-input formControlName="applicationId" name="applicationId" type="text" id="applicationId" placeholder="e.g. TWA_100082957.695171.AS" />
     </nz-form-control>
   </nz-form-item>
 

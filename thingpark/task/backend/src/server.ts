@@ -18,7 +18,7 @@ const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
 export type thingparkApplication = {
-  applicationId: string;    // Routing profile name (LrnInfos) used to match incoming uplinks
+  applicationId: string;    // AS_ID value (e.g. TWA_100082957.123.AS) used to match incoming uplinks
   applicationName: string;  // Display name
   deviceIdPrefix: string;   // Prefix for auto-provisioned Thinger.io device IDs
   thingparkUrl: string;     // ThingPark server base URL (e.g. https://myserver.thingpark.com)
@@ -50,7 +50,8 @@ const io = new SocketIOServer(httpServer, {
  *
  * ThingPark delivers uplinks as a POST with:
  *  - Query params: LrnInfos (routing profile), LrnDevEui, LrnFPort, AS_ID, Time, Token
- *  - JSON body: UplinkFrameReport (DevEUI, FCntUp, FPort, payload_hex, BatteryLevel, ACKbit, ...)
+ *  - JSON body: the UplinkFrameReport is wrapped under the key "DevEUI_uplink":
+ *      { "DevEUI_uplink": { "DevEUI": "...", "FCntUp": 42, "FPort": 1, "payload_hex": "...", ... } }
  *
  * The Thinger.io common format is documented at:
  * https://docs.thinger.io/lpwan/the-things-stack#integrating-lorawan-devices
@@ -60,12 +61,15 @@ function thingparkToThinger(body: any, queryParams: any, appId: string, deviceId
     throw new Error('Invalid message: body is undefined or null');
   }
 
-  const devEui = body.DevEUI || (queryParams.LrnDevEui as string);
+  // ThingPark wraps uplink data under "DevEUI_uplink". Fall back to flat body for robustness.
+  const uplink = body.DevEUI_uplink ?? body;
+
+  const devEui = uplink.DevEUI || (queryParams.LrnDevEui as string);
   if (!devEui) {
-    throw new Error('Invalid message: missing device EUI (DevEUI in body or LrnDevEui in query)');
+    throw new Error('Invalid message: missing device EUI (DevEUI in body.DevEUI_uplink or LrnDevEui in query)');
   }
 
-  const fPort = body.FPort ?? (queryParams.LrnFPort ? parseInt(queryParams.LrnFPort as string, 10) : null);
+  const fPort = uplink.FPort ?? (queryParams.LrnFPort ? parseInt(queryParams.LrnFPort as string, 10) : null);
 
   return {
     deviceEui: devEui,
@@ -73,12 +77,12 @@ function thingparkToThinger(body: any, queryParams: any, appId: string, deviceId
     source: 'thingpark',
     appId: appId,
     fPort: fPort ?? null,
-    fCnt: body.FCntUp ?? null,
-    payload: body.payload_hex || null,  // ThingPark provides payload already in hex
-    decodedPayload: null,               // Basic connection does not decode payloads
+    fCnt: uplink.FCntUp ?? null,
+    payload: uplink.payload_hex || null,  // ThingPark provides payload already in hex
+    decodedPayload: null,                 // Basic connection does not decode payloads
     metadata: {
-      ack: body.ACKbit ?? null,
-      battery: body.BatteryLevel ?? null,
+      ack: uplink.ACKbit ?? null,
+      battery: uplink.BatteryLevel ?? null,
       offline: null,
       seqNo: null
     }
@@ -277,15 +281,19 @@ app.post('/uplink', (req: Request, res: Response) => {
   let application: thingparkApplication | undefined;
 
   try {
-    // ThingPark identifies the routing profile via LrnInfos query parameter
-    applicationId = req.query.LrnInfos as string;
-    deviceEui = (req.query.LrnDevEui as string) || req.body.DevEUI;
+    // ThingPark identifies the Application Server via AS_ID query param (stable across requests).
+    // LrnInfos is intentionally ignored — it contains a dynamic suffix that changes per connection.
+    applicationId = req.query.AS_ID as string;
+
+    // ThingPark wraps uplink data under "DevEUI_uplink"; DevEUI also comes as LrnDevEui in query
+    const uplinkBody = req.body?.DevEUI_uplink ?? req.body;
+    deviceEui = (req.query.LrnDevEui as string) || uplinkBody?.DevEUI;
 
     if (!applicationId) {
-      throw new Error('Missing LrnInfos query parameter (routing profile name)');
+      throw new Error('Missing AS_ID query parameter');
     }
     if (!deviceEui) {
-      throw new Error('Missing device EUI — expected LrnDevEui query param or DevEUI in body');
+      throw new Error('Missing device EUI — expected LrnDevEui query param or DevEUI_uplink.DevEUI in body');
     }
 
     application = settings.applications.find(a => a.applicationId === applicationId);
@@ -301,7 +309,7 @@ app.post('/uplink', (req: Request, res: Response) => {
         queryParams: req.query
       }
     });
-    res.status(400).send({ message: "Invalid message format" });
+    res.status(400).send({ message: "Invalid message format", error: error.message });
     return;
   }
 
