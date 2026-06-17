@@ -30,53 +30,36 @@ export class ApplicationComponent implements OnInit {
 
   protected applicationForm: FormGroup;
 
-  /** Makes sure the application Id is not repeated given the LORIOT Access Token */
-  applicationIdValidator(control: AbstractControl)  {
-    if (!control.value || typeof this.applications() === 'undefined' ) {
-      // If the control is empty, consider it valid
-      return null;
-    }
-    return null;
-  }
-
-  /** Makes sure the device Id prefix is not repeated */
   deviceIdPrefixValidator(control: AbstractControl) {
-    if (!control.value || typeof this.applications() === 'undefined' ) {
-      // If the control is empty, consider it valid
+    if (!control.value || typeof this.applications() === 'undefined') {
       return null;
     }
-    if ( this.applications()?.find(app => app.deviceIdPrefix === control.value) ) {
-        return { error: true, prefixUnique: true };
+    if (this.applications()?.find(app => app.deviceIdPrefix === control.value)) {
+      return { error: true, prefixUnique: true };
     }
     return null;
   }
 
-  constructor(
-    private fb: NonNullableFormBuilder
-  ) {
+  constructor(private fb: NonNullableFormBuilder) {
     this.applicationForm = this.fb.group({});
-
   }
 
   onSubmit() {
-    if ( this.applicationForm.valid ) {
+    if (this.applicationForm.valid) {
       this.application.set(this.applicationForm.getRawValue());
     }
   }
 
   ngOnInit() {
-
     this.applicationForm = this.fb.group({
-      applicationId: [this.application()?.applicationId],
+      applicationId: [this.application()?.applicationId || '', [Validators.required]],
       applicationName: [this.application()?.applicationName || ''],
       deviceIdPrefix: [this.application()?.deviceIdPrefix || '', [Validators.required, this.deviceIdPrefixValidator.bind(this)]],
-      enabled: [true]
+      thingparkUrl: [this.application()?.thingparkUrl || '', [Validators.required]],
+      asId: [this.application()?.asId || ''],
+      asKey: [this.application()?.asKey || ''],
+      enabled: [this.application()?.enabled ?? true]
     });
-
-    if ( this.application() !== undefined ) {
-      this.applicationForm.get('accessToken')?.disable();
-    }
-
   }
 
 }

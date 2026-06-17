@@ -1,35 +1,50 @@
 
 <form nz-form [formGroup]="applicationForm" (ngSubmit)="onSubmit()">
 
-  <!-- Application Name -->
+  <!-- Routing Profile ID (LrnInfos) -->
   <nz-form-item>
-      <nz-form-label
-        [nzSpan]="8"
-        [nzXs]="26"
-        nzFor="applicationName"
-        nzTooltipTitle="Application name that will be used to link to the application in the TTN stack platform"
-        nzRequired
-      >
-        Application Name
-      </nz-form-label>
-      <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
-        <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName" placeholder="Application name" />
-      </nz-form-control>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="applicationId"
+      nzTooltipTitle="The ThingPark routing profile name (LrnInfos). Must match the routing profile configured in ThingPark Enterprise that sends uplinks to this plugin."
+      nzRequired
+    >
+      Routing Profile ID
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="applicationId" name="applicationId" type="text" id="applicationId" placeholder="e.g. my-routing-profile" />
+    </nz-form-control>
   </nz-form-item>
 
-  <!-- Prefix -->
+  <!-- Display Name -->
+  <nz-form-item>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="applicationName"
+      nzTooltipTitle="Human-readable name for this routing profile configuration"
+    >
+      Display Name
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="applicationName" name="applicationName" type="text" id="applicationName" placeholder="Optional display name" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Device Id Prefix -->
   <nz-form-item>
     <nz-form-label
       [nzSpan]="8"
       [nzXs]="26"
       nzFor="deviceIdPrefix"
-      nzTooltipTitle="The prefix for the device IDs and which will be used to match against the Thinger.io Product autoprovision feature"
+      nzTooltipTitle="Prefix prepended to the device EUI to form the Thinger.io device ID (used for auto-provisioning via Products)"
       nzRequired
     >
       Device Id Prefix
     </nz-form-label>
     <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback [nzErrorTip]="errorPrefixField">
-      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix" placeholder="Ex: my_device_" />
+      <input nz-input formControlName="deviceIdPrefix" name="deviceIdPrefix" type="text" id="deviceIdPrefix" placeholder="Ex: thingpark_" />
       <ng-template #errorPrefixField let-control>
         @if (control.errors?.['prefixUnique']) {
           The Device Id Prefix must be unique
@@ -38,21 +53,66 @@
     </nz-form-control>
   </nz-form-item>
 
-  <!-- Enabled -->
+  <!-- ThingPark Server URL -->
   <nz-form-item>
-      <nz-form-label
-              [nzSpan]="8"
-              [nzXs]="26"
-              nzFor="enabled"
-              nzTooltipTitle="Enable or disable the application data proccesing"
-              nzRequired
-      >
-          Enabled
-      </nz-form-label>
-      <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
-          <nz-switch formControlName="enabled"></nz-switch>
-      </nz-form-control>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="thingparkUrl"
+      nzTooltipTitle="Base URL of your ThingPark Enterprise server. Used to send downlink messages to devices."
+      nzRequired
+    >
+      ThingPark Server URL
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="thingparkUrl" name="thingparkUrl" type="text" id="thingparkUrl" placeholder="https://myserver.thingpark.com" />
+    </nz-form-control>
   </nz-form-item>
 
+  <!-- AS_ID (optional) -->
+  <nz-form-item>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="asId"
+      nzTooltipTitle="Application Server identifier (AS_ID) for downlink token authentication. Leave empty if your ThingPark server does not require AS authentication."
+    >
+      AS_ID
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="asId" name="asId" type="text" id="asId" placeholder="Optional — e.g. myapp@myserver" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Tunnel Key (optional) -->
+  <nz-form-item>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="asKey"
+      nzTooltipTitle="Pre-shared 128-bit tunnel interface key (hex) for computing the SHA-256 downlink authentication token. Leave empty if AS authentication is not configured."
+    >
+      Tunnel Key (hex)
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <input nz-input formControlName="asKey" name="asKey" type="password" id="asKey" placeholder="Optional — 128-bit key in hex" />
+    </nz-form-control>
+  </nz-form-item>
+
+  <!-- Enabled -->
+  <nz-form-item>
+    <nz-form-label
+      [nzSpan]="8"
+      [nzXs]="26"
+      nzFor="enabled"
+      nzTooltipTitle="Enable or disable uplink processing for this routing profile"
+      nzRequired
+    >
+      Enabled
+    </nz-form-label>
+    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
+      <nz-switch formControlName="enabled"></nz-switch>
+    </nz-form-control>
+  </nz-form-item>
 
 </form>

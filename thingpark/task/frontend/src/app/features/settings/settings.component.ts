@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
 import { NzCardComponent } from "ng-zorro-antd/card";
 import { AppConfigService } from "../../core/services/app-config.service";
-import { NzSkeletonComponent } from "ng-zorro-antd/skeleton";
-import { faEye, faEyeSlash, faGears, faInfoCircle, faUpRightAndDownLeftFromCenter } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faEyeSlash, faGears, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { faQuestionCircle, faCopy } from "@fortawesome/free-regular-svg-icons"
 import { FaIconComponent } from "@fortawesome/angular-fontawesome";
 import { NzTooltipDirective } from "ng-zorro-antd/tooltip";
@@ -15,7 +14,6 @@ import { Clipboard } from '@angular/cdk/clipboard';
     imports: [
         NzCardComponent,
         FaIconComponent,
-        NzSkeletonComponent,
         NzTooltipDirective,
     ],
     templateUrl: './settings.component.html',
@@ -28,11 +26,10 @@ export class SettingsComponent {
   protected faQuestionCircle = faQuestionCircle;
   protected faInfoCircle = faInfoCircle;
   protected faCopy = faCopy;
-  protected faUpRightAndDownLeftFromCenter = faUpRightAndDownLeftFromCenter;
 
   protected endpointUrl: string;
   protected tokenVisible = false;
-  protected ttnToken = '';
+  protected callbackToken = '';
 
   constructor(
     private appConfigService: AppConfigService,
@@ -42,16 +39,16 @@ export class SettingsComponent {
   ) {
     const config = this.appConfigService.getConfig();
     this.endpointUrl = window.location.origin + window.location.pathname;
-    this.ttnToken = config?.THINGER_TOKEN_TTN_PLUGIN || 'UNKNOWN';
+    this.callbackToken = config?.THINGER_TOKEN_THINGPARK_PLUGIN_CALLBACK || 'UNKNOWN';
   }
 
   showTokenModal(): void {
     this.modal.create({
-      nzTitle: 'TTN API Token',
+      nzTitle: 'ThingPark Callback Token',
       nzContent: `
         <div style="width: 520px; word-break: break-all; padding: 18px 0;">
           <span style="color: #888;">Bearer </span>
-          <span style="font-family: monospace; user-select: all;">${this.ttnToken}</span>
+          <span style="font-family: monospace; user-select: all;">${this.callbackToken}</span>
         </div>
       `,
       nzFooter: [
@@ -75,7 +72,7 @@ export class SettingsComponent {
   }
 
   copyToken(): void {
-    this.clipboard.copy(`Bearer ${this.ttnToken}`);
+    this.clipboard.copy(`Bearer ${this.callbackToken}`);
     this.message.success('Copied!');
   }
 }

@@ -5,6 +5,7 @@ import { DevicesApi, PluginsApi, ApiException, PropertyCreate } from "@thinger-i
 import { request } from 'undici'
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
+import { createHash } from 'crypto';
 
 import { thingerApiConfig } from "./lib/api.js";
 import { Log } from "./lib/log.js";
@@ -13,27 +14,26 @@ import { UserEvents } from './lib/user-events.js';
 const _user: string = process.env.THINGER_USER || "";
 const _plugin = process.env.THINGER_PLUGIN || "";
 
-// Initialize Products and Plugins API
 const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
-export type ttnApplication = {
-  applicationId: string;
-  applicationName: string;
-  deviceIdPrefix: string;
-  accessToken: string;
+export type thingparkApplication = {
+  applicationId: string;    // Routing profile name (LrnInfos) used to match incoming uplinks
+  applicationName: string;  // Display name
+  deviceIdPrefix: string;   // Prefix for auto-provisioned Thinger.io device IDs
+  thingparkUrl: string;     // ThingPark server base URL (e.g. https://myserver.thingpark.com)
+  asId: string;             // AS_ID for downlink authentication (optional)
+  asKey: string;            // Pre-shared tunnel key in hex for downlink auth (optional)
   enabled: boolean;
 }
 
-let settings: { applications: ttnApplication[] } = { applications: [] };
+let settings: { applications: thingparkApplication[] } = { applications: [] };
 
-// Set up user events logger. This logger is used to give the user feedback about
-// the plugin operations. It souldnt be used for debugging purposes.
 const userEvents = new UserEvents();
 
 const app: Express = express();
 app.enable('trust proxy');
-app.use(express.json({ strict: false, limit: '8mb' }))
+app.use(express.json({ strict: false, limit: '8mb' }));
 
 const httpServer = createServer(app);
 
@@ -46,63 +46,60 @@ const io = new SocketIOServer(httpServer, {
 });
 
 /**
- * Convert a TTN uplink message into a common Thinger.io uplink format.
- * This "common" format can be found in the Thinger.io LoRaWAN plugins documentation.
+ * Convert a ThingPark uplink message into the common Thinger.io uplink format.
  *
- * @param {Object} msg - TTN uplink message.
- * @returns {Object} - Thinger.io uplink message.
+ * ThingPark delivers uplinks as a POST with:
+ *  - Query params: LrnInfos (routing profile), LrnDevEui, LrnFPort, AS_ID, Time, Token
+ *  - JSON body: UplinkFrameReport (DevEUI, FCntUp, FPort, payload_hex, BatteryLevel, ACKbit, ...)
+ *
+ * The Thinger.io common format is documented at:
+ * https://docs.thinger.io/lpwan/the-things-stack#integrating-lorawan-devices
  */
-function ttnToThinger(msg: any, appId: string, deviceId: string): any {
-  if (!msg) {
-    throw new Error('Invalid message: msg is undefined or null');
+function thingparkToThinger(body: any, queryParams: any, appId: string, deviceId: string): any {
+  if (!body) {
+    throw new Error('Invalid message: body is undefined or null');
   }
 
-  if (!msg.end_device_ids?.dev_eui) {
-    throw new Error('Invalid message: missing device EUI');
+  const devEui = body.DevEUI || (queryParams.LrnDevEui as string);
+  if (!devEui) {
+    throw new Error('Invalid message: missing device EUI (DevEUI in body or LrnDevEui in query)');
   }
 
-  if (!msg.uplink_message) {
-    throw new Error('Invalid message: missing uplink_message');
-  }
-
-  // If no device template was selected in TTN workspace, encoded data
-  // will be sent as raw payload 
-
-  const rawPayload = msg.uplink_message?.frm_payload || null;
-  let hexPayload = null;
-  if (rawPayload) {
-    try {
-      hexPayload = Buffer.from(rawPayload, 'base64').toString('hex');
-    } catch (error) {
-      console.error('Error converting payload to hex:', error);
-      hexPayload = null;
-    }
-  }
+  const fPort = body.FPort ?? (queryParams.LrnFPort ? parseInt(queryParams.LrnFPort as string, 10) : null);
 
   return {
-    deviceEui: msg.end_device_ids.dev_eui,
-    deviceId: deviceId || '',
-    source: 'ttn',
-    appId: appId || '',
-    fPort: msg.uplink_message?.f_port ?? null,
-    fCnt: msg.uplink_message?.f_cnt ?? null,
-    payload: hexPayload,
-    decodedPayload: msg.uplink_message?.decoded_payload || null,
+    deviceEui: devEui,
+    deviceId: deviceId,
+    source: 'thingpark',
+    appId: appId,
+    fPort: fPort ?? null,
+    fCnt: body.FCntUp ?? null,
+    payload: body.payload_hex || null,  // ThingPark provides payload already in hex
+    decodedPayload: null,               // Basic connection does not decode payloads
     metadata: {
-      ack: msg.ack ?? null,
-      battery: msg.uplink_message?.last_battery_percentage?.value ?? null,
-      offline: msg.offline ?? null,
-      seqNo: msg.seqno ?? null
+      ack: body.ACKbit ?? null,
+      battery: body.BatteryLevel ?? null,
+      offline: null,
+      seqNo: null
     }
   };
-} 
+}
 
-// Serve the API
+/**
+ * Compute the ThingPark downlink authentication token.
+ * Token = hex(SHA-256(AS_ID + DevEUI + Time + FPort + Payload + TunnelKey))
+ */
+function computeDownlinkToken(asId: string, devEui: string, time: string, fPort: number, payload: string, asKey: string): string {
+  const message = asId + devEui + time + fPort.toString() + payload + asKey;
+  return createHash('sha256').update(message).digest('hex');
+}
+
+// Downlink endpoint — receives downlink requests from Thinger.io and forwards to ThingPark
 app.post("/downlink", async (req: Request, res: Response) => {
 
   Log.log("Received downlink message:\n", JSON.stringify(req.body, null, 2));
 
-  const { data, port, priority, confirmed, uplink } = req.body;
+  const { data, port, confirmed, uplink } = req.body;
 
   if (!data || !uplink) {
     userEvents.push({
@@ -129,144 +126,103 @@ app.post("/downlink", async (req: Request, res: Response) => {
         deviceId: uplink.deviceId
       }
     });
-    res.status(200).send({
-      error: "Enter a valid downlink message"
-    });
-    return;
-  }
-
-  // find data
-  const application: ttnApplication | undefined = settings.applications.find(
-    (app: { applicationName: string }) => app.applicationName
-  );
-  if (typeof application === 'undefined') {
-    Log.error(`Application not found`);
-    userEvents.push({
-      category: 'downlink',
-      severity: 'error',
-      title: 'Downlink failed: application not configured',
-      device: uplink.deviceEui,
-      details: {
-        error: 'Application not found in plugin settings',
-        deviceId: uplink.deviceId
-      }
-    });
-    res.status(404).send({ message: "Application not found" });
+    res.status(200).send({ error: "Enter a valid downlink message" });
     return;
   }
 
   try {
-    //Obtain the device properties to get the downlink URL and API key
-    Log.log("Fetching device properties for downlink:", uplink.deviceId);
+    Log.log("Fetching downlink_info for device:", uplink.deviceId);
     const downlinkInfoResponse = await devicesApi.readProperty(_user, uplink.deviceId, "downlink_info");
     const downlinkInfo = downlinkInfoResponse.value || {};
 
-    let downlinkUrl = downlinkInfo.replace_url || downlinkInfo.push_url;
-    const apiKey = downlinkInfo.api_key;
+    const thingparkUrl = downlinkInfo.thingpark_url;
+    const devEui = downlinkInfo.dev_eui;
 
-    if (!downlinkUrl || !apiKey) {
-      Log.error("Downlink URL or API key not found in device properties");
+    if (!thingparkUrl || !devEui) {
+      Log.error("ThingPark URL or device EUI not found in downlink_info");
       userEvents.push({
         category: 'downlink',
         severity: 'error',
         title: 'Downlink failed: missing configuration',
         device: uplink.deviceEui,
         details: {
-          error: 'Downlink URL or API key not found',
+          error: 'ThingPark URL or device EUI not found in device properties. Make sure the device has sent at least one uplink.',
           deviceId: uplink.deviceId,
-          hasUrl: !!downlinkUrl,
-          hasApiKey: !!apiKey
+          hasThingparkUrl: !!thingparkUrl,
+          hasDevEui: !!devEui
         }
       });
-      res.status(500).send({ message: "Downlink URL or API key not found in device properties" });
+      res.status(500).send({ message: "ThingPark URL or device EUI not found in device properties" });
       return;
     }
 
-    // Parse priority. Given Thinger.io standard downlink format. "Priority" is a unsigned
-    // integer from 0 (lowest priority) to 6 (highest priority)
-    const priorityLevels = ["LOW","LOW","NORMAL", "NORMAL", "NORMAL", "HIGH", "HIGH"];
-    const priority_str = priorityLevels[priority] || "NORMAL";
+    const time = new Date().toISOString();
 
-    // Data is StringHex encoded
-    const data_base64 = Buffer.from(data, 'hex').toString('base64');
+    const params = new URLSearchParams({
+      DevEUI: devEui,
+      FPort: port.toString(),
+      Payload: data,  // Thinger.io sends hex, ThingPark expects hex — no conversion needed
+      Confirmed: (confirmed ? 1 : 0).toString()
+    });
 
-    const downlinkPayload = {
-      downlinks: [
-        {
-          f_port: port,
-          frm_payload: data_base64,
-          priority: priority_str,
-          confirmed: confirmed || false,
-        }
-      ]
-    };
-
-    console.log("Downlink Payload:", downlinkPayload);
-
-    if (req.body.replace_downlink) {
-      downlinkUrl = downlinkInfo.replace_url;
-    } else {
-      downlinkUrl = downlinkInfo.push_url;
+    // Add token-based authentication if configured
+    if (downlinkInfo.as_id) {
+      params.set('AS_ID', downlinkInfo.as_id);
+      params.set('Time', time);
+      if (downlinkInfo.as_key) {
+        const token = computeDownlinkToken(downlinkInfo.as_id, devEui, time, port, data, downlinkInfo.as_key);
+        params.set('Token', token);
+      }
     }
 
-    Log.log("Using URL:", downlinkUrl);
+    const downlinkUrl = `${thingparkUrl}/thingpark/lrc/rest/v2/downlink?${params.toString()}`;
+    Log.log("Sending downlink to ThingPark:", downlinkUrl);
 
     userEvents.push({
       category: 'downlink',
       severity: 'info',
       title: `Downlink initiated to ${uplink.deviceEui}`,
       device: uplink.deviceEui,
-      application: application.applicationName,
       details: {
         deviceId: uplink.deviceId,
         port: port,
-        priority: priority_str,
         confirmed: confirmed || false,
-        dataHex: data,
-        replace: req.body.replace_downlink || false
+        dataHex: data
       },
       metadata: {
         size: Buffer.from(data, 'hex').length
       }
     });
 
-    const downlink_headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    };
-
     const startTime = Date.now();
-    const { statusCode, body } = await request(downlinkUrl, {
+    const { statusCode, body: responseBody } = await request(downlinkUrl, {
       method: 'POST',
-      headers: downlink_headers,
-      body: JSON.stringify(downlinkPayload)
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
     const duration = Date.now() - startTime;
 
-    // Process response
-    let responseBody = '';
-    for await (const chunk of body) {
-      responseBody += chunk.toString();
+    let responseText = '';
+    for await (const chunk of responseBody) {
+      responseText += chunk.toString();
     }
-    let parsedBody;
+    let parsedBody: any;
     try {
-      parsedBody = JSON.parse(responseBody);
+      parsedBody = JSON.parse(responseText);
     } catch {
-      parsedBody = responseBody;
+      parsedBody = responseText;
     }
 
-    Log.debug(`Downlink response:\n`, statusCode, parsedBody);
+    Log.debug(`Downlink response:`, statusCode, parsedBody);
+
     if (statusCode >= 200 && statusCode < 300) {
       userEvents.push({
         category: 'downlink',
         severity: 'success',
         title: `Downlink sent to ${uplink.deviceEui}`,
         device: uplink.deviceEui,
-        application: application.applicationName,
         details: {
           deviceId: uplink.deviceId,
           port: port,
-          priority: priority_str,
           statusCode: statusCode,
           response: parsedBody
         },
@@ -281,27 +237,20 @@ app.post("/downlink", async (req: Request, res: Response) => {
         severity: 'error',
         title: `Downlink failed for ${uplink.deviceEui} (HTTP ${statusCode})`,
         device: uplink.deviceEui,
-        application: application.applicationName,
         details: {
           deviceId: uplink.deviceId,
           statusCode: statusCode,
           error: parsedBody,
-          request: {
-            port: port,
-            priority: priority_str,
-            dataHex: data
-          }
+          request: { port: port, dataHex: data }
         },
-        metadata: {
-          duration: duration
-        }
+        metadata: { duration: duration }
       });
     }
+
     res.status(statusCode).send(parsedBody);
 
   } catch (err: any) {
     Log.error("Error while sending downlink:", err.message || err);
-
     userEvents.push({
       category: 'downlink',
       severity: 'error',
@@ -313,28 +262,33 @@ app.post("/downlink", async (req: Request, res: Response) => {
         stack: err.stack
       }
     });
-
     res.status(500).send({ message: "Error while sending downlink", error: err.message || err });
   }
-
 });
 
-// Default uplink endpoint
-app.post(`/uplink`, (req: Request, res: Response) => {
+// Uplink endpoint — receives uplink callbacks from ThingPark and forwards to Thinger.io
+app.post('/uplink', (req: Request, res: Response) => {
 
-  Log.debug("Received message from device:\n", JSON.stringify(req.body, null, 2));
+  Log.debug("Received uplink from ThingPark:\n", JSON.stringify(req.body, null, 2));
+  Log.debug("Query params:", JSON.stringify(req.query, null, 2));
 
   let applicationId: string;
   let deviceEui: string;
-  let application: ttnApplication | undefined;
+  let application: thingparkApplication | undefined;
 
-  // Application id is recieved in payload from TTN according to
-  // TTN-Data-Format specifications:
-  // https://www.thethingsindustries.com/docs/integrations/data-formats/
   try {
-    applicationId = req.body.end_device_ids.application_ids.application_id;
-    deviceEui = req.body.end_device_ids.dev_eui;
-    application = settings.applications.find((app: { applicationName: string }) => app.applicationName === applicationId);
+    // ThingPark identifies the routing profile via LrnInfos query parameter
+    applicationId = req.query.LrnInfos as string;
+    deviceEui = (req.query.LrnDevEui as string) || req.body.DevEUI;
+
+    if (!applicationId) {
+      throw new Error('Missing LrnInfos query parameter (routing profile name)');
+    }
+    if (!deviceEui) {
+      throw new Error('Missing device EUI — expected LrnDevEui query param or DevEUI in body');
+    }
+
+    application = settings.applications.find(a => a.applicationId === applicationId);
   } catch (error: any) {
     Log.error("Error parsing uplink message:", error.message || error);
     userEvents.push({
@@ -342,17 +296,17 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       severity: 'error',
       title: 'Uplink rejected: invalid message format',
       details: {
-        error: error.message || 'Unknown error parsing uplink message',
-        receivedBody: req.body
+        error: error.message || 'Unknown error parsing uplink',
+        receivedBody: req.body,
+        queryParams: req.query
       }
     });
     res.status(400).send({ message: "Invalid message format" });
     return;
   }
 
-  if (typeof application === 'undefined') {
+  if (!application) {
     Log.error(`Application ${applicationId} not found`);
-
     userEvents.push({
       category: 'uplink',
       severity: 'warning',
@@ -362,67 +316,56 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       details: {
         error: 'Application not configured in plugin settings',
         applicationId: applicationId,
-        availableApplications: settings.applications.map(a => a.applicationName)
+        availableApplications: settings.applications.map(a => a.applicationId)
       }
     });
-
     res.status(404).send({ message: "Application not found" });
     return;
   }
 
   if (!application.enabled) {
     Log.log(`Application ${applicationId} is disabled, ignoring uplink`);
-
     userEvents.push({
       category: 'uplink',
       severity: 'warning',
       title: `Uplink ignored: application ${applicationId} is disabled`,
       device: deviceEui,
       application: applicationId,
-      details: {
-        deviceId: deviceEui,
-        applicationId: applicationId
-      }
+      details: { deviceEui, applicationId }
     });
     res.status(200).send({ message: "Application is disabled, uplink ignored" });
     return;
   }
 
   const device = `${application.deviceIdPrefix}${deviceEui}`;
-  console.log("Device:", device);
+  const thingerMessage = thingparkToThinger(req.body, req.query, applicationId, device);
 
-  const ttnMessage = ttnToThinger(req.body, applicationId, device);
-  console.log("TTN Message:", ttnMessage);
+  Log.log("Forwarding uplink to Thinger device:", device);
 
-  const hasDecodedPayload = ttnMessage.decodedPayload &&
-    Object.keys(ttnMessage.decodedPayload).length > 0;
-
+  const hasPayload = !!thingerMessage.payload;
   userEvents.push({
     category: 'uplink',
     severity: 'info',
-    title: hasDecodedPayload
+    title: hasPayload
       ? `Uplink from ${deviceEui}`
-      : `Uplink from ${deviceEui} (no decoded payload)`,
+      : `Uplink from ${deviceEui} (no payload)`,
     device: deviceEui,
     application: applicationId,
     details: {
       deviceId: device,
-      fPort: ttnMessage.fPort,
-      fCnt: ttnMessage.fCnt,
-      payload: ttnMessage.payload,
-      decodedPayload: ttnMessage.decodedPayload,
-      metadata: ttnMessage.metadata
+      fPort: thingerMessage.fPort,
+      fCnt: thingerMessage.fCnt,
+      payload: thingerMessage.payload,
+      metadata: thingerMessage.metadata
     },
     metadata: {
-      size: ttnMessage.payload ? Buffer.from(ttnMessage.payload, 'hex').length : 0
+      size: thingerMessage.payload ? Buffer.from(thingerMessage.payload, 'hex').length : 0
     }
   });
 
-  devicesApi.accessInputResources(_user, device, 'uplink', ttnMessage).then(() => {
-    Log.log("Uplink of callback handled:", device);
+  devicesApi.accessInputResources(_user, device, 'uplink', thingerMessage).then(() => {
+    Log.log("Uplink forwarded to Thinger:", device);
 
-    // In order to make downlink requests, it is necessary to store relevant data from
-    // the uplink payload in the device's properties.
     userEvents.push({
       category: 'uplink',
       severity: 'success',
@@ -432,16 +375,18 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       details: {
         deviceId: device,
         action: 'forwarded_to_thinger',
-        fPort: ttnMessage.fPort,
-        fCnt: ttnMessage.fCnt
+        fPort: thingerMessage.fPort,
+        fCnt: thingerMessage.fCnt
       }
     });
 
+    // Store downlink configuration derived from the application settings.
+    // This is read back when a downlink needs to be sent to this device.
     const downlinkInfo = {
-      api_key: req.header("X-Downlink-Apikey") || "",
-      push_url: req.header("X-Downlink-Push") || "",
-      replace_url: req.header("X-Downlink-Replace") || "",
-      domain: req.body.uplink_message?.network_ids?.cluster_address || "",
+      dev_eui: deviceEui,
+      thingpark_url: application!.thingparkUrl || '',
+      as_id: application!.asId || '',
+      as_key: application!.asKey || ''
     };
 
     const prop = new PropertyCreate();
@@ -450,9 +395,9 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 
     devicesApi.createProperty(_user, device, prop)
       .then(() => {
-        Log.info("Downlink info updated for device", device);
-        // If downlink info is not present, warn the user
-        if (!downlinkInfo.api_key || !downlinkInfo.push_url || !downlinkInfo.replace_url) {
+        Log.info("Downlink info saved for device", device);
+
+        if (!downlinkInfo.thingpark_url) {
           userEvents.push({
             category: 'device',
             severity: 'warning',
@@ -461,10 +406,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
             application: applicationId,
             details: {
               deviceId: device,
-              hasApiKey: !!downlinkInfo.api_key,
-              hasPushUrl: !!downlinkInfo.push_url,
-              hasReplaceUrl: !!downlinkInfo.replace_url,
-              description: 'Essential downlink configuration parameters are missing from TTN request headers. Uplink messages will be forwarded, but downlink functionality is disabled.'
+              description: 'ThingPark URL is not configured in application settings. Downlink functionality is disabled.'
             }
           });
         } else {
@@ -476,9 +418,8 @@ app.post(`/uplink`, (req: Request, res: Response) => {
             application: applicationId,
             details: {
               deviceId: device,
-              hasApiKey: !!downlinkInfo.api_key,
-              hasPushUrl: !!downlinkInfo.push_url,
-              hasReplaceUrl: !!downlinkInfo.replace_url
+              hasThingparkUrl: !!downlinkInfo.thingpark_url,
+              hasAsId: !!downlinkInfo.as_id
             }
           });
         }
@@ -486,7 +427,6 @@ app.post(`/uplink`, (req: Request, res: Response) => {
       })
       .catch((err: ApiException<any>) => {
         Log.error("Error saving downlink info", err);
-
         userEvents.push({
           category: 'uplink',
           severity: 'warning',
@@ -500,9 +440,9 @@ app.post(`/uplink`, (req: Request, res: Response) => {
         });
         res.status(500).send({ message: "Error saving downlink info" });
       });
+
   }).catch((error: ApiException<any>) => {
     Log.log("Error while handling uplink", error);
-
     userEvents.push({
       category: 'error',
       severity: 'error',
@@ -513,9 +453,9 @@ app.post(`/uplink`, (req: Request, res: Response) => {
         deviceId: device,
         httpErrorCode: error.code || 'N/A',
         error: error.message,
-        description: 'This plugin couldn\'t forward the uplink message to Thinger.io platform. Check you product id prefix',
-        fPort: ttnMessage.fPort,
-        fCnt: ttnMessage.fCnt
+        description: 'Could not forward uplink to Thinger.io. Check the device ID prefix matches an existing product.',
+        fPort: thingerMessage.fPort,
+        fCnt: thingerMessage.fCnt
       }
     });
     res.status(500).send();
@@ -531,7 +471,7 @@ app.post(`/uplink`, (req: Request, res: Response) => {
         deviceId: device,
         httpErrorCode: error.code || 'N/A',
         error: error.message || 'Unknown unexpected error',
-        uplinkRecieved: req.body
+        uplinkReceived: req.body
       }
     });
     res.status(500).send();
@@ -541,14 +481,12 @@ app.post(`/uplink`, (req: Request, res: Response) => {
 io.on('connection', (socket) => {
   Log.info('Client connected to events stream:', socket.id);
 
-  // Send initial data when client connects
   socket.emit('initial-events', {
     events: userEvents.getRecent({ limit: 20 }),
     config: userEvents.getConfig(),
     stats: userEvents.getStats()
   });
 
-  // Handle client requests for filtered events
   socket.on('get-events', (filters) => {
     try {
       const events = userEvents.getRecent(filters);
@@ -558,7 +496,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle clear events request
   socket.on('clear-events', () => {
     try {
       userEvents.clear();
@@ -568,7 +505,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle get stats request
   socket.on('get-stats', () => {
     try {
       socket.emit('stats-response', userEvents.getStats());
@@ -586,12 +522,10 @@ userEvents.on('new-event', (event) => {
   io.emit('new-event', event);
 });
 
-// When events are cleared, notify all clients
 userEvents.on('events-cleared', () => {
   io.emit('events-cleared');
 });
 
-// Endpoint to return the os environment variables that start with THINGER
 app.get("/env", (req: Request, res: Response) => {
   const thingerEnv = Object.keys(process.env)
     .filter((key) => key.startsWith("THINGER"))
@@ -602,64 +536,46 @@ app.get("/env", (req: Request, res: Response) => {
   res.json(thingerEnv);
 });
 
-// Endpoint to return the plugin settings
 app.get("/settings", async (req: Request, res: Response) => {
   res.json(settings);
 });
 
-// Endpoint to send the plugins
 app.post("/settings", async (req: Request, res: Response) => {
   Log.log("Post settings", req.body);
-  saveSettings(req.body).then((response: { value: { applications: ttnApplication[] } }) => {
+  saveSettings(req.body).then((response: { value: { applications: thingparkApplication[] } }) => {
     settings = response.value;
     res.status(200).send(settings);
   }).catch((error: any) => {
     res.status(400).send(error);
   });
-
 });
 
-// Serve the Angular app after the API
 app.use(FrontEndRouter);
 
-// Settings functions
 function saveSettings(value: object = {}) {
-
   const prop = new PropertyCreate();
   prop.property = "settings";
   prop.value = value;
-
   return pluginsApi.createProperty(_user, _plugin, prop);
 }
 
 async function readSettings() {
-
-  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: ttnApplication[] } }) => {
-
+  pluginsApi.readProperty(_user, _plugin, "settings").then((response: { value: { applications: thingparkApplication[] } }) => {
     Log.debug("Retrieved settings:\n", JSON.stringify(response, null, 2));
     settings = response.value;
-
-    //}).catch((error: PluginsApiResponseProcessor) => {
   }).catch((error: ApiException<any>) => {
-
     if (error.code === 404) {
-      //Log.log(error.message);
       Log.log("Settings property not found, initializing...");
     }
-
-    // Initialize empty value settings
-    saveSettings({ "applications": [] }).then((response: { value: { applications: ttnApplication[] } }) => {
+    saveSettings({ "applications": [] }).then((response: { value: { applications: thingparkApplication[] } }) => {
       settings = response.value;
       Log.log(`Settings initialized: ${response}`);
     }).catch((error: any) => {
-      // TODO: Do something, show an error message, etc.
       Log.error(`Error initializing settings: ${error.message}`);
     });
-
   });
 }
 
-// Read settings on startup
 await readSettings();
 
 httpServer.listen(3000, () => {
