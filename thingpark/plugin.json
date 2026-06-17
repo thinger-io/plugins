@@ -1,0 +1,59 @@
+{
+  "name": "thingpark",
+  "version": "1.0.0",
+  "description": "Plugin for integrating Thinger.io with ThingPark",
+  "author": "Thinger.io",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thinger-io/plugins.git",
+    "directory": "thingpark"
+  },
+  "metadata": {
+    "name": "ThingPark LNS",
+    "description": "ThingPark Integration",
+    "category": "connectivity",
+    "image": "assets/actility-logo.png",
+    "icon": "assets/actility-logo.png"
+  },
+  "tokens": {
+    "thingpark_plugin": {
+      "name": "Access from ThingPark plugin to Thinger.io account",
+      "allow": {
+        "Device": {
+          "*": [
+            "AccessDeviceResources",
+            "CreateDeviceProperty",
+            "ReadDeviceProperty"
+          ]
+        },
+        "Plugin": {
+          "thingpark": "*"
+        }
+      }
+    },
+    "thingpark_plugin_callback": {
+      "name": "Access from thingpark to Uplink callback",
+      "allow": {
+        "Plugin": {
+          "thingpark": [
+            "CallPluginEndpoint"
+          ]
+        }
+      }
+    }
+  },
+  "task": {
+    "type": "docker",
+    "image": "thinger/thingpark-plugin",
+    "port": 3000
+  },
+  "interface": {
+    "main": {
+      "proxy_to": {
+        "plugin": "thingpark",
+        "port": 3000
+      }
+    }
+  }
+}
