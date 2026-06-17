@@ -99,6 +99,7 @@
 <nz-modal
   [(nzVisible)]="modalVisible"
   [nzTitle]="selectedApplication ? 'Edit Application' : 'Add Application'"
+  [nzWidth]="680"
   (nzOnCancel)="handleCancel()"
   (nzOnOk)="submitForm()">
   <ng-container *nzModalContent>

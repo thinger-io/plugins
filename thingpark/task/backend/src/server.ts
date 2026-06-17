@@ -18,11 +18,10 @@ const devicesApi = new DevicesApi(thingerApiConfig);
 const pluginsApi = new PluginsApi(thingerApiConfig);
 
 export type thingparkApplication = {
-  applicationId: string;    // AS_ID value (e.g. TWA_100082957.123.AS) used to match incoming uplinks
+  applicationId: string;    // AS_ID value (e.g. TWA_100082957.123.AS) — used for uplink matching AND downlink auth
   applicationName: string;  // Display name
   deviceIdPrefix: string;   // Prefix for auto-provisioned Thinger.io device IDs
   thingparkUrl: string;     // ThingPark server base URL (e.g. https://myserver.thingpark.com)
-  asId: string;             // AS_ID for downlink authentication (optional)
   asKey: string;            // Pre-shared tunnel key in hex for downlink auth (optional)
   enabled: boolean;
 }
@@ -393,7 +392,7 @@ app.post('/uplink', (req: Request, res: Response) => {
     const downlinkInfo = {
       dev_eui: deviceEui,
       thingpark_url: application!.thingparkUrl || '',
-      as_id: application!.asId || '',
+      as_id: application!.applicationId,  // applicationId IS the AS_ID
       as_key: application!.asKey || ''
     };
 

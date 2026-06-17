@@ -56,7 +56,6 @@ export class ApplicationComponent implements OnInit {
       applicationName: [this.application()?.applicationName || ''],
       deviceIdPrefix: [this.application()?.deviceIdPrefix || '', [Validators.required, this.deviceIdPrefixValidator.bind(this)]],
       thingparkUrl: [this.application()?.thingparkUrl || '', [Validators.required]],
-      asId: [this.application()?.asId || ''],
       asKey: [this.application()?.asKey || ''],
       enabled: [this.application()?.enabled ?? true]
     });

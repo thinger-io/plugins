@@ -19,11 +19,10 @@ import { faEye, faEyeSlash, faPlus, faLayerGroup, faTrashAlt } from "@fortawesom
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 
 export interface Application {
-  applicationId: string;      // Routing profile name (LrnInfos) in ThingPark
+  applicationId: string;      // AS_ID of the ThingPark Application Server (e.g. TWA_100082957.695171.AS)
   applicationName: string | null;
   deviceIdPrefix: string;
   thingparkUrl: string;       // ThingPark server base URL for downlinks
-  asId: string;               // AS_ID for downlink token authentication (optional)
   asKey: string;              // Pre-shared tunnel key hex for downlink auth (optional)
   enabled: boolean;
 }

@@ -69,21 +69,6 @@
     </nz-form-control>
   </nz-form-item>
 
-  <!-- AS_ID (optional) -->
-  <nz-form-item>
-    <nz-form-label
-      [nzSpan]="8"
-      [nzXs]="26"
-      nzFor="asId"
-      nzTooltipTitle="Application Server identifier (AS_ID) for downlink token authentication. Leave empty if your ThingPark server does not require AS authentication."
-    >
-      AS_ID
-    </nz-form-label>
-    <nz-form-control [nzSpan]="12" [nzXs]="26" nzHasFeedback>
-      <input nz-input formControlName="asId" name="asId" type="text" id="asId" placeholder="Optional — e.g. myapp@myserver" />
-    </nz-form-control>
-  </nz-form-item>
-
   <!-- Tunnel Key (optional) -->
   <nz-form-item>
     <nz-form-label
